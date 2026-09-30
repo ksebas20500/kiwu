@@ -14,9 +14,22 @@ enum TaskFlowShared {
     }()
     static let esquemaURL = "taskflow"
 
-    /// Carpeta compartida del App Group. Es nil si la app no está firmada con el grupo.
+    /// Carpeta compartida entre la app y los widgets.
+    ///
+    /// - Compilación normal (firmada con un equipo de desarrollo): carpeta del App Group.
+    /// - Compilación `DIRECT_DISTRIBUTION` (instalador descargable, firma ad hoc): macOS no permite usar
+    ///   App Groups sin equipo de desarrollo, así que se usa una carpeta real de Application Support,
+    ///   autorizada en el sandbox de ambos con una excepción (ver `Config/Direct-*.entitlements`).
     static var carpeta: URL? {
-        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)
+        #if DIRECT_DISTRIBUTION
+        guard let usuario = getpwuid(getuid()) else { return nil }
+        let carpeta = URL(fileURLWithPath: String(cString: usuario.pointee.pw_dir), isDirectory: true)
+            .appendingPathComponent("Library/Application Support/TaskFlow", isDirectory: true)
+        try? FileManager.default.createDirectory(at: carpeta, withIntermediateDirectories: true)
+        return carpeta
+        #else
+        return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)
+        #endif
     }
 
     static func urlDeber(_ id: UUID) -> URL {

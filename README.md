@@ -54,6 +54,25 @@ No hay servidor, cuentas, publicidad ni analíticas, y la app no usa Internet. L
 - Xcode 26 o superior.
 - Una cuenta de Apple (Apple ID) añadida a Xcode. La app usa un App Group para compartir datos con los widgets, y macOS solo permite esa capacidad con una app firmada por un equipo de desarrollo. Sin firma con equipo, la app arranca mal o los widgets no reciben datos.
 
+## Instalación (sin compilar)
+
+Descarga la última versión desde [**Releases**](https://github.com/ksebas20500/taskflow/releases/latest).
+
+**Opción 1: un solo comando** (recomendada; comprueba la descarga y deja la app lista para abrir)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ksebas20500/taskflow/main/install.sh | bash
+```
+
+**Opción 2: a mano.** Descarga `TaskFlow.dmg`, ábrelo y arrastra **TaskFlow** a *Aplicaciones*.
+La primera vez, macOS avisará de que no puede verificar al desarrollador (la app no está notarizada por Apple, porque eso requiere una cuenta de pago). Para abrirla:
+- *Ajustes del Sistema → Privacidad y seguridad → Abrir igualmente*, o
+- en la Terminal: `xattr -dr com.apple.quarantine /Applications/TaskFlow.app`
+
+El instalador es **universal** (Apple Silicon e Intel), pesa unos pocos MB y necesita macOS 13 o superior (widgets: macOS 14 o superior).
+
+Si prefieres no fiarte de un binario, compílalo tú mismo (siguiente sección) o revisa cómo se genera en [`Tools/crear-instalador.sh`](Tools/crear-instalador.sh).
+
 ## Compilar y ejecutar
 
 ```bash
@@ -85,6 +104,14 @@ Tools/                    Utilidades (generador del icono)
 ```
 
 **Cómo se comunican la app y los widgets.** La app escribe una instantánea JSON en el App Group cada vez que guarda datos; los widgets solo la leen. Cuando completas un deber desde un widget, este lo deja en una cola y la app lo aplica a su base de datos al abrirse. Los enlaces `taskflow://…` llevan al deber, nota o día del calendario correspondiente.
+
+## Crear el instalador
+
+```bash
+Tools/crear-instalador.sh     # genera dist/TaskFlow.dmg (Release, universal, firma ad hoc)
+```
+
+La versión del instalador se compila con la opción `DIRECT_DISTRIBUTION`: como macOS no permite usar App Groups sin un equipo de desarrollo, la app y los widgets comparten sus datos por una carpeta (`~/Library/Application Support/TaskFlow`) autorizada en el sandbox de ambos. La compilación desde Xcode con tu equipo sigue usando el App Group.
 
 ## Icono
 

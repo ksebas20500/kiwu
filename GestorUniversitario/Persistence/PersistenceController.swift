@@ -10,8 +10,7 @@ final class PersistenceController {
 
         // Tareas y notas viven en almacenes separados: así añadir el módulo de notas
         // no altera la base de datos de tareas que ya existe.
-        let directorio = NSPersistentContainer.defaultDirectoryURL()
-        try? FileManager.default.createDirectory(at: directorio, withIntermediateDirectories: true)
+        let directorio = Self.directorioDeDatos()
         let tareas = NSPersistentStoreDescription(url: directorio.appendingPathComponent("GestorUniversitario.sqlite"))
         tareas.configuration = "Tareas"
         let notas = NSPersistentStoreDescription(url: directorio.appendingPathComponent("Notas.sqlite"))
@@ -29,6 +28,30 @@ final class PersistenceController {
         }
         container.viewContext.automaticallyMergesChangesFromParent = true
         container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+    }
+
+    /// Carpeta fija de los datos (no depende del nombre del ejecutable). Si solo existe la carpeta
+    /// antigua `GestorUniversitario` (versiones anteriores al cambio de nombre), se copian sus bases
+    /// a la nueva sin borrar nada.
+    private static func directorioDeDatos() -> URL {
+        let fm = FileManager.default
+        let base = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let nuevo = base.appendingPathComponent("TaskFlow", isDirectory: true)
+        let antiguo = base.appendingPathComponent("GestorUniversitario", isDirectory: true)
+        try? fm.createDirectory(at: nuevo, withIntermediateDirectories: true)
+
+        let tareasNuevas = nuevo.appendingPathComponent("GestorUniversitario.sqlite")
+        let tareasAntiguas = antiguo.appendingPathComponent("GestorUniversitario.sqlite")
+        if !fm.fileExists(atPath: tareasNuevas.path), fm.fileExists(atPath: tareasAntiguas.path) {
+            for nombre in ["GestorUniversitario.sqlite", "GestorUniversitario.sqlite-wal", "GestorUniversitario.sqlite-shm",
+                           "Notas.sqlite", "Notas.sqlite-wal", "Notas.sqlite-shm"] {
+                let origen = antiguo.appendingPathComponent(nombre)
+                if fm.fileExists(atPath: origen.path) {
+                    try? fm.copyItem(at: origen, to: nuevo.appendingPathComponent(nombre))
+                }
+            }
+        }
+        return nuevo
     }
 
     func save() {

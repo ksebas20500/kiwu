@@ -25,3 +25,6 @@ Config/Signing.xcconfig
 .idea/
 .vscode/
 *.swp
+
+# Instalador generado (se publica en GitHub Releases, no en el repositorio)
+dist/
