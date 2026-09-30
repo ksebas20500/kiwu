@@ -1,0 +1,4 @@
+// Ajustes comunes a la app y al widget.
+// El equipo de firma es personal: cada quien lo define en Config/Signing.xcconfig,
+// un archivo local que NO se sube al repositorio (ver Signing.example.xcconfig).
+#include? "Signing.xcconfig"

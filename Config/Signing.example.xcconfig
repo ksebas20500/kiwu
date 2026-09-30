@@ -1,0 +1,3 @@
+// Copia este archivo como Config/Signing.xcconfig y pon el identificador de tu equipo de desarrollo
+// (Xcode > Settings > Accounts > tu equipo > "Team ID"). Signing.xcconfig está en .gitignore.
+DEVELOPMENT_TEAM = TU_TEAM_ID
