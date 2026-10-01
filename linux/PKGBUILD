@@ -12,7 +12,7 @@ optdepends=('webkitgtk-6.0: reproducir vídeos de YouTube/Vimeo dentro de las no
             'mako: notificaciones de los recordatorios (o cualquier otro demonio de notificaciones)')
 makedepends=('python-build' 'python-installer' 'python-setuptools' 'python-wheel')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/linux-v$pkgver.tar.gz")
-sha256sums=('SKIP')   # sustituir por la suma real al publicar la etiqueta linux-v$pkgver
+sha256sums=('e170648f491b2d3238d2257813d50aa5a10ae7d8ba7050222faa5db736b148ff')
 
 build() {
   cd "$pkgname-linux-v$pkgver/linux"

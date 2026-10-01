@@ -75,7 +75,7 @@ cd kiwu/linux
 makepkg -si
 ```
 
-> El `PKGBUILD` descarga la etiqueta `linux-v0.1.0`. Mientras esa etiqueta no exista en GitHub, usa el instalador o `./run.sh`.
+> El `PKGBUILD` descarga la etiqueta `linux-v0.1.0` y comprueba su suma de verificación.
 
 ## Hyprland: configuración recomendada
 
