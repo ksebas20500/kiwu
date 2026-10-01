@@ -85,7 +85,7 @@ struct DeberesWidgetView: View {
         let contenido = VStack(alignment: .leading, spacing: 8) {
             cabecera
             if !entrada.hayDatos {
-                mensaje("Abre TaskFlow para sincronizar tus deberes", icono: "arrow.triangle.2.circlepath")
+                mensaje("Abre Kiwu para sincronizar tus deberes", icono: "arrow.triangle.2.circlepath")
             } else if visibles.isEmpty {
                 mensaje(entrada.lista == nil ? "Todo al día" : "Sin deberes pendientes en esta lista", icono: "checkmark.seal.fill")
             } else {
@@ -102,10 +102,10 @@ struct DeberesWidgetView: View {
 
         // En el widget pequeño solo se admite un enlace para todo el widget.
         if familia == .systemSmall, let primero = visibles.first {
-            contenido.widgetURL(TaskFlowShared.urlDeber(primero.id))
+            contenido.widgetURL(KiwuShared.urlDeber(primero.id))
         } else {
             // Los enlaces de cada fila tienen prioridad; el resto del widget abre la app en Tareas.
-            contenido.widgetURL(TaskFlowShared.urlModulo("tareas"))
+            contenido.widgetURL(KiwuShared.urlModulo("tareas"))
         }
     }
 
@@ -159,7 +159,7 @@ struct DeberesWidgetView: View {
             if familia == .systemSmall {
                 detalle
             } else {
-                Link(destination: TaskFlowShared.urlDeber(deber.id)) { detalle }
+                Link(destination: KiwuShared.urlDeber(deber.id)) { detalle }
             }
         }
     }

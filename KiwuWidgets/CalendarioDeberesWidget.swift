@@ -67,7 +67,7 @@ struct CalendarioDeberesWidget: Widget {
                 .containerBackground(.fill.tertiary, for: .widget)
         }
         .configurationDisplayName("Calendario de deberes")
-        .description("El mes con tus fechas de entrega marcadas. Pulsa un día para verlo en TaskFlow.")
+        .description("El mes con tus fechas de entrega marcadas. Pulsa un día para verlo en Kiwu.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
@@ -121,21 +121,21 @@ struct CalendarioWidgetView: View {
     var body: some View {
         switch familia {
         case .systemSmall:
-            pequeno.widgetURL(TaskFlowShared.urlCalendario(dia: hoy))
+            pequeno.widgetURL(KiwuShared.urlCalendario(dia: hoy))
         case .systemMedium:
             HStack(alignment: .top, spacing: 12) {
                 calendario.frame(maxWidth: .infinity)
                 listaAgenda(maximo: 3)
                     .frame(width: 138)
             }
-            .widgetURL(TaskFlowShared.urlCalendario(dia: nil))
+            .widgetURL(KiwuShared.urlCalendario(dia: nil))
         default:
             VStack(alignment: .leading, spacing: 8) {
                 calendario
                 Divider()
                 listaAgenda(maximo: 3)
             }
-            .widgetURL(TaskFlowShared.urlCalendario(dia: nil))
+            .widgetURL(KiwuShared.urlCalendario(dia: nil))
         }
     }
 
@@ -155,7 +155,7 @@ struct CalendarioWidgetView: View {
                 .foregroundStyle(.secondary)
             Spacer(minLength: 0)
             if !entrada.hayDatos {
-                Text("Abre TaskFlow para sincronizar")
+                Text("Abre Kiwu para sincronizar")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             } else {
@@ -226,7 +226,7 @@ struct CalendarioWidgetView: View {
         let colores = PaletaPastel.asignar(ids: tareas.map(\.id))
         let lado: CGFloat = compacto ? 12 : 18
 
-        return Link(destination: TaskFlowShared.urlCalendario(dia: dia)) {
+        return Link(destination: KiwuShared.urlCalendario(dia: dia)) {
             VStack(spacing: compacto ? 0 : 1) {
                 Text("\(cal.component(.day, from: dia))")
                     .font(.system(size: compacto ? 8.5 : 11, weight: esHoy ? .bold : .regular))
@@ -253,7 +253,7 @@ struct CalendarioWidgetView: View {
     private func listaAgenda(maximo: Int) -> some View {
         VStack(alignment: .leading, spacing: compacto ? 5 : 6) {
             if !entrada.hayDatos {
-                Text("Abre TaskFlow para sincronizar tus deberes")
+                Text("Abre Kiwu para sincronizar tus deberes")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             } else if agenda.isEmpty {
@@ -283,7 +283,7 @@ struct CalendarioWidgetView: View {
             }
             .buttonStyle(.plain)
 
-            Link(destination: TaskFlowShared.urlDeber(deber.id)) {
+            Link(destination: KiwuShared.urlDeber(deber.id)) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(deber.titulo)
                         .font(.system(size: 11, weight: .medium))

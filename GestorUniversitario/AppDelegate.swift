@@ -1,6 +1,6 @@
 import AppKit
 
-/// Recibe los enlaces `taskflow://…` (widgets) directamente desde macOS, tanto si la app
+/// Recibe los enlaces `kiwu://…` (widgets) directamente desde macOS, tanto si la app
 /// estaba cerrada como si ya estaba abierta, y la trae al frente en el punto indicado.
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private static var ultimoEnlace: (texto: String, fecha: Date)?
@@ -14,16 +14,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     static func procesar(_ url: URL, origen: String) {
         let texto = url.absoluteString
         if let ultimo = ultimoEnlace, ultimo.texto == texto, Date().timeIntervalSince(ultimo.fecha) < 0.6 {
-            NSLog("TaskFlow [URL] duplicado ignorado (%@): %@", origen, texto)
+            NSLog("Kiwu [URL] duplicado ignorado (%@): %@", origen, texto)
             return
         }
         ultimoEnlace = (texto, Date())
 
         guard let destino = Enrutador.shared.abrir(url) else {
-            NSLog("TaskFlow [URL] no reconocido (%@): %@", origen, texto)
+            NSLog("Kiwu [URL] no reconocido (%@): %@", origen, texto)
             return
         }
-        NSLog("TaskFlow [URL] aceptado (%@): %@ -> %@", origen, texto, destino.rawValue)
+        NSLog("Kiwu [URL] aceptado (%@): %@ -> %@", origen, texto, destino.rawValue)
         UserDefaults.standard.set(destino.rawValue, forKey: "modulo")
         traerAlFrente()
     }

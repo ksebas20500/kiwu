@@ -15,7 +15,7 @@ enum WidgetDataService {
     }
 
     static func actualizar(_ context: NSManagedObjectContext) {
-        guard TaskFlowShared.carpeta != nil else { return }
+        guard KiwuShared.carpeta != nil else { return }
 
         let peticion = Deber.fetchRequest()
         peticion.predicate = NSPredicate(format: "completado == NO")
@@ -82,7 +82,7 @@ struct PeticionNuevaNota: Equatable {
     let id = UUID()
 }
 
-/// Navegación pedida desde fuera de la app (enlaces `taskflow://...` de los widgets).
+/// Navegación pedida desde fuera de la app (enlaces `kiwu://...` de los widgets).
 final class Enrutador: ObservableObject {
     static let shared = Enrutador()
     @Published var deberPendiente: UUID?
@@ -90,16 +90,16 @@ final class Enrutador: ObservableObject {
     @Published var nuevaNota: PeticionNuevaNota?
     @Published var diaCalendario: Date?
 
-    /// Interpreta la URL y devuelve el módulo que debe mostrarse (nil si no es un enlace de TaskFlow).
+    /// Interpreta la URL y devuelve el módulo que debe mostrarse (nil si no es un enlace de Kiwu).
     func abrir(_ url: URL) -> Modulo? {
-        guard url.scheme == TaskFlowShared.esquemaURL else { return nil }
+        guard url.scheme == KiwuShared.esquemaURL else { return nil }
         switch url.host {
         case "tareas":
             return .tareas
         case "calendario":
             let texto = URLComponents(url: url, resolvingAgainstBaseURL: false)?
                 .queryItems?.first { $0.name == "dia" }?.value
-            diaCalendario = texto.flatMap { TaskFlowShared.dia(desde: $0) } ?? Calendar.current.startOfDay(for: .now)
+            diaCalendario = texto.flatMap { KiwuShared.dia(desde: $0) } ?? Calendar.current.startOfDay(for: .now)
             return .tareas
         case "notas":
             return .notas

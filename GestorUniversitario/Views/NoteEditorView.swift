@@ -101,45 +101,47 @@ final class NoteEditorModel: ObservableObject {
     }
 }
 
+/// Operaciones que una fila de bloque pide al editor (ya atadas al id del bloque).
+private struct OpsBloque {
+    var enter: (String, [TextRun]?) -> Void
+    var borrar: () -> Void
+    var eliminar: () -> Void
+    var especial: (NoteBlockKind) -> Void
+    var navegar: (Int) -> Bool
+    var mover: (Int) -> Void
+    var duplicar: () -> Void
+    var aEnlace: (String) -> Void
+}
+
 struct NoteEditorView: View {
     @ObservedObject var model: NoteEditorModel
-    @FocusState private var enfoque: UUID?
+    @StateObject private var enfoque = EnfoqueCtl()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach($model.doc.blocks) { $block in
+                let id = block.id
                 BlockRow(
                     block: $block,
-                    numero: numero(de: block.id),
-                    enfoque: $enfoque,
-                    onEnter: { enter(block.id) },
-                    onBorrar: { borrar(block.id) },
-                    onEliminar: { quitar(block.id) },
-                    onEspecial: { especial(block.id, $0) }
+                    numero: numero(de: id),
+                    enfoque: enfoque,
+                    ops: OpsBloque(
+                        enter: { enter(id, resto: $0, runs: $1) },
+                        borrar: { borrar(id) },
+                        eliminar: { quitar(id) },
+                        especial: { especial(id, $0) },
+                        navegar: { navegar(id, $0) },
+                        mover: { mover(id, $0) },
+                        duplicar: { duplicar(id) },
+                        aEnlace: { aEnlace(id, $0) }
+                    )
                 )
             }
 
             Color.clear
-                .frame(height: 100)
+                .frame(height: 240)
                 .contentShape(Rectangle())
                 .onTapGesture(perform: alFinal)
-                .overlay(alignment: .topLeading) {
-                    Menu {
-                        ForEach(NoteBlockKind.allCases) { tipo in
-                            Button {
-                                agregar(tipo)
-                            } label: {
-                                Label(tipo.titulo, systemImage: tipo.icono)
-                            }
-                        }
-                    } label: {
-                        Label("Añadir bloque", systemImage: "plus")
-                            .font(.caption)
-                    }
-                    .menuStyle(.borderlessButton)
-                    .fixedSize()
-                    .padding(.top, 8)
-                }
         }
         .onDrop(of: [.fileURL], isTargeted: nil) { proveedores in
             for proveedor in proveedores {
@@ -152,6 +154,8 @@ struct NoteEditorView: View {
         }
     }
 
+    private func indice(_ id: UUID) -> Int? { model.doc.blocks.firstIndex { $0.id == id } }
+
     private func especial(_ id: UUID, _ tipo: NoteBlockKind) {
         switch tipo {
         case .image:
@@ -162,13 +166,16 @@ struct NoteEditorView: View {
             var divisor = NoteBlock()
             divisor.kind = .divider
             model.insertar([divisor], despuesDe: id)
+            if let i = indice(id), i + 1 < model.doc.blocks.count {
+                enfoque.pedir(model.doc.blocks[model.doc.blocks.count - 1].id, alFinal: false)
+            }
         default:
             break
         }
     }
 
     private func quitar(_ id: UUID) {
-        guard let i = model.doc.blocks.firstIndex(where: { $0.id == id }) else { return }
+        guard let i = indice(id) else { return }
         if model.doc.blocks.count > 1 {
             model.doc.blocks.remove(at: i)
         } else {
@@ -176,83 +183,125 @@ struct NoteEditorView: View {
         }
     }
 
+    /// Numeración de las listas, con un contador por nivel de sangría.
     private func numero(de id: UUID) -> Int {
-        var n = 0
+        var contadores = Array(repeating: 0, count: 5)
         for bloque in model.doc.blocks {
-            n = bloque.kind == .numberedList ? n + 1 : 0
-            if bloque.id == id { return max(n, 1) }
+            let nivel = min(max(bloque.indent, 0), 4)
+            if bloque.kind == .numberedList {
+                contadores[nivel] += 1
+                for mayor in (nivel + 1)..<5 { contadores[mayor] = 0 }
+            } else {
+                contadores = Array(repeating: 0, count: 5)
+            }
+            if bloque.id == id { return max(contadores[nivel], 1) }
         }
         return 1
     }
 
-    private func enfocar(_ id: UUID) {
-        DispatchQueue.main.async { enfoque = id }
+    private func puedeEscribirse(_ tipo: NoteBlockKind) -> Bool {
+        ![.image, .file, .divider, .embed].contains(tipo)
     }
 
-    private func enter(_ id: UUID) {
-        guard let i = model.doc.blocks.firstIndex(where: { $0.id == id }) else { return }
+    private func navegar(_ id: UUID, _ direccion: Int) -> Bool {
+        guard var i = indice(id) else { return false }
+        i += direccion
+        while model.doc.blocks.indices.contains(i) {
+            if puedeEscribirse(model.doc.blocks[i].kind) {
+                enfoque.pedir(model.doc.blocks[i].id, alFinal: direccion < 0)
+                return true
+            }
+            i += direccion
+        }
+        return false
+    }
+
+    private func mover(_ id: UUID, _ delta: Int) {
+        guard let i = indice(id), model.doc.blocks.indices.contains(i + delta) else { return }
+        withAnimation(.easeInOut(duration: 0.15)) {
+            model.doc.blocks.swapAt(i, i + delta)
+        }
+    }
+
+    private func duplicar(_ id: UUID) {
+        guard let i = indice(id) else { return }
+        var copia = model.doc.blocks[i]
+        copia.id = UUID()
+        model.doc.blocks.insert(copia, at: i + 1)
+    }
+
+    private func aEnlace(_ id: UUID, _ texto: String) {
+        guard let i = indice(id), let url = ServicioEnlaces.url(desde: texto) else { return }
+        model.doc.blocks[i].kind = .embed
+        model.doc.blocks[i].text = ""
+        model.doc.blocks[i].runs = nil
+        model.doc.blocks[i].url = url.absoluteString
+        model.doc.blocks[i].preview = nil
+        if model.doc.blocks.last?.kind != .paragraph { model.doc.blocks.append(NoteBlock()) }
+    }
+
+    private func enter(_ id: UUID, resto: String, runs: [TextRun]?) {
+        guard let i = indice(id) else { return }
         let actual = model.doc.blocks[i]
+
+        // Una dirección web sola en un párrafo se convierte en enlace con vista previa.
+        if actual.kind == .paragraph, resto.isEmpty, actual.indent == 0,
+           actual.text.hasPrefix("http://") || actual.text.hasPrefix("https://") || actual.text.hasPrefix("www."),
+           ServicioEnlaces.url(desde: actual.text) != nil {
+            aEnlace(id, actual.text)
+            if let siguiente = model.doc.blocks.indices.contains(i + 1) ? model.doc.blocks[i + 1] : nil {
+                enfoque.pedir(siguiente.id, alFinal: false)
+            }
+            return
+        }
+
         var nuevo = NoteBlock()
         switch actual.kind {
         case .bulletedList, .numberedList, .checklist:
-            if actual.text.isEmpty {
-                model.doc.blocks[i].kind = .paragraph
-                enfocar(id)
+            if actual.text.isEmpty && resto.isEmpty {
+                if actual.indent > 0 {
+                    model.doc.blocks[i].indent -= 1
+                } else {
+                    model.doc.blocks[i].kind = .paragraph
+                }
+                enfoque.pedir(id)
                 return
             }
             nuevo.kind = actual.kind
+            nuevo.indent = actual.indent
         default:
             break
         }
+        nuevo.text = resto
+        nuevo.runs = runs
         model.doc.blocks.insert(nuevo, at: i + 1)
-        enfocar(nuevo.id)
+        enfoque.pedir(nuevo.id, alFinal: false)
     }
 
     private func borrar(_ id: UUID) {
-        guard let i = model.doc.blocks.firstIndex(where: { $0.id == id }) else { return }
+        guard let i = indice(id) else { return }
+        if model.doc.blocks[i].indent > 0 {
+            model.doc.blocks[i].indent -= 1
+            enfoque.pedir(id)
+            return
+        }
         if model.doc.blocks[i].kind != .paragraph {
             model.doc.blocks[i].kind = .paragraph
-            enfocar(id)
+            enfoque.pedir(id)
             return
         }
         guard model.doc.blocks.count > 1 else { return }
         model.doc.blocks.remove(at: i)
-        enfocar(model.doc.blocks[max(0, i - 1)].id)
+        enfoque.pedir(model.doc.blocks[max(0, i - 1)].id)
     }
 
     private func alFinal() {
         if let ultimo = model.doc.blocks.last, ultimo.kind == .paragraph, ultimo.text.isEmpty {
-            enfocar(ultimo.id)
+            enfoque.pedir(ultimo.id)
         } else {
             let nuevo = NoteBlock()
             model.doc.blocks.append(nuevo)
-            enfocar(nuevo.id)
-        }
-    }
-
-    private func agregar(_ tipo: NoteBlockKind) {
-        if tipo == .image {
-            elegirImagen()
-            return
-        }
-        if tipo == .file {
-            model.elegirArchivos()
-            return
-        }
-        if tipo != .divider, let ultimo = model.doc.blocks.last, ultimo.kind == .paragraph, ultimo.text.isEmpty {
-            model.doc.blocks[model.doc.blocks.count - 1].kind = tipo
-            enfocar(ultimo.id)
-            return
-        }
-        var bloque = NoteBlock()
-        bloque.kind = tipo
-        model.doc.blocks.append(bloque)
-        if tipo == .divider {
-            let siguiente = NoteBlock()
-            model.doc.blocks.append(siguiente)
-            enfocar(siguiente.id)
-        } else {
-            enfocar(bloque.id)
+            enfoque.pedir(nuevo.id)
         }
     }
 
@@ -270,55 +319,50 @@ struct NoteEditorView: View {
     }
 }
 
+// MARK: - Fila de bloque
+
 private struct BlockRow: View {
     @Binding var block: NoteBlock
     let numero: Int
-    var enfoque: FocusState<UUID?>.Binding
-    let onEnter: () -> Void
-    let onBorrar: () -> Void
-    let onEliminar: () -> Void
-    let onEspecial: (NoteBlockKind) -> Void
+    @ObservedObject var enfoque: EnfoqueCtl
+    let ops: OpsBloque
 
-    @State private var hover = false
+    @Environment(\.colorScheme) private var esquema
+    @State private var indiceSlash = 0
+    @State private var slashDescartado = false
+    @State private var haySeleccion = false
+    @State private var pidiendoEnlace = false
 
     var body: some View {
-        HStack(alignment: .top, spacing: 6) {
-            Menu {
-                ForEach(NoteBlockKind.allCases.filter { $0 != .image && $0 != .file }) { tipo in
-                    Button {
-                        convertir(a: tipo)
-                    } label: {
-                        Label(tipo.titulo, systemImage: tipo.icono)
-                    }
+        contenido
+            .padding(.leading, CGFloat(block.indent) * 26)
+            .overlay(alignment: .topLeading) {
+                if !opcionesSlash.isEmpty {
+                    SlashMenu(opciones: opcionesSlash, seleccionado: indiceSlash, onElegir: elegirSlash, onPasar: { indiceSlash = $0 })
+                        .offset(y: 30)
                 }
-                Divider()
-                Button("Eliminar bloque", role: .destructive, action: onEliminar)
-            } label: {
-                Image(systemName: "line.3.horizontal")
-                    .foregroundStyle(.secondary)
             }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .opacity(hover ? 1 : 0)
-            .padding(.top, 3)
-
-            contenido
-                .overlay(alignment: .topLeading) {
-                    if !opcionesSlash.isEmpty {
-                        SlashMenu(opciones: opcionesSlash, onElegir: elegirSlash)
-                            .offset(y: 30)
-                    }
+            .overlay(alignment: .topLeading) {
+                if haySeleccion {
+                    BarraFormato(pidiendoEnlace: $pidiendoEnlace)
+                        .offset(y: -44)
                 }
-        }
-        .zIndex(opcionesSlash.isEmpty ? 0 : 10)
-        .onHover { hover = $0 }
+            }
+            .zIndex(opcionesSlash.isEmpty && !haySeleccion ? 0 : 10)
+            .onChange(of: block.text) { _ in
+                indiceSlash = 0
+                slashDescartado = false
+                aplicarAtajo(block.text)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .campoActivo)) { nota in
+                if (nota.object as? CampoTexto)?.bloqueID != block.id { haySeleccion = false }
+            }
     }
 
     // MARK: Menú "/"
 
     private var opcionesSlash: [NoteBlockKind] {
-        guard block.kind == .paragraph, block.text.hasPrefix("/") else { return [] }
+        guard !slashDescartado, block.kind == .paragraph, block.text.hasPrefix("/"), !block.text.contains(" ") || block.text.count < 14 else { return [] }
         let filtro = String(block.text.dropFirst())
         return NoteBlockKind.allCases.filter {
             $0 != .paragraph && (filtro.isEmpty || $0.titulo.localizedCaseInsensitiveContains(filtro))
@@ -327,14 +371,89 @@ private struct BlockRow: View {
 
     private func elegirSlash(_ tipo: NoteBlockKind) {
         block.text = ""
+        block.runs = nil
         switch tipo {
         case .image, .file, .divider:
-            onEspecial(tipo)
+            ops.especial(tipo)
         default:
             block.kind = tipo
-            reenfocar()
+            if tipo != .embed { enfoque.pedir(block.id) }
         }
     }
+
+    // MARK: Acciones del campo de texto
+
+    private var acciones: AccionesCampo {
+        AccionesCampo(
+            enter: { resto, runs in
+                if opcionesSlash.indices.contains(indiceSlash) {
+                    elegirSlash(opcionesSlash[indiceSlash])
+                } else {
+                    ops.enter(resto, runs)
+                }
+            },
+            borrarVacio: ops.borrar,
+            retrocederInicio: {
+                if block.indent > 0 { block.indent -= 1; return true }
+                if block.kind != .paragraph { block.kind = .paragraph; return true }
+                return false
+            },
+            navegar: ops.navegar,
+            slashMover: { delta in
+                let n = opcionesSlash.count
+                guard n > 0 else { return }
+                indiceSlash = min(max(indiceSlash + delta, 0), n - 1)
+            },
+            tab: { delta in block.indent = min(max(block.indent + delta, 0), 4) },
+            escape: { if !opcionesSlash.isEmpty { slashDescartado = true } },
+            seleccion: { haySeleccion = $0 },
+            enlaceSolo: ops.aEnlace,
+            pedirEnlace: { if haySeleccion { pidiendoEnlace = true } },
+            menu: menuBloque
+        )
+    }
+
+    private func menuBloque() -> [ItemMenuBloque] {
+        let convertibles = NoteBlockKind.allCases.filter { $0 != .image && $0 != .file && $0 != .divider }
+        return [
+            ItemMenuBloque(titulo: "Convertir en", icono: "arrow.triangle.2.circlepath",
+                           sub: convertibles.map { tipo in ItemMenuBloque(titulo: tipo.titulo, icono: tipo.icono) { convertir(a: tipo) } }),
+            ItemMenuBloque(titulo: "Aumentar sangría", icono: "increase.indent") { block.indent = min(block.indent + 1, 4) },
+            ItemMenuBloque(titulo: "Reducir sangría", icono: "decrease.indent") { block.indent = max(block.indent - 1, 0) },
+            ItemMenuBloque(titulo: "Mover arriba", icono: "arrow.up") { ops.mover(-1) },
+            ItemMenuBloque(titulo: "Mover abajo", icono: "arrow.down") { ops.mover(1) },
+            ItemMenuBloque(titulo: "Duplicar", icono: "plus.square.on.square", accion: ops.duplicar),
+            ItemMenuBloque(titulo: "Eliminar bloque", icono: "trash", destructivo: true, accion: ops.eliminar)
+        ]
+    }
+
+    private func convertir(a tipo: NoteBlockKind) {
+        if tipo == .embed {
+            block.url = ServicioEnlaces.url(desde: block.text)?.absoluteString
+            block.preview = nil
+            block.text = ""
+            block.runs = nil
+        }
+        block.kind = tipo
+        if tipo != .embed { enfoque.pedir(block.id) }
+    }
+
+    private func campo(_ placeholder: String, fuente: NSFont = .systemFont(ofSize: 14), color: NSColor = .labelColor, tachado: Bool = false) -> some View {
+        CampoRico(
+            texto: $block.text,
+            runs: $block.runs,
+            id: block.id,
+            estilo: EstiloBloque(fuente: fuente, color: color, tachado: tachado),
+            placeholder: placeholder,
+            enfoque: enfoque,
+            slashActivo: !opcionesSlash.isEmpty,
+            acciones: acciones
+        )
+    }
+
+    private func cursiva(_ fuente: NSFont) -> NSFont { NSFontManager.shared.convert(fuente, toHaveTrait: .italicFontMask) }
+
+    // MARK: Contenido
 
     @ViewBuilder
     private var contenido: some View {
@@ -342,13 +461,11 @@ private struct BlockRow: View {
         case .paragraph:
             campo("Escribe algo, o pulsa / para ver los bloques")
         case .heading:
-            campo("Título")
-                .font(.system(size: 21, weight: .bold))
-                .padding(.top, 6)
+            campo("Título", fuente: .systemFont(ofSize: 22, weight: .bold))
+                .padding(.top, 8)
         case .subheading:
-            campo("Título 2")
-                .font(.system(size: 17, weight: .semibold))
-                .padding(.top, 4)
+            campo("Título 2", fuente: .systemFont(ofSize: 18, weight: .semibold))
+                .padding(.top, 5)
         case .callout:
             HStack(alignment: .top, spacing: 10) {
                 Text("💡")
@@ -359,40 +476,31 @@ private struct BlockRow: View {
             .padding(.vertical, 2)
         case .bulletedList:
             HStack(alignment: .top, spacing: 8) {
-                Text("•").padding(.top, 2)
+                Text(["•", "◦", "▪", "•", "◦"][min(block.indent, 4)]).padding(.top, 1).frame(width: 12)
                 campo("Elemento de lista")
             }
         case .numberedList:
             HStack(alignment: .top, spacing: 8) {
                 Text("\(numero).")
                     .foregroundStyle(.secondary)
-                    .padding(.top, 2)
+                    .padding(.top, 1)
                     .frame(minWidth: 18, alignment: .trailing)
                 campo("Elemento de lista")
             }
         case .checklist:
             HStack(alignment: .top, spacing: 8) {
                 CheckboxView(marcado: block.isChecked) { block.isChecked.toggle() }
-                    .padding(.top, 1)
-                campo("Tarea")
-                    .strikethrough(block.isChecked)
-                    .foregroundColor(block.isChecked ? .secondary : .primary)
+                    .padding(.top, 0)
+                campo("Tarea", color: block.isChecked ? .secondaryLabelColor : .labelColor, tachado: block.isChecked)
             }
         case .quote:
-            campo("Cita")
-                .italic()
+            campo("Cita", fuente: cursiva(.systemFont(ofSize: 14)))
                 .padding(.leading, 12)
                 .overlay(alignment: .leading) {
                     Rectangle().fill(Color.secondary.opacity(0.6)).frame(width: 3)
                 }
         case .code:
-            TextField("Código", text: $block.text, axis: .vertical)
-                .textFieldStyle(.plain)
-                .font(.system(.body, design: .monospaced))
-                .focused(enfoque, equals: block.id)
-                .modifier(BorrarVacioModifier(texto: block.text, accion: onBorrar))
-                .padding(10)
-                .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.06)))
+            bloqueCodigo
         case .image:
             if let data = block.imageData, let imagen = NSImage(data: data) {
                 Image(nsImage: imagen)
@@ -401,37 +509,79 @@ private struct BlockRow: View {
                     .frame(maxHeight: 380)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .padding(.vertical, 4)
+                    .contextMenu { Button("Eliminar imagen", role: .destructive, action: ops.eliminar) }
             } else {
                 Text("Imagen no disponible").foregroundStyle(.secondary)
             }
         case .file:
-            FileBlockView(block: $block, onQuitar: onEliminar)
+            FileBlockView(block: $block, onQuitar: ops.eliminar)
+        case .embed:
+            EnlaceBlockView(block: $block, onQuitar: ops.eliminar) {
+                block.kind = .paragraph
+                block.text = block.url ?? ""
+                block.url = nil
+                block.preview = nil
+            }
         case .divider:
-            Divider().padding(.vertical, 10)
+            Divider()
+                .padding(.vertical, 10)
+                .contextMenu { Button("Eliminar divisor", role: .destructive, action: ops.eliminar) }
         }
     }
 
-    private func campo(_ placeholder: String) -> some View {
-        TextField(placeholder, text: $block.text)
-            .textFieldStyle(.plain)
-            .focused(enfoque, equals: block.id)
-            .onSubmit {
-                if let primero = opcionesSlash.first { elegirSlash(primero) } else { onEnter() }
+    // MARK: Código
+
+    private var bloqueCodigo: some View {
+        let oscuro = esquema == .dark
+        let detectado = Resaltador.detectar(block.text)
+        let lenguaje = block.language ?? detectado
+        let fuente = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                Menu {
+                    Button("Automático") { block.language = nil }
+                    Divider()
+                    ForEach(Resaltador.lenguajes) { l in
+                        Button(l.nombre) { block.language = l.id }
+                    }
+                } label: {
+                    Text(block.language == nil ? "Auto · \(Resaltador.nombre(de: lenguaje))" : Resaltador.nombre(de: lenguaje))
+                        .font(.caption)
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                Spacer()
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(block.text, forType: .string)
+                } label: {
+                    Label("Copiar", systemImage: "doc.on.doc").font(.caption)
+                }
+                .buttonStyle(.plain)
             }
-            .onChange(of: block.text) { aplicarAtajo($0) }
-            .modifier(BorrarVacioModifier(texto: block.text, accion: onBorrar))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+
+            CampoRico(
+                texto: $block.text,
+                runs: $block.runs,
+                id: block.id,
+                estilo: EstiloBloque(fuente: fuente, color: Resaltador.color(nil, oscuro: oscuro)),
+                placeholder: "Escribe o pega tu código",
+                codigo: .init(lenguaje: lenguaje, oscuro: oscuro),
+                enfoque: enfoque,
+                acciones: acciones
+            )
+            .padding(12)
+        }
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: Resaltador.fondo(oscuro: oscuro))))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.08), lineWidth: 0.5))
+        .padding(.vertical, 2)
     }
 
-    private func convertir(a tipo: NoteBlockKind) {
-        block.kind = tipo
-        if tipo == .divider { block.text = "" }
-        reenfocar()
-    }
-
-    private func reenfocar() {
-        let id = block.id
-        DispatchQueue.main.async { enfoque.wrappedValue = id }
-    }
+    // MARK: Atajos de Markdown
 
     private func aplicarAtajo(_ texto: String) {
         guard block.kind == .paragraph else { return }
@@ -442,55 +592,166 @@ private struct BlockRow: View {
         for (prefijo, tipo) in atajos where texto.hasPrefix(prefijo) {
             block.kind = tipo
             block.text = String(texto.dropFirst(prefijo.count))
-            reenfocar()
+            block.runs = nil
+            enfoque.pedir(block.id)
             return
         }
     }
 }
 
+// MARK: - Menú "/"
+
 private struct SlashMenu: View {
     let opciones: [NoteBlockKind]
+    let seleccionado: Int
     let onElegir: (NoteBlockKind) -> Void
+    let onPasar: (Int) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(opciones.prefix(8).enumerated()), id: \.element) { indice, tipo in
-                Button { onElegir(tipo) } label: {
-                    Label(tipo.titulo, systemImage: tipo.icono)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(indice == 0 ? Color.accentColor.opacity(0.15) : .clear)
-                        .contentShape(Rectangle())
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(opciones.enumerated()), id: \.element) { indice, tipo in
+                        Button { onElegir(tipo) } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: tipo.icono)
+                                    .frame(width: 26, height: 26)
+                                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.08)))
+                                Text(tipo.titulo).lineLimit(1)
+                                Spacer(minLength: 0)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(RoundedRectangle(cornerRadius: 6).fill(indice == seleccionado ? Color.accentColor.opacity(0.18) : .clear))
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .id(indice)
+                        .onHover { if $0 { onPasar(indice) } }
+                    }
                 }
-                .buttonStyle(.plain)
+                .padding(4)
+            }
+            .onChange(of: seleccionado) { nuevo in
+                withAnimation(.easeOut(duration: 0.1)) { proxy.scrollTo(nuevo, anchor: nil) }
             }
         }
-        .padding(4)
-        .frame(width: 250)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .windowBackgroundColor)))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.15), lineWidth: 0.5))
-        .shadow(color: .black.opacity(0.2), radius: 10, y: 4)
+        .frame(width: 290)
+        .frame(height: min(CGFloat(opciones.count) * 36 + 8, 300))
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .windowBackgroundColor)))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.primary.opacity(0.15), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.22), radius: 12, y: 5)
     }
 }
 
-/// Borrar en un bloque vacío lo convierte en texto o lo elimina (macOS 14+).
-private struct BorrarVacioModifier: ViewModifier {
-    let texto: String
-    let accion: () -> Void
+// MARK: - Barra de formato
 
-    func body(content: Content) -> some View {
-        if #available(macOS 14.0, *) {
-            content.onKeyPress(.delete) {
-                if texto.isEmpty {
-                    accion()
-                    return .handled
-                }
-                return .ignored
+private struct BarraFormato: View {
+    @Binding var pidiendoEnlace: Bool
+    @State private var mostrandoColores = false
+    @State private var direccion = ""
+
+    private let control = ControladorFormato.shared
+
+    var body: some View {
+        HStack(spacing: 2) {
+            boton("bold", "Negrita  ⌘B") { control.alternar(.tfBold) }
+            boton("italic", "Cursiva  ⌘I") { control.alternar(.tfItalic) }
+            boton("underline", "Subrayado  ⌘U") { control.alternar(.tfUnderline) }
+            boton("strikethrough", "Tachado  ⌘⇧X") { control.alternar(.tfStrike) }
+            boton("chevron.left.forwardslash.chevron.right", "Código en línea  ⌘E") { control.alternar(.tfCode) }
+            Divider().frame(height: 16).padding(.horizontal, 4)
+            boton("paintpalette", "Color y resaltado") { mostrandoColores.toggle() }
+                .popover(isPresented: $mostrandoColores, arrowEdge: .bottom) { paleta }
+            boton("link", "Enlace  ⌘K") {
+                direccion = control.enlaceActual ?? ""
+                pidiendoEnlace = true
             }
-        } else {
-            content
+            .popover(isPresented: $pidiendoEnlace, arrowEdge: .bottom) { panelEnlace }
+            boton("eraser", "Quitar formato") { control.limpiar() }
         }
+        .padding(4)
+        .background(RoundedRectangle(cornerRadius: 9).fill(.regularMaterial))
+        .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.primary.opacity(0.15), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
+        .fixedSize()
+        .onChange(of: pidiendoEnlace) { abierto in
+            if abierto && direccion.isEmpty { direccion = control.enlaceActual ?? "" }
+        }
+    }
+
+    private func boton(_ icono: String, _ ayuda: String, _ accion: @escaping () -> Void) -> some View {
+        Button(action: accion) {
+            Image(systemName: icono)
+                .font(.system(size: 13, weight: .medium))
+                .frame(width: 28, height: 26)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(ayuda)
+    }
+
+    private var paleta: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Color del texto").font(.caption).foregroundStyle(.secondary)
+            LazyVGrid(columns: Array(repeating: GridItem(.fixed(30), spacing: 6), count: 5), spacing: 6) {
+                Button { control.colorear(nil, fondo: false); mostrandoColores = false } label: {
+                    Text("A").frame(width: 30, height: 30)
+                        .background(RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.3)))
+                }
+                .buttonStyle(.plain)
+                .help("Predeterminado")
+                ForEach(NotaColor.allCases) { color in
+                    Button { control.colorear(color.rawValue, fondo: false); mostrandoColores = false } label: {
+                        Text("A").fontWeight(.semibold).foregroundStyle(color.swiftUI).frame(width: 30, height: 30)
+                            .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.06)))
+                    }
+                    .buttonStyle(.plain)
+                    .help(color.titulo)
+                }
+            }
+            Text("Resaltado").font(.caption).foregroundStyle(.secondary)
+            LazyVGrid(columns: Array(repeating: GridItem(.fixed(30), spacing: 6), count: 5), spacing: 6) {
+                Button { control.colorear(nil, fondo: true); mostrandoColores = false } label: {
+                    Image(systemName: "nosign").frame(width: 30, height: 30)
+                        .background(RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.3)))
+                }
+                .buttonStyle(.plain)
+                .help("Sin resaltado")
+                ForEach(NotaColor.allCases) { color in
+                    Button { control.colorear(color.rawValue, fondo: true); mostrandoColores = false } label: {
+                        RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: color.fondo)).frame(width: 30, height: 30)
+                    }
+                    .buttonStyle(.plain)
+                    .help(color.titulo)
+                }
+            }
+        }
+        .padding(14)
+    }
+
+    private var panelEnlace: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Enlace").font(.headline)
+            TextField("https://…", text: $direccion)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 260)
+                .onSubmit(aplicar)
+            HStack {
+                Button("Quitar enlace") { control.enlazar(nil); pidiendoEnlace = false }
+                Spacer()
+                Button("Aplicar", action: aplicar)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(ServicioEnlaces.url(desde: direccion) == nil)
+            }
+        }
+        .padding(14)
+    }
+
+    private func aplicar() {
+        guard let url = ServicioEnlaces.url(desde: direccion) else { return }
+        control.enlazar(url.absoluteString)
+        pidiendoEnlace = false
     }
 }
 

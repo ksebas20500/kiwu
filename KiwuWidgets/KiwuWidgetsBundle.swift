@@ -2,7 +2,7 @@ import WidgetKit
 import SwiftUI
 
 @main
-struct TaskFlowWidgetsBundle: WidgetBundle {
+struct KiwuWidgetsBundle: WidgetBundle {
     var body: some Widget {
         ProximosDeberesWidget()
         NotasRapidasWidget()

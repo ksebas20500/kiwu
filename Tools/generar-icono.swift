@@ -1,7 +1,7 @@
 import AppKit
 import CoreGraphics
 
-// Dibuja el icono de TaskFlow a un tamaño dado (lienzo lógico de 1024 px).
+// Dibuja el icono de Kiwu a un tamaño dado (lienzo lógico de 1024 px).
 func dibujar(lado: Int) -> Data {
     let escala = CGFloat(lado) / 1024
     let espacio = CGColorSpace(name: CGColorSpace.sRGB)!

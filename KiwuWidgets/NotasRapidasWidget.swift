@@ -73,7 +73,7 @@ struct NotasWidgetView: View {
         }
     }
 
-    private var nuevaNota: URL { TaskFlowShared.urlNuevaNota(cuaderno: entrada.cuaderno) }
+    private var nuevaNota: URL { KiwuShared.urlNuevaNota(cuaderno: entrada.cuaderno) }
     private var visibles: [WidgetNota] { Array(entrada.notas.prefix(maximo)) }
 
     var body: some View {
@@ -88,7 +88,7 @@ struct NotasWidgetView: View {
             }
 
             if !entrada.hayDatos {
-                Text("Abre TaskFlow para sincronizar tus notas")
+                Text("Abre Kiwu para sincronizar tus notas")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else if visibles.isEmpty {
@@ -109,7 +109,7 @@ struct NotasWidgetView: View {
             contenido.widgetURL(nuevaNota)
         } else {
             // Los enlaces de cada nota y del botón tienen prioridad; el resto del widget abre Notas.
-            contenido.widgetURL(TaskFlowShared.urlModulo("notas"))
+            contenido.widgetURL(KiwuShared.urlModulo("notas"))
         }
     }
 
@@ -156,7 +156,7 @@ struct NotasWidgetView: View {
         if familia == .systemSmall {
             detalle
         } else {
-            Link(destination: TaskFlowShared.urlNota(nota.id)) { detalle }
+            Link(destination: KiwuShared.urlNota(nota.id)) { detalle }
         }
     }
 }

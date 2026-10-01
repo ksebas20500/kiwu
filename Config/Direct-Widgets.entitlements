@@ -6,7 +6,7 @@
 	<true/>
 	<key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>
 	<array>
-		<string>/Library/Application Support/TaskFlow/</string>
+		<string>/Library/Application Support/Kiwu/</string>
 	</array>
 </dict>
 </plist>

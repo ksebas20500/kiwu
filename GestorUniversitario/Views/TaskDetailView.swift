@@ -5,11 +5,13 @@ struct TaskDetailView: View {
     let materias: [Materia]
     let service: DeberService
     let onDelete: () -> Void
+    var onCerrar: (() -> Void)? = nil
 
     @StateObject private var model: NoteEditorModel
     @State private var mostrandoFecha = false
 
-    init(deber: Deber, materias: [Materia], service: DeberService, onDelete: @escaping () -> Void) {
+    init(deber: Deber, materias: [Materia], service: DeberService, onDelete: @escaping () -> Void, onCerrar: (() -> Void)? = nil) {
+        self.onCerrar = onCerrar
         self.deber = deber
         self.materias = materias
         self.service = service
@@ -87,6 +89,15 @@ struct TaskDetailView: View {
             }
             .menuStyle(.borderlessButton)
             .fixedSize()
+
+            if let onCerrar {
+                Button(action: onCerrar) {
+                    Image(systemName: "xmark")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Cerrar el panel")
+            }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)

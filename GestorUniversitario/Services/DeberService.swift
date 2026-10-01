@@ -100,8 +100,24 @@ struct DeberService {
         if reprogramar { Task { await reminders.reprogramar(deber) } }
     }
 
+    /// Mueve la tarea a una columna del flujo (Por hacer, En curso, Hecho).
+    func mover(_ deber: Deber, a columna: ColumnaFlujo) {
+        guard deber.columna != columna else { return }
+        switch columna {
+        case .porHacer, .enCurso:
+            deber.estado = columna.rawValue
+            deber.completado = false
+            deber.fechaCompletado = nil
+        case .hecho:
+            deber.completado = true
+            deber.fechaCompletado = .now
+        }
+        guardar(deber)
+    }
+
     func marcar(_ deber: Deber, completado: Bool) {
         deber.completado = completado
+        if !completado { deber.estado = deber.estado == ColumnaFlujo.enCurso.rawValue ? deber.estado : 0 }
         deber.fechaCompletado = completado ? .now : nil
         guardar(deber)
     }

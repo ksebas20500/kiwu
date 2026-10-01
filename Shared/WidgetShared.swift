@@ -2,7 +2,7 @@ import Foundation
 
 /// Constantes y datos compartidos entre la app y la extensión de widgets.
 /// Este archivo se compila en ambos targets.
-enum TaskFlowShared {
+enum KiwuShared {
     /// App Group con prefijo del equipo (`<TeamID>.com.ksebas.taskflow`). macOS solo deja al widget
     /// leer los datos de la app con este formato. El valor real llega desde el Info.plist de cada target.
     static let appGroup: String = {
@@ -12,7 +12,7 @@ enum TaskFlowShared {
         }
         return "group.com.ksebas.taskflow"
     }()
-    static let esquemaURL = "taskflow"
+    static let esquemaURL = "kiwu"
 
     /// Carpeta compartida entre la app y los widgets.
     ///
@@ -24,7 +24,7 @@ enum TaskFlowShared {
         #if DIRECT_DISTRIBUTION
         guard let usuario = getpwuid(getuid()) else { return nil }
         let carpeta = URL(fileURLWithPath: String(cString: usuario.pointee.pw_dir), isDirectory: true)
-            .appendingPathComponent("Library/Application Support/TaskFlow", isDirectory: true)
+            .appendingPathComponent("Library/Application Support/Kiwu", isDirectory: true)
         try? FileManager.default.createDirectory(at: carpeta, withIntermediateDirectories: true)
         return carpeta
         #else
@@ -135,8 +135,8 @@ struct WidgetSnapshot: Codable {
 /// el widget la lee y deja en una cola los deberes que el usuario completa,
 /// para que la app los aplique a su base de datos.
 enum AlmacenWidget {
-    private static var archivoSnapshot: URL? { TaskFlowShared.carpeta?.appendingPathComponent("widget-snapshot.json") }
-    private static var archivoCola: URL? { TaskFlowShared.carpeta?.appendingPathComponent("widget-completados.json") }
+    private static var archivoSnapshot: URL? { KiwuShared.carpeta?.appendingPathComponent("widget-snapshot.json") }
+    private static var archivoCola: URL? { KiwuShared.carpeta?.appendingPathComponent("widget-completados.json") }
 
     // MARK: Instantánea
 
@@ -192,7 +192,7 @@ enum AlmacenWidget {
 
     // MARK: Mes mostrado en el widget de calendario
 
-    private static var archivoMes: URL? { TaskFlowShared.carpeta?.appendingPathComponent("widget-calendario-mes.txt") }
+    private static var archivoMes: URL? { KiwuShared.carpeta?.appendingPathComponent("widget-calendario-mes.txt") }
 
     /// Meses de diferencia respecto al mes actual que muestra el widget de calendario.
     static var desplazamientoMes: Int {

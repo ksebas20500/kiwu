@@ -17,6 +17,9 @@ struct ContentView: View {
     @State private var sidebar: SidebarItem = .hoy
     @State private var deberSeleccionado: UUID?
     @State private var vistaMateria: VistaMateria = .tareas
+    @AppStorage("vistaTareas") private var vistaTareas: VistaTareas = .lista
+    @ObservedObject private var ajustes = AjustesStore.shared
+    @State private var refresco = 0
     @State private var mostrandoNuevaMateria = false
     @State private var materiaAEliminar: Materia?
 
@@ -95,6 +98,7 @@ struct ContentView: View {
     // MARK: Vista
 
     var body: some View {
+        let _ = refresco
         HStack(spacing: 0) {
             SidebarView(
                 seleccion: Binding(get: { sidebar }, set: { sidebar = $0; deberSeleccionado = nil; vistaMateria = .tareas }),
@@ -123,31 +127,77 @@ struct ContentView: View {
             } else if let materia = materiaActual, vistaMateria == .archivos {
                 CarpetaMateriaView(materia: materia, vista: $vistaMateria, service: materiaService)
             } else {
-                TaskListView(
-                    titulo: titulo,
-                    pendientes: pendientes,
-                    completados: completados,
-                    materias: Array(materias),
-                    materiaFija: materiaActual,
-                    mostrarMateria: materiaActual == nil,
-                    permiteCrear: sidebar != .completadas,
-                    seleccion: $deberSeleccionado,
-                    service: deberService,
-                    onCrear: crear,
-                    onEliminar: eliminar,
-                    vista: materiaActual == nil ? nil : $vistaMateria,
-                    carpetaAlerta: materiaActual.map { $0.bookmarkCarpeta != nil && !$0.carpetaDisponible } ?? false
-                )
-                .frame(width: 360)
-                Divider()
-                if let deber = deberActual {
-                    detalle(deber)
+                if vistaTareas == .tablero {
+                    TaskBoardView(
+                        titulo: titulo,
+                        pendientes: pendientes,
+                        completados: completados,
+                        materias: Array(materias),
+                        materiaFija: materiaActual,
+                        mostrarMateria: materiaActual == nil,
+                        permiteCrear: sidebar != .completadas,
+                        seleccion: $deberSeleccionado,
+                        vistaTareas: $vistaTareas,
+                        service: deberService,
+                        onCrear: crear,
+                        onEliminar: eliminar,
+                        vista: materiaActual == nil ? nil : $vistaMateria,
+                        carpetaAlerta: materiaActual.map { $0.bookmarkCarpeta != nil && !$0.carpetaDisponible } ?? false
+                    )
+                    if let deber = deberActual {
+                        Divider()
+                        detalle(deber, cerrable: true).frame(width: 380)
+                    }
                 } else {
-                    EmptyStateView(titulo: "Selecciona una tarea", icono: "checklist")
+                    TaskListView(
+                        titulo: titulo,
+                        pendientes: pendientes,
+                        completados: completados,
+                        materias: Array(materias),
+                        materiaFija: materiaActual,
+                        mostrarMateria: materiaActual == nil,
+                        permiteCrear: sidebar != .completadas,
+                        seleccion: $deberSeleccionado,
+                        vistaTareas: $vistaTareas,
+                        service: deberService,
+                        onCrear: crear,
+                        onEliminar: eliminar,
+                        vista: materiaActual == nil ? nil : $vistaMateria,
+                        carpetaAlerta: materiaActual.map { $0.bookmarkCarpeta != nil && !$0.carpetaDisponible } ?? false
+                    )
+                    .frame(width: 360)
+                    Divider()
+                    if let deber = deberActual {
+                        detalle(deber)
+                    } else {
+                        EmptyStateView(titulo: "Selecciona una tarea", icono: "checklist")
+                    }
                 }
             }
         }
         .frame(minWidth: 1000, minHeight: 620)
+        .onReceive(NotificationCenter.default.publisher(for: .NSManagedObjectContextObjectsDidChange,
+                                                        object: PersistenceController.shared.container.viewContext)) { nota in
+            // Los FetchRequest no avisan cuando solo cambia un atributo: sin esto el tablero se quedaba desfasado.
+            let claves: Set<String> = ["completado", "estado", "fechaEntrega", "materia", "fechaCompletado"]
+            let cambiados = (nota.userInfo?[NSUpdatedObjectsKey] as? Set<NSManagedObject>) ?? []
+            if cambiados.contains(where: { ($0 as? Deber).map { !Set($0.changedValues().keys).isDisjoint(with: claves) } ?? false }) {
+                refresco += 1
+            }
+        }
+        .onReceive(ajustes.acciones) { accion in
+            switch accion {
+            case .vistaLista: vistaTareas = .lista
+            case .vistaTablero: vistaTareas = .tablero
+            case .irHoy: sidebar = .hoy; deberSeleccionado = nil; vistaMateria = .tareas
+            case .irCalendario: sidebar = .calendario; deberSeleccionado = nil
+            case .nuevaTarea where sidebar == .calendario || vistaMateria == .archivos:
+                sidebar = materiaActual.map { .materia($0.id) } ?? .todos
+                vistaMateria = .tareas
+                DispatchQueue.main.async { ajustes.disparar(.nuevaTarea) }
+            default: break
+            }
+        }
         .onReceive(enrutador.$diaCalendario.compactMap { $0 }) { _ in
             sidebar = .calendario
             deberSeleccionado = nil
@@ -181,12 +231,13 @@ struct ContentView: View {
         }
     }
 
-    private func detalle(_ deber: Deber) -> some View {
+    private func detalle(_ deber: Deber, cerrable: Bool = false) -> some View {
         TaskDetailView(
             deber: deber,
             materias: Array(materias),
             service: deberService,
-            onDelete: { eliminar(deber) }
+            onDelete: { eliminar(deber) },
+            onCerrar: cerrable ? { deberSeleccionado = nil } : nil
         )
         .id(deber.id)
     }

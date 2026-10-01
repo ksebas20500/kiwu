@@ -1,4 +1,5 @@
 import CoreData
+import SQLite3
 
 final class PersistenceController {
     static let shared = PersistenceController()
@@ -30,29 +31,7 @@ final class PersistenceController {
         container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
     }
 
-    /// Carpeta fija de los datos (no depende del nombre del ejecutable). Si solo existe la carpeta
-    /// antigua `GestorUniversitario` (versiones anteriores al cambio de nombre), se copian sus bases
-    /// a la nueva sin borrar nada.
-    private static func directorioDeDatos() -> URL {
-        let fm = FileManager.default
-        let base = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let nuevo = base.appendingPathComponent("TaskFlow", isDirectory: true)
-        let antiguo = base.appendingPathComponent("GestorUniversitario", isDirectory: true)
-        try? fm.createDirectory(at: nuevo, withIntermediateDirectories: true)
-
-        let tareasNuevas = nuevo.appendingPathComponent("GestorUniversitario.sqlite")
-        let tareasAntiguas = antiguo.appendingPathComponent("GestorUniversitario.sqlite")
-        if !fm.fileExists(atPath: tareasNuevas.path), fm.fileExists(atPath: tareasAntiguas.path) {
-            for nombre in ["GestorUniversitario.sqlite", "GestorUniversitario.sqlite-wal", "GestorUniversitario.sqlite-shm",
-                           "Notas.sqlite", "Notas.sqlite-wal", "Notas.sqlite-shm"] {
-                let origen = antiguo.appendingPathComponent(nombre)
-                if fm.fileExists(atPath: origen.path) {
-                    try? fm.copyItem(at: origen, to: nuevo.appendingPathComponent(nombre))
-                }
-            }
-        }
-        return nuevo
-    }
+    private static func directorioDeDatos() -> URL { CarpetaDatos.url }
 
     func save() {
         let context = container.viewContext
@@ -93,6 +72,7 @@ final class PersistenceController {
             attribute("recordatorioAntesEnHoras", .integer16AttributeType, optional: false),
             attribute("fechaCompletado", .dateAttributeType, optional: true),
             attribute("contenidoNota", .binaryDataAttributeType, optional: false),
+            attribute("estado", .integer16AttributeType, optional: false, defaultValue: 0),
             attribute("fechaCreacion", .dateAttributeType, optional: false),
             attribute("fechaActualizacion", .dateAttributeType, optional: false)
         ]
@@ -167,11 +147,71 @@ final class PersistenceController {
         return model
     }
 
-    private static func attribute(_ name: String, _ type: NSAttributeType, optional: Bool) -> NSAttributeDescription {
+    private static func attribute(_ name: String, _ type: NSAttributeType, optional: Bool, defaultValue: Any? = nil) -> NSAttributeDescription {
         let attribute = NSAttributeDescription()
+        attribute.defaultValue = defaultValue
         attribute.name = name
         attribute.attributeType = type
         attribute.isOptional = optional
         return attribute
+    }
+}
+
+/// Carpeta fija de los datos de la app (`Application Support/Kiwu`).
+///
+/// Al abrir Kiwu se copian, sin borrar nada, los datos de las versiones anteriores: primero de `TaskFlow`
+/// (el nombre anterior de la app) y, si no existe, de `GestorUniversitario`. Se copia la carpeta entera:
+/// bases de tareas y notas, y la imagen de fondo si la había. Si Kiwu ya tenía bases pero están vacías
+/// (por ejemplo, de una primera apertura que no encontró los datos), se apartan y se copian las antiguas.
+enum CarpetaDatos {
+    static let url: URL = preparar(base: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0])
+
+    private static let baseDeTareas = "GestorUniversitario.sqlite"
+
+    static func preparar(base: URL) -> URL {
+        let fm = FileManager.default
+        let nuevo = base.appendingPathComponent("Kiwu", isDirectory: true)
+        try? fm.createDirectory(at: nuevo, withIntermediateDirectories: true)
+
+        let tareasNuevas = nuevo.appendingPathComponent(baseDeTareas)
+        if fm.fileExists(atPath: tareasNuevas.path), tieneDatos(nuevo) { return nuevo }
+
+        for anterior in ["TaskFlow", "GestorUniversitario"] {
+            let origen = base.appendingPathComponent(anterior, isDirectory: true)
+            guard fm.fileExists(atPath: origen.appendingPathComponent(baseDeTareas).path), tieneDatos(origen) else { continue }
+
+            // Aparta las bases vacías de Kiwu (no se borran) para que no se mezclen con las copiadas.
+            let apartadas = nuevo.appendingPathComponent("vacias-\(Int(Date().timeIntervalSince1970))", isDirectory: true)
+            for nombre in (try? fm.contentsOfDirectory(atPath: nuevo.path)) ?? [] where nombre.contains(".sqlite") {
+                try? fm.createDirectory(at: apartadas, withIntermediateDirectories: true)
+                try? fm.moveItem(at: nuevo.appendingPathComponent(nombre), to: apartadas.appendingPathComponent(nombre))
+            }
+            for nombre in (try? fm.contentsOfDirectory(atPath: origen.path)) ?? [] where !nombre.hasPrefix(".") {
+                let destino = nuevo.appendingPathComponent(nombre)
+                if !fm.fileExists(atPath: destino.path) {
+                    try? fm.copyItem(at: origen.appendingPathComponent(nombre), to: destino)
+                }
+            }
+            break
+        }
+        return nuevo
+    }
+
+    /// true si la carpeta tiene alguna lista, tarea, nota o página guardada.
+    private static func tieneDatos(_ carpeta: URL) -> Bool {
+        let consultas = [(baseDeTareas, "SELECT COUNT(*) FROM ZMATERIA"),
+                         (baseDeTareas, "SELECT COUNT(*) FROM ZDEBER"),
+                         ("Notas.sqlite", "SELECT COUNT(*) FROM ZPAGINA")]
+        return consultas.contains { contar(carpeta.appendingPathComponent($0.0), $0.1) > 0 }
+    }
+
+    private static func contar(_ archivo: URL, _ sql: String) -> Int {
+        var db: OpaquePointer?
+        guard sqlite3_open_v2(archivo.path, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else { sqlite3_close(db); return 0 }
+        defer { sqlite3_close(db) }
+        var consulta: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &consulta, nil) == SQLITE_OK else { return 0 }
+        defer { sqlite3_finalize(consulta) }
+        return sqlite3_step(consulta) == SQLITE_ROW ? Int(sqlite3_column_int(consulta, 0)) : 0
     }
 }

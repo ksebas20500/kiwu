@@ -16,7 +16,33 @@ extension NSManagedObject {
     var estaEliminado: Bool { isDeleted || managedObjectContext == nil }
 }
 
+/// Columnas del flujo de trabajo de una tarea.
+enum ColumnaFlujo: Int16, CaseIterable, Identifiable {
+    case porHacer = 0, enCurso = 1, hecho = 2
+    var id: Int16 { rawValue }
+
+    var titulo: String {
+        switch self {
+        case .porHacer: return "Por hacer"
+        case .enCurso: return "En curso"
+        case .hecho: return "Hecho"
+        }
+    }
+
+    var icono: String {
+        switch self {
+        case .porHacer: return "circle"
+        case .enCurso: return "circle.lefthalf.filled"
+        case .hecho: return "checkmark.circle.fill"
+        }
+    }
+}
+
 extension Deber {
+    var columna: ColumnaFlujo {
+        completado ? .hecho : (estado == ColumnaFlujo.enCurso.rawValue ? .enCurso : .porHacer)
+    }
+
     var vencido: Bool { !completado && (fechaEntrega.map { $0 < .now } ?? false) }
 }
 
@@ -49,6 +75,7 @@ extension NoteBlockKind {
         case .image: return "Imagen"
         case .file: return "Archivo adjunto (PDF, Word)"
         case .divider: return "Divisor"
+        case .embed: return "Enlace con vista previa (web o vídeo)"
         }
     }
 
@@ -66,6 +93,7 @@ extension NoteBlockKind {
         case .image: return "photo"
         case .file: return "paperclip"
         case .divider: return "minus"
+        case .embed: return "link"
         }
     }
 }

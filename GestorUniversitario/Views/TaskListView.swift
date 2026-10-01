@@ -9,6 +9,7 @@ struct TaskListView: View {
     let mostrarMateria: Bool
     let permiteCrear: Bool
     @Binding var seleccion: UUID?
+    @Binding var vistaTareas: VistaTareas
     let service: DeberService
     let onCrear: (String, Materia) -> Void
     let onEliminar: (Deber) -> Void
@@ -18,6 +19,8 @@ struct TaskListView: View {
     @State private var nuevoTitulo = ""
     @State private var destinoID: UUID?
     @State private var completadosVisibles = true
+    @FocusState private var campoEnfocado: Bool
+    @ObservedObject private var ajustes = AjustesStore.shared
 
     private var destino: Materia? {
         materiaFija ?? materias.first { $0.id == destinoID } ?? materias.first
@@ -25,11 +28,16 @@ struct TaskListView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(titulo)
-                .font(.system(size: 26, weight: .bold))
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, vista == nil ? 12 : 8)
+            HStack(spacing: 8) {
+                Text(titulo)
+                    .font(.system(size: 26, weight: .bold))
+                    .lineLimit(1)
+                Spacer()
+                SelectorVistaTareas(vista: $vistaTareas)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, vista == nil ? 12 : 8)
 
             if let vista {
                 VistaMateriaPicker(vista: vista, carpetaAlerta: carpetaAlerta)
@@ -74,6 +82,7 @@ struct TaskListView: View {
                 }
             }
         }
+        .onReceive(ajustes.acciones) { if $0 == .nuevaTarea && permiteCrear { campoEnfocado = true } }
     }
 
     private var campoNuevaTarea: some View {
@@ -82,6 +91,7 @@ struct TaskListView: View {
                 .foregroundStyle(.secondary)
             TextField(destino == nil ? "Crea una lista primero" : "Añadir tarea", text: $nuevoTitulo)
                 .textFieldStyle(.plain)
+                .focused($campoEnfocado)
                 .onSubmit(crear)
                 .disabled(destino == nil)
 
@@ -142,6 +152,14 @@ private struct TaskRow: View {
                 Text(deber.titulo)
                     .lineLimit(1)
                     .strikethrough(deber.completado)
+                if deber.columna == .enCurso {
+                    Text("En curso")
+                        .font(.caption2.weight(.medium))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.accentColor.opacity(0.18)))
+                        .foregroundColor(.accentColor)
+                }
                 Spacer(minLength: 8)
                 if mostrarMateria {
                     Text(deber.materia.nombre)
@@ -160,6 +178,10 @@ private struct TaskRow: View {
             .background(RoundedRectangle(cornerRadius: 8).fill(seleccionado ? Color.primary.opacity(0.08) : .clear))
             .contentShape(Rectangle())
             .contextMenu {
+                ForEach(ColumnaFlujo.allCases.filter { $0 != deber.columna }) { c in
+                    Button("Mover a «\(c.titulo)»") { service.mover(deber, a: c) }
+                }
+                Divider()
                 Button("Eliminar tarea", role: .destructive, action: onEliminar)
             }
         }
