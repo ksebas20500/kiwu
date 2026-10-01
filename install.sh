@@ -1,13 +1,13 @@
 #!/bin/bash
 # Instala la última versión de Kiwu en /Applications.
 #
-#   curl -fsSL https://raw.githubusercontent.com/ksebas20500/taskflow/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/ksebas20500/kiwu/main/install.sh | bash
 #
 # Descarga el .dmg de la última versión publicada, comprueba su suma de verificación, copia la app
 # y quita la marca de cuarentena (la app no está notarizada por Apple, ver el README).
 set -euo pipefail
 
-REPO="ksebas20500/taskflow"
+REPO="ksebas20500/kiwu"
 BASE="https://github.com/$REPO/releases/latest/download"
 DESTINO="${TASKFLOW_DESTINO:-/Applications}"
 

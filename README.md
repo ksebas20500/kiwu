@@ -10,15 +10,15 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ksebas20500/taskflow/releases/latest/download/Kiwu.dmg"><b>⬇️ Descargar para macOS</b></a>
+  <a href="https://github.com/ksebas20500/kiwu/releases/latest/download/Kiwu.dmg"><b>⬇️ Descargar para macOS</b></a>
   &nbsp;·&nbsp;
-  <a href="https://github.com/ksebas20500/taskflow/releases">Todas las versiones</a>
+  <a href="https://github.com/ksebas20500/kiwu/releases">Todas las versiones</a>
   &nbsp;·&nbsp;
   <a href="#instalación-sin-compilar">Instalación</a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/ksebas20500/taskflow/releases/latest"><img alt="Última versión" src="https://img.shields.io/github/v/release/ksebas20500/taskflow?label=versi%C3%B3n&color=E8705A"></a>
+  <a href="https://github.com/ksebas20500/kiwu/releases/latest"><img alt="Última versión" src="https://img.shields.io/github/v/release/ksebas20500/kiwu?label=versi%C3%B3n&color=E8705A"></a>
   <img alt="macOS 13 o superior" src="https://img.shields.io/badge/macOS-13%2B-555?logo=apple&logoColor=white">
   <img alt="Hecho con SwiftUI" src="https://img.shields.io/badge/SwiftUI-Core%20Data%20%C2%B7%20WidgetKit-F05138?logo=swift&logoColor=white">
   <a href="LICENSE"><img alt="Licencia MIT" src="https://img.shields.io/badge/licencia-MIT-2EA44F"></a>
@@ -115,12 +115,12 @@ No hay servidor, cuentas, publicidad ni analíticas. La app solo se conecta a In
 
 ## Instalación (sin compilar)
 
-Descarga la última versión desde [**Releases**](https://github.com/ksebas20500/taskflow/releases/latest) (enlace directo al instalador: [`Kiwu.dmg`](https://github.com/ksebas20500/taskflow/releases/latest/download/Kiwu.dmg)). Cada versión conserva su propio `.dmg` en la [lista de versiones](https://github.com/ksebas20500/taskflow/releases).
+Descarga la última versión desde [**Releases**](https://github.com/ksebas20500/kiwu/releases/latest) (enlace directo al instalador: [`Kiwu.dmg`](https://github.com/ksebas20500/kiwu/releases/latest/download/Kiwu.dmg)). Cada versión conserva su propio `.dmg` en la [lista de versiones](https://github.com/ksebas20500/kiwu/releases).
 
 **Opción 1: un solo comando** (recomendada; comprueba la descarga y deja la app lista para abrir)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ksebas20500/taskflow/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ksebas20500/kiwu/main/install.sh | bash
 ```
 
 **Opción 2: a mano.** Descarga `Kiwu.dmg`, ábrelo y arrastra **Kiwu** a *Aplicaciones*.
