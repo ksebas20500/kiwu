@@ -15,7 +15,7 @@ trap 'rm -rf "$TRABAJO"' EXIT
 
 echo "▸ Compilando (Release, universal, optimizado)…"
 xcodebuild \
-  -project GestorUniversitario.xcodeproj -scheme Kiwu -configuration Release \
+  -project Kiwu.xcodeproj -scheme Kiwu -configuration Release \
   -derivedDataPath "$TRABAJO/build" \
   ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
   CODE_SIGNING_ALLOWED=NO \

@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kiwu"
+version = "0.1.0"
+description = "Tareas, tablero, calendario y notas para el escritorio de Linux (GTK4 + libadwaita)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Kevin Sebastián Medina Nava" }]
+dependencies = ["PyGObject>=3.46"]
+
+[project.urls]
+Homepage = "https://github.com/ksebas20500/kiwu"
+
+[project.scripts]
+kiwu = "kiwu.app:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["kiwu*"]
+
+[tool.setuptools.package-data]
+kiwu = ["recursos/esquemas/*.xml"]

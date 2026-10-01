@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.ksebas20500.Kiwu</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Kiwu</name>
+  <summary>Tareas, tablero, calendario y notas, todo en tu equipo</summary>
+  <description>
+    <p>Kiwu organiza tus tareas por lista, con vista de lista y de tablero (Por hacer, En curso, Hecho), un calendario mensual y un editor de notas por bloques con formato, bloques de código con colores y enlaces con vista previa.</p>
+    <p>Todo es local: sin cuentas, sin nube y sin publicidad. Solo se conecta a Internet cuando añades un enlace a una nota.</p>
+  </description>
+  <launchable type="desktop-id">io.github.ksebas20500.Kiwu.desktop</launchable>
+  <url type="homepage">https://github.com/ksebas20500/kiwu</url>
+  <url type="bugtracker">https://github.com/ksebas20500/kiwu/issues</url>
+  <developer_name>Kevin Sebastián Medina Nava</developer_name>
+  <content_rating type="oars-1.1"/>
+  <provides><binary>kiwu</binary></provides>
+  <requires><display_length compare="ge">600</display_length></requires>
+  <categories><category>Office</category><category>ProjectManagement</category></categories>
+  <releases>
+    <release version="0.1.0" date="2026-10-01"><description><p>Primera versión para Linux (GTK4 y libadwaita).</p></description></release>
+  </releases>
+</component>

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Kiwu (recordatorios)
+Comment=Mantiene activos los recordatorios de Kiwu sin abrir la ventana
+Exec=kiwu --segundo-plano
+Icon=io.github.ksebas20500.Kiwu
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Colores inspirados en Kiwu Dark+ de VS Code. Licencia: MIT (parte de Kiwu). -->
+<style-scheme id="kiwu-dark" name="Kiwu Dark+" version="1.0">
+  <author>Kiwu</author>
+  <description>Colores de código tipo Kiwu Dark+</description>
+  <style name="text" foreground="#D4D4D4" background="#1E1E1E"/>
+  <style name="selection" background="#264F78"/>
+  <style name="cursor" foreground="#AEAFAD"/>
+  <style name="current-line" background="#1E1E1E"/>
+  <style name="line-numbers" foreground="#6A9955" background="#1E1E1E"/>
+  <style name="def:comment" foreground="#6A9955" italic="true"/>
+  <style name="def:shebang" foreground="#6A9955" italic="true"/>
+  <style name="def:doc-comment-element" foreground="#6A9955" italic="true"/>
+  <style name="def:string" foreground="#CE9178"/>
+  <style name="def:special-char" foreground="#D7BA7D"/>
+  <style name="def:keyword" foreground="#569CD6"/>
+  <style name="def:statement" foreground="#C586C0"/>
+  <style name="def:type" foreground="#4EC9B0"/>
+  <style name="def:function" foreground="#DCDCAA"/>
+  <style name="def:builtin" foreground="#DCDCAA"/>
+  <style name="def:constant" foreground="#4FC1FF"/>
+  <style name="def:special-constant" foreground="#569CD6"/>
+  <style name="def:boolean" foreground="#569CD6"/>
+  <style name="def:decimal" foreground="#B5CEA8"/>
+  <style name="def:base-n-integer" foreground="#B5CEA8"/>
+  <style name="def:floating-point" foreground="#B5CEA8"/>
+  <style name="def:complex" foreground="#B5CEA8"/>
+  <style name="def:number" foreground="#B5CEA8"/>
+  <style name="def:preprocessor" foreground="#C586C0"/>
+  <style name="def:identifier" foreground="#9CDCFE"/>
+  <style name="def:variable" foreground="#9CDCFE"/>
+  <style name="def:operator" foreground="#D4D4D4"/>
+  <style name="def:note" foreground="#6A9955" bold="true"/>
+  <style name="def:error" foreground="#f44747" underline="error"/>
+  <style name="def:warning" underline="error"/>
+  <style name="def:underlined" underline="single"/>
+  <style name="def:heading" foreground="#569CD6" bold="true"/>
+  <style name="def:emphasis" italic="true"/>
+  <style name="def:strong-emphasis" bold="true"/>
+  <style name="def:link-text" foreground="#4EC9B0" underline="single"/>
+  <style name="def:link-destination" foreground="#CE9178"/>
+  <style name="def:inline-code" foreground="#CE9178"/>
+  <style name="xml:tag" foreground="#569CD6"/>
+  <style name="xml:attribute-name" foreground="#9CDCFE"/>
+  <style name="xml:attribute-value" foreground="#CE9178"/>
+  <style name="html:tag" foreground="#569CD6"/>
+  <style name="html:attrib-name" foreground="#9CDCFE"/>
+  <style name="css:at-rules" foreground="#C586C0"/>
+  <style name="css:keyword" foreground="#9CDCFE"/>
+  <style name="json:keyword" foreground="#9CDCFE"/>
+</style-scheme>

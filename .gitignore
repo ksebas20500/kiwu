@@ -19,7 +19,7 @@ build/
 .build/
 
 # Firma personal (cada persona usa su propio equipo de desarrollo)
-Config/Signing.xcconfig
+macos/Config/Signing.xcconfig
 
 # Editores
 .idea/
@@ -28,3 +28,13 @@ Config/Signing.xcconfig
 
 # Instalador generado (se publica en GitHub Releases, no en el repositorio)
 dist/
+
+# Python (versión de Linux)
+__pycache__/
+*.pyc
+*.egg-info/
+linux/build/
+linux/dist/
+linux/*.pkg.tar.*
+linux/src/
+linux/pkg/

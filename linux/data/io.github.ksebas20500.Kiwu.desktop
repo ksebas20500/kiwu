@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Name=Kiwu
+GenericName=Tareas y notas
+Comment=Tareas, tablero, calendario y notas, todo en tu equipo
+Exec=kiwu
+Icon=io.github.ksebas20500.Kiwu
+Terminal=false
+Categories=Office;ProjectManagement;
+Keywords=tareas;notas;kanban;calendario;deberes;universidad;
+StartupWMClass=io.github.ksebas20500.Kiwu
+StartupNotify=true
+Actions=NuevaTarea;
+
+[Desktop Action NuevaTarea]
+Name=Nueva tarea
+Exec=kiwu --nueva-tarea

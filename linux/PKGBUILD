@@ -1,0 +1,36 @@
+# Maintainer: Kevin Sebastián Medina Nava
+pkgname=kiwu
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Tareas, tablero, calendario y notas (GTK4 + libadwaita)'
+arch=('any')
+url='https://github.com/ksebas20500/kiwu'
+license=('MIT')
+depends=('python' 'python-gobject' 'gtk4' 'libadwaita' 'gtksourceview5')
+optdepends=('webkitgtk-6.0: reproducir vídeos de YouTube/Vimeo dentro de las notas'
+            'xdg-desktop-portal-gtk: selector de archivos y tema claro/oscuro del escritorio'
+            'mako: notificaciones de los recordatorios (o cualquier otro demonio de notificaciones)')
+makedepends=('python-build' 'python-installer' 'python-setuptools' 'python-wheel')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/linux-v$pkgver.tar.gz")
+sha256sums=('SKIP')   # sustituir por la suma real al publicar la etiqueta linux-v$pkgver
+
+build() {
+  cd "$pkgname-linux-v$pkgver/linux"
+  python -m build --wheel --no-isolation
+}
+
+check() {
+  cd "$pkgname-linux-v$pkgver/linux"
+  python -m unittest discover -s tests
+}
+
+package() {
+  cd "$pkgname-linux-v$pkgver/linux"
+  python -m installer --destdir="$pkgdir" dist/*.whl
+  install -Dm644 data/io.github.ksebas20500.Kiwu.desktop -t "$pkgdir/usr/share/applications/"
+  install -Dm644 data/io.github.ksebas20500.Kiwu.metainfo.xml -t "$pkgdir/usr/share/metainfo/"
+  install -Dm644 data/icons/hicolor/256x256/apps/io.github.ksebas20500.Kiwu.png \
+    -t "$pkgdir/usr/share/icons/hicolor/256x256/apps/"
+  install -Dm644 data/kiwu-segundo-plano.desktop -t "$pkgdir/usr/share/kiwu/"
+  install -Dm644 ../LICENSE -t "$pkgdir/usr/share/licenses/$pkgname/"
+}
