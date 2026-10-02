@@ -15,6 +15,8 @@
   <a href="#linux"><b>🐧 Instalar en Linux</b></a>
   &nbsp;·&nbsp;
   <a href="https://github.com/ksebas20500/kiwu/releases">Todas las versiones</a>
+  &nbsp;·&nbsp;
+  <a href="https://kiwu.web.app/">🌐 Sitio web</a>
 </p>
 
 <p align="center">
@@ -156,6 +158,10 @@ kiwu/
 ```
 
 Cada carpeta de plataforma es independiente: tiene su código, sus pruebas, su instalador y su documentación.
+
+## Sitio web
+
+Guías, requisitos e instalación en **[kiwu.web.app](https://kiwu.web.app/)**: [funciones](https://kiwu.web.app/funciones/), [instalar](https://kiwu.web.app/instalar/), [macOS](https://kiwu.web.app/macos/), [Linux](https://kiwu.web.app/linux/) y [privacidad](https://kiwu.web.app/privacidad/).
 
 ## Contribuir
 
