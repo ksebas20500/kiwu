@@ -1,0 +1,44 @@
+{
+  "formato": 1,
+  "app": "kiwu",
+  "exportado": "2026-10-15T18:00:00Z",
+  "materias": [
+    { "id": "11111111-1111-1111-1111-111111111111", "nombre": "Cálculo", "orden": 0, "carpeta": null, "creada": "2026-10-01T10:00:00Z", "actualizada": "2026-10-02T10:00:00Z" },
+    { "id": "22222222-2222-2222-2222-222222222222", "nombre": "Física", "orden": 1, "carpeta": null, "creada": "2026-10-01T10:00:00Z", "actualizada": "2026-10-01T10:00:00Z" }
+  ],
+  "deberes": [
+    {
+      "id": "33333333-3333-3333-3333-333333333333", "materia": "11111111-1111-1111-1111-111111111111", "titulo": "Taller de límites",
+      "completado": false, "estado": 1, "fechaEntrega": "2026-10-20T23:00:00Z", "recordatorioHoras": 24, "fechaCompletado": null,
+      "nota": { "blocks": [ { "id": "44444444-4444-4444-4444-444444444444", "kind": "paragraph", "text": "Hacer los ejercicios 1 al 10", "indent": 0 } ] },
+      "creada": "2026-10-01T10:00:00Z", "actualizada": "2026-10-03T10:00:00Z"
+    },
+    {
+      "id": "55555555-5555-5555-5555-555555555555", "materia": "99999999-9999-9999-9999-999999999999", "titulo": "Huérfana (la lista no existe)",
+      "completado": false, "estado": 0, "fechaEntrega": null, "recordatorioHoras": 24, "fechaCompletado": null,
+      "nota": { "blocks": [] }, "creada": "2026-10-01T10:00:00Z", "actualizada": "2026-10-01T10:00:00Z"
+    }
+  ],
+  "cuadernos": [
+    { "id": "66666666-6666-6666-6666-666666666666", "nombre": "Apuntes", "icono": "📓", "orden": 0, "creada": "2026-10-01T10:00:00Z", "actualizada": "2026-10-01T10:00:00Z" }
+  ],
+  "paginas": [
+    {
+      "id": "77777777-7777-7777-7777-777777777777", "cuaderno": "66666666-6666-6666-6666-666666666666", "titulo": "Código fuente", "icono": "", "favorita": true,
+      "contenido": "{\"blocks\":[{\"id\":\"88888888-8888-8888-8888-888888888888\",\"kind\":\"paragraph\",\"text\":\"Texto con tildes: canción\",\"indent\":0}]}",
+      "creada": "2026-10-01T10:00:00Z", "actualizada": "2026-10-04T10:00:00Z"
+    },
+    {
+      "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "cuaderno": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", "titulo": "Huérfana (el cuaderno no existe)", "icono": "", "favorita": false,
+      "contenido": { "blocks": [] }, "creada": "2026-10-01T10:00:00Z", "actualizada": "2026-10-01T10:00:00Z"
+    }
+  ],
+  "horarios": [
+    { "id": "cccccccc-cccc-cccc-cccc-cccccccccccc", "nombre": "Universidad", "icono": "🎓", "orden": 0, "creada": "2026-10-01T10:00:00Z", "actualizada": "2026-10-01T10:00:00Z" }
+  ],
+  "clases": [
+    { "id": "dddddddd-dddd-dddd-dddd-dddddddddddd", "horario": "cccccccc-cccc-cccc-cccc-cccccccccccc", "materia": "11111111-1111-1111-1111-111111111111", "grupo": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee", "titulo": "Cálculo", "diaSemana": 1, "inicioMin": 600, "finMin": 720, "aula": "204", "notas": "", "avisoMin": 10, "creada": "2026-10-01T10:00:00Z", "actualizada": "2026-10-01T10:00:00Z" },
+    { "id": "ffffffff-ffff-ffff-ffff-ffffffffffff", "horario": "cccccccc-cccc-cccc-cccc-cccccccccccc", "materia": null, "grupo": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee", "titulo": "Cálculo", "diaSemana": 3, "inicioMin": 600, "finMin": 720, "aula": "204", "notas": "", "avisoMin": null, "creada": "2026-10-01T10:00:00Z", "actualizada": "2026-10-01T10:00:00Z" },
+    { "id": "12121212-1212-1212-1212-121212121212", "horario": "cccccccc-cccc-cccc-cccc-cccccccccccc", "materia": null, "grupo": "13131313-1313-1313-1313-131313131313", "titulo": "Inválida (día 9)", "diaSemana": 9, "inicioMin": 600, "finMin": 720, "aula": "", "notas": "", "avisoMin": null, "creada": "2026-10-01T10:00:00Z", "actualizada": "2026-10-01T10:00:00Z" }
+  ]
+}
