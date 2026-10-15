@@ -63,7 +63,7 @@ struct NotasRootView: View {
     private var visibles: [Pagina] {
         let texto = busqueda.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !texto.isEmpty else { return enAlcance }
-        return enAlcance.filter { $0.titulo.localizedStandardContains(texto) || $0.textoPlano.localizedStandardContains(texto) }
+        return enAlcance.filter { BusquedaTexto.contiene($0.titulo, texto) || BusquedaTexto.contiene($0.textoPlano, texto) }
     }
 
     private var titulo: String {

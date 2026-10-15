@@ -181,6 +181,7 @@ struct NoteEditorView: View {
         } else {
             model.doc.blocks = [NoteBlock()]
         }
+        asegurarParrafoFinal()
     }
 
     /// Numeración de las listas, con un contador por nivel de sangría.
@@ -292,7 +293,13 @@ struct NoteEditorView: View {
         }
         guard model.doc.blocks.count > 1 else { return }
         model.doc.blocks.remove(at: i)
+        asegurarParrafoFinal()
         enfoque.pedir(model.doc.blocks[max(0, i - 1)].id)
+    }
+
+    /// El documento siempre termina en un párrafo (para poder seguir escribiendo).
+    private func asegurarParrafoFinal() {
+        if model.doc.blocks.last?.kind != .paragraph { model.doc.blocks.append(NoteBlock()) }
     }
 
     private func alFinal() {
@@ -365,7 +372,7 @@ private struct BlockRow: View {
         guard !slashDescartado, block.kind == .paragraph, block.text.hasPrefix("/"), !block.text.contains(" ") || block.text.count < 14 else { return [] }
         let filtro = String(block.text.dropFirst())
         return NoteBlockKind.allCases.filter {
-            $0 != .paragraph && (filtro.isEmpty || $0.titulo.localizedCaseInsensitiveContains(filtro))
+            $0 != .paragraph && BusquedaTexto.contiene($0.titulo, filtro)
         }
     }
 
