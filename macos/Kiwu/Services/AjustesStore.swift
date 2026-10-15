@@ -4,13 +4,14 @@ import Combine
 
 /// Acciones de la app que se pueden lanzar con un atajo de teclado.
 enum AccionApp: String, CaseIterable, Identifiable, Codable {
-    case irTareas, irNotas, nuevaTarea, vistaLista, vistaTablero, irHoy, irCalendario, abrirAjustes
+    case irTareas, irNotas, irHorario, nuevaTarea, vistaLista, vistaTablero, irHoy, irCalendario, abrirAjustes
     var id: String { rawValue }
 
     var titulo: String {
         switch self {
         case .irTareas: return "Ir a Tareas"
         case .irNotas: return "Ir a Notas"
+        case .irHorario: return "Ir a Horario"
         case .nuevaTarea: return "Nueva tarea"
         case .vistaLista: return "Vista de lista"
         case .vistaTablero: return "Vista de tablero"
@@ -24,6 +25,7 @@ enum AccionApp: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .irTareas: return Atajo("1", comando: true)
         case .irNotas: return Atajo("2", comando: true)
+        case .irHorario: return Atajo("3", comando: true)
         case .nuevaTarea: return Atajo("n", comando: true)
         case .vistaLista: return Atajo("l", comando: true, opcion: true)
         case .vistaTablero: return Atajo("b", comando: true, opcion: true)

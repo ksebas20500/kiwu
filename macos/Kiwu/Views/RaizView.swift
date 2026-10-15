@@ -1,10 +1,10 @@
 import SwiftUI
 
 enum Modulo: String {
-    case tareas, notas
+    case tareas, notas, horario
 }
 
-/// Raíz de la app: barra lateral de módulos (Tareas / Notas) y el módulo activo.
+/// Raíz de la app: barra lateral de módulos (Tareas / Notas / Horario) y el módulo activo.
 struct RaizView: View {
     @AppStorage("modulo") private var modulo: Modulo = .tareas
     @Environment(\.managedObjectContext) private var context
@@ -18,6 +18,7 @@ struct RaizView: View {
             VStack(spacing: 10) {
                 boton(.tareas, icono: "checkmark.square", ayuda: "Tareas")
                 boton(.notas, icono: "note.text", ayuda: "Notas")
+                boton(.horario, icono: "calendar.day.timeline.left", ayuda: "Horario")
                 Spacer()
                 Button {
                     mostrandoAjustes = true
@@ -40,6 +41,7 @@ struct RaizView: View {
             switch modulo {
             case .tareas: ContentView()
             case .notas: NotasRootView()
+            case .horario: HorarioRootView()
             }
         }
         .frame(minWidth: 1060, minHeight: 620)
@@ -52,6 +54,7 @@ struct RaizView: View {
             switch accion {
             case .irTareas: modulo = .tareas
             case .irNotas: modulo = .notas
+            case .irHorario: modulo = .horario
             case .abrirAjustes: mostrandoAjustes = true
             case .irHoy, .irCalendario, .vistaLista, .vistaTablero, .nuevaTarea:
                 if modulo != .tareas { modulo = .tareas }
@@ -69,6 +72,7 @@ struct RaizView: View {
         materiaService.comprobarTodas((try? context.fetch(Materia.fetchRequest())) ?? [])
         WidgetDataService.aplicarCompletadosDelWidget(context: context, service: deberService)
         WidgetDataService.actualizar(context)
+        Task { await AvisosHorario.reprogramar(en: context) }
     }
 
     private func boton(_ destino: Modulo, icono: String, ayuda: String) -> some View {
