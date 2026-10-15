@@ -11,13 +11,15 @@ struct TaskListView: View {
     @Binding var seleccion: UUID?
     @Binding var vistaTareas: VistaTareas
     let service: DeberService
-    let onCrear: (String, Materia) -> Void
+    let onCrear: (String, Materia, Date?) -> Void
     let onEliminar: (Deber) -> Void
     var vista: Binding<VistaMateria>? = nil
     var carpetaAlerta = false
 
     @State private var nuevoTitulo = ""
     @State private var destinoID: UUID?
+    @State private var fechaNueva: Date?
+    @State private var eligiendoFecha = false
     @State private var completadosVisibles = true
     @FocusState private var campoEnfocado: Bool
     @ObservedObject private var ajustes = AjustesStore.shared
@@ -95,6 +97,22 @@ struct TaskListView: View {
                 .onSubmit(crear)
                 .disabled(destino == nil)
 
+            if let fechaNueva {
+                Button { self.fechaNueva = nil } label: {
+                    Label(fechaNueva.formatted(date: .abbreviated, time: .shortened), systemImage: "xmark.circle.fill")
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.accentColor)
+                .help("Quitar la fecha de entrega")
+            }
+            Button { eligiendoFecha = true } label: { Image(systemName: "calendar") }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help("Fecha y hora de entrega")
+                .disabled(destino == nil)
+                .popover(isPresented: $eligiendoFecha) { SelectorFechaEntrega(fecha: $fechaNueva) }
+
             if materiaFija == nil, let destino {
                 Menu {
                     ForEach(materias) { materia in
@@ -129,8 +147,9 @@ struct TaskListView: View {
     private func crear() {
         let limpio = nuevoTitulo.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !limpio.isEmpty, let destino else { return }
-        onCrear(limpio, destino)
+        onCrear(limpio, destino, fechaNueva)
         nuevoTitulo = ""
+        fechaNueva = nil
     }
 }
 
@@ -185,5 +204,28 @@ private struct TaskRow: View {
                 Button("Eliminar tarea", role: .destructive, action: onEliminar)
             }
         }
+    }
+}
+
+/// Ventana para elegir la fecha y la hora de entrega de una tarea nueva (por defecto, hoy a las 18:00).
+private struct SelectorFechaEntrega: View {
+    @Binding var fecha: Date?
+    @Environment(\.dismiss) private var dismiss
+    @State private var valor = Calendar.current.date(bySettingHour: 18, minute: 0, second: 0, of: .now) ?? .now
+
+    var body: some View {
+        VStack(spacing: 10) {
+            DatePicker("Entrega", selection: $valor, displayedComponents: [.date, .hourAndMinute])
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+            HStack {
+                Button("Sin fecha") { fecha = nil; dismiss() }
+                Spacer()
+                Button("Listo") { fecha = valor; dismiss() }.keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(14)
+        .frame(width: 260)
+        .onAppear { if let fecha { valor = fecha } }
     }
 }

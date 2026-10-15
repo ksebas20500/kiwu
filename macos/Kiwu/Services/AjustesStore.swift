@@ -104,6 +104,9 @@ final class AjustesStore: ObservableObject {
     /// 0...30: desenfoque del fondo.
     @Published var desenfoque: Double { didSet { defaults.set(desenfoque, forKey: "ajustes.desenfoque") } }
 
+    /// Color de la app: nombre predefinido, «sistema» o «#RRGGBB». Solo se guarda en este Mac.
+    @Published var acento: String { didSet { defaults.set(acento, forKey: "ajustes.acento") } }
+
     private let defaults = UserDefaults.standard
 
     private init() {
@@ -114,6 +117,7 @@ final class AjustesStore: ObservableObject {
         }
         atajos = Dictionary(uniqueKeysWithValues: AccionApp.allCases.map { ($0, guardados[$0] ?? $0.atajoPredeterminado) })
         tema = TemaApp(rawValue: defaults.string(forKey: "ajustes.tema") ?? "") ?? .sistema
+        acento = defaults.string(forKey: "ajustes.acento") ?? ColorAcento.predeterminado
         visibilidadFondo = defaults.object(forKey: "ajustes.visibilidadFondo") as? Double ?? 0.5
         opacidadPaneles = defaults.object(forKey: "ajustes.opacidadPaneles") as? Double ?? 0.45
         desenfoque = defaults.object(forKey: "ajustes.desenfoque") as? Double ?? 0

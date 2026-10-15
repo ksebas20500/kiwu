@@ -71,6 +71,10 @@ private struct AparienciaAjustes: View {
                 .frame(width: 280)
             }
 
+            seccion("Color de la app") {
+                SelectorAcento(acento: $ajustes.acento)
+            }
+
             seccion("Fondo de la app") {
                 HStack(alignment: .top, spacing: 16) {
                     vistaPrevia
@@ -144,6 +148,53 @@ private struct AparienciaAjustes: View {
         }
         .opacity(ajustes.fondo == nil ? 0.5 : 1)
         .disabled(ajustes.fondo == nil)
+    }
+}
+
+// MARK: Color de la app
+
+private struct SelectorAcento: View {
+    @Binding var acento: String
+
+    private var personalizado: Binding<Color> {
+        Binding(
+            get: { ColorAcento.hex(de: acento).map { ColorAcento.color(hex: $0) } ?? .accentColor },
+            set: { nuevo in
+                if let c = NSColor(nuevo).usingColorSpace(.sRGB) {
+                    acento = ColorAcento.hex(r: Double(c.redComponent), g: Double(c.greenComponent), b: Double(c.blueComponent))
+                }
+            }
+        )
+    }
+
+    private var esPredefinido: Bool { ColorAcento.predefinidos.contains { $0.nombre == acento } }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                ForEach(ColorAcento.predefinidos, id: \.nombre) { p in
+                    muestra(ColorAcento.color(hex: p.hex), activo: acento == p.nombre, ayuda: p.titulo) { acento = p.nombre }
+                }
+            }
+            HStack(spacing: 12) {
+                Button(acento == ColorAcento.sistema ? "✓ Colores del sistema" : "Colores del sistema") { acento = ColorAcento.sistema }
+                ColorPicker("Otro", selection: personalizado, supportsOpacity: false)
+                    .fixedSize()
+                if !esPredefinido && acento != ColorAcento.sistema { Text("Personalizado").font(.caption).foregroundStyle(.secondary) }
+            }
+            Text("Solo cambia este Mac: no se incluye en la copia de seguridad.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func muestra(_ color: Color, activo: Bool, ayuda: String, accion: @escaping () -> Void) -> some View {
+        Button(action: accion) {
+            Circle().fill(color).frame(width: 26, height: 26)
+                .overlay(Circle().stroke(Color.primary.opacity(activo ? 0.9 : 0.15), lineWidth: activo ? 3 : 1))
+        }
+        .buttonStyle(.plain)
+        .help(ayuda)
     }
 }
 

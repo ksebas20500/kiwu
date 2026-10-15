@@ -162,7 +162,7 @@ struct ContentView: View {
                         seleccion: $deberSeleccionado,
                         vistaTareas: $vistaTareas,
                         service: deberService,
-                        onCrear: crear,
+                        onCrear: { crear($0, en: $1, fecha: $2) },
                         onEliminar: eliminar,
                         vista: materiaActual == nil ? nil : $vistaMateria,
                         carpetaAlerta: materiaActual.map { $0.bookmarkCarpeta != nil && !$0.carpetaDisponible } ?? false
@@ -245,7 +245,12 @@ struct ContentView: View {
     }
 
     private func crear(_ titulo: String, en materia: Materia) {
-        let fecha: Date? = sidebar == .hoy ? cal.date(bySettingHour: 18, minute: 0, second: 0, of: .now) : nil
+        crear(titulo, en: materia, fecha: nil)
+    }
+
+    /// Sin fecha elegida, en la vista Hoy la tarea se entrega hoy a las 18:00.
+    private func crear(_ titulo: String, en materia: Materia, fecha elegida: Date?) {
+        let fecha = elegida ?? (sidebar == .hoy ? cal.date(bySettingHour: 18, minute: 0, second: 0, of: .now) : nil)
         deberService.crear(titulo: titulo, en: materia, fecha: fecha)
     }
 

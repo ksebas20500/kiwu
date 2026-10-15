@@ -9,6 +9,7 @@ struct RaizView: View {
     @AppStorage("modulo") private var modulo: Modulo = .tareas
     @Environment(\.managedObjectContext) private var context
     @ObservedObject private var ajustes = AjustesStore.shared
+    @Environment(\.colorScheme) private var esquemaSistema
     @State private var mostrandoAjustes = false
     private let deberService = DeberService(persistence: .shared, reminders: ReminderService())
     private let materiaService = MateriaService(persistence: .shared, reminders: ReminderService())
@@ -47,8 +48,9 @@ struct RaizView: View {
         .frame(minWidth: 1060, minHeight: 620)
         .background(FondoApp(ajustes: ajustes))
         .preferredColorScheme(ajustes.tema.esquema)
+        .tint(ColorAcento.color(para: ajustes.acento, oscuro: (ajustes.tema.esquema ?? esquemaSistema) == .dark))
         .sheet(isPresented: $mostrandoAjustes) {
-            AjustesView().preferredColorScheme(ajustes.tema.esquema)
+            AjustesView().preferredColorScheme(ajustes.tema.esquema).tint(ColorAcento.color(para: ajustes.acento, oscuro: (ajustes.tema.esquema ?? esquemaSistema) == .dark))
         }
         .onReceive(ajustes.acciones) { accion in
             switch accion {
