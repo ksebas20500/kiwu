@@ -18,6 +18,13 @@
 			remoteGlobalIDString = 000000000000000200000000;
 			remoteInfo = KiwuWidgets;
 		};
+		000000000000000361000000 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 000000000000000100000000;
+			remoteInfo = Kiwu;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -37,6 +44,7 @@
 		000000000000000000000220 /* KiwuWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KiwuWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		000000000000000000000301 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		000000000000000000000302 /* Signing.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.example.xcconfig; sourceTree = "<group>"; };
+		000000000000000000000320 /* KiwuTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KiwuTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -48,6 +56,11 @@
 		000000000000000000000030 /* KiwuWidgets */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = KiwuWidgets;
+			sourceTree = "<group>";
+		};
+		000000000000000000000032 /* KiwuTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = KiwuTests;
 			sourceTree = "<group>";
 		};
 		000000000000000000000031 /* Shared */ = {
@@ -68,6 +81,11 @@
 			files = (
 			);
 		};
+		000000000000000330000000 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -77,6 +95,7 @@
 				000000000000000000000010 /* Kiwu */,
 				000000000000000000000030 /* KiwuWidgets */,
 				000000000000000000000031 /* Shared */,
+				000000000000000000000032 /* KiwuTests */,
 				000000000000000000000300 /* Config */,
 				000000000000000000000020 /* Products */,
 			);
@@ -87,6 +106,7 @@
 			children = (
 				000000000000000000000120 /* Kiwu.app */,
 				000000000000000000000220 /* KiwuWidgets.appex */,
+				000000000000000000000320 /* KiwuTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -145,6 +165,27 @@
 			productReference = 000000000000000000000220 /* KiwuWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		000000000000000300000000 /* KiwuTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 000000000000000310000000 /* Build configuration list for PBXNativeTarget "KiwuTests" */;
+			buildPhases = (
+				000000000000000320000000 /* Sources */,
+				000000000000000330000000 /* Frameworks */,
+				000000000000000340000000 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				000000000000000360000000 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				000000000000000000000032 /* KiwuTests */,
+			);
+			name = KiwuTests;
+			productName = KiwuTests;
+			productReference = 000000000000000000000320 /* KiwuTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -160,6 +201,10 @@
 					};
 					000000000000000200000000 = {
 						CreatedOnToolsVersion = 26.3;
+					};
+					000000000000000300000000 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = 000000000000000100000000;
 					};
 				};
 			};
@@ -179,6 +224,7 @@
 			targets = (
 				000000000000000100000000 /* Kiwu */,
 				000000000000000200000000 /* KiwuWidgets */,
+				000000000000000300000000 /* KiwuTests */,
 			);
 		};
 /* End PBXProject section */
@@ -190,6 +236,11 @@
 			);
 		};
 		000000000000000240000000 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		000000000000000340000000 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
 			);
@@ -207,6 +258,11 @@
 			files = (
 			);
 		};
+		000000000000000320000000 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -214,6 +270,11 @@
 			isa = PBXTargetDependency;
 			target = 000000000000000200000000 /* KiwuWidgets */;
 			targetProxy = 000000000000000161000000 /* PBXContainerItemProxy */;
+		};
+		000000000000000360000000 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 000000000000000100000000 /* Kiwu */;
+			targetProxy = 000000000000000361000000 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -502,6 +563,42 @@
 			};
 			name = Release;
 		};
+		000000000000000311000000 /* Debug configuration for PBXNativeTarget "KiwuTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ksebas.gestoruniversitario.Tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Kiwu.app/Contents/MacOS/Kiwu";
+			};
+			name = Debug;
+		};
+		000000000000000312000000 /* Release configuration for PBXNativeTarget "KiwuTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ksebas.gestoruniversitario.Tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Kiwu.app/Contents/MacOS/Kiwu";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -526,6 +623,14 @@
 			buildConfigurations = (
 				000000000000000211000000 /* Debug configuration for PBXNativeTarget "KiwuWidgets" */,
 				000000000000000212000000 /* Release configuration for PBXNativeTarget "KiwuWidgets" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		000000000000000310000000 /* Build configuration list for PBXNativeTarget "KiwuTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000311000000 /* Debug configuration for PBXNativeTarget "KiwuTests" */,
+				000000000000000312000000 /* Release configuration for PBXNativeTarget "KiwuTests" */,
 			);
 			defaultConfigurationName = Release;
 		};

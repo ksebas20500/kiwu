@@ -110,6 +110,7 @@ final class Materia: NSManagedObject {
     @NSManaged var carpetaDisponible: Bool
     @NSManaged var fechaCreacion: Date
     @NSManaged var fechaActualizacion: Date
+    @NSManaged var eliminada: Date?
     @NSManaged var deberes: Set<Deber>
 }
 
@@ -126,13 +127,27 @@ final class Deber: NSManagedObject {
     @NSManaged var fechaActualizacion: Date
     /// Columna del tablero: 0 por hacer, 1 en curso. «Hecho» se deduce de `completado`.
     @NSManaged var estado: Int16
+    @NSManaged var eliminada: Date?
     @NSManaged var materia: Materia
 }
 
+/// Predicado común de «no eliminado»: todas las lecturas de la interfaz lo usan (borrado lógico).
+let predicadoVivo = NSPredicate(format: "eliminada == nil")
+
 extension Materia {
+    /// Lista de lecturas: solo las vivas (`eliminada == nil`). Para ver también las eliminadas, usa `fetchRequestTodas()`.
     static func fetchRequest() -> NSFetchRequest<Materia> {
+        let peticion = fetchRequestTodas()
+        peticion.predicate = predicadoVivo
+        return peticion
+    }
+
+    static func fetchRequestTodas() -> NSFetchRequest<Materia> {
         NSFetchRequest<Materia>(entityName: "Materia")
     }
+
+    /// Tareas que siguen vivas (la relación incluye también las eliminadas lógicamente).
+    var deberesVivos: [Deber] { deberes.filter { $0.eliminada == nil } }
 
     convenience init(context: NSManagedObjectContext, nombre: String, orden: Int16 = 0) {
         self.init(context: context)
@@ -148,7 +163,14 @@ extension Materia {
 }
 
 extension Deber {
+    /// Solo tareas vivas y de listas vivas. Para ver también las eliminadas, usa `fetchRequestTodas()`.
     static func fetchRequest() -> NSFetchRequest<Deber> {
+        let peticion = fetchRequestTodas()
+        peticion.predicate = NSPredicate(format: "eliminada == nil AND materia.eliminada == nil")
+        return peticion
+    }
+
+    static func fetchRequestTodas() -> NSFetchRequest<Deber> {
         NSFetchRequest<Deber>(entityName: "Deber")
     }
 
@@ -179,6 +201,7 @@ final class Cuaderno: NSManagedObject {
     @NSManaged var orden: Int16
     @NSManaged var fechaCreacion: Date
     @NSManaged var fechaActualizacion: Date
+    @NSManaged var eliminada: Date?
     @NSManaged var paginas: Set<Pagina>
 }
 
@@ -192,10 +215,23 @@ final class Pagina: NSManagedObject {
     @NSManaged var favorita: Bool
     @NSManaged var fechaCreacion: Date
     @NSManaged var fechaActualizacion: Date
+    @NSManaged var eliminada: Date?
     @NSManaged var cuaderno: Cuaderno
 }
 
 extension Cuaderno: Identifiable {
+    static func fetchRequest() -> NSFetchRequest<Cuaderno> {
+        let peticion = fetchRequestTodas()
+        peticion.predicate = predicadoVivo
+        return peticion
+    }
+
+    static func fetchRequestTodas() -> NSFetchRequest<Cuaderno> {
+        NSFetchRequest<Cuaderno>(entityName: "Cuaderno")
+    }
+
+    var paginasVivas: [Pagina] { paginas.filter { $0.eliminada == nil } }
+
     convenience init(context: NSManagedObjectContext, nombre: String, icono: String, orden: Int16) {
         self.init(context: context)
         id = UUID()
@@ -208,6 +244,16 @@ extension Cuaderno: Identifiable {
 }
 
 extension Pagina: Identifiable {
+    static func fetchRequest() -> NSFetchRequest<Pagina> {
+        let peticion = fetchRequestTodas()
+        peticion.predicate = NSPredicate(format: "eliminada == nil AND cuaderno.eliminada == nil")
+        return peticion
+    }
+
+    static func fetchRequestTodas() -> NSFetchRequest<Pagina> {
+        NSFetchRequest<Pagina>(entityName: "Pagina")
+    }
+
     convenience init(context: NSManagedObjectContext, cuaderno: Cuaderno) {
         self.init(context: context)
         id = UUID()

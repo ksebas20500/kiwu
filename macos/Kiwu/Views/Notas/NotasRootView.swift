@@ -22,11 +22,13 @@ private enum HojaCuaderno: Identifiable {
 struct NotasRootView: View {
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Cuaderno.orden, ascending: true), NSSortDescriptor(keyPath: \Cuaderno.nombre, ascending: true)],
+        predicate: NSPredicate(format: "eliminada == nil"),
         animation: .default
     ) private var cuadernos: FetchedResults<Cuaderno>
 
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Pagina.fechaActualizacion, ascending: false)],
+        predicate: NSPredicate(format: "eliminada == nil AND cuaderno.eliminada == nil"),
         animation: .default
     ) private var paginas: FetchedResults<Pagina>
 

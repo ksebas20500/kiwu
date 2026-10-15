@@ -18,7 +18,7 @@ enum WidgetDataService {
         guard KiwuShared.carpeta != nil else { return }
 
         let peticion = Deber.fetchRequest()
-        peticion.predicate = NSPredicate(format: "completado == NO")
+        peticion.predicate = NSPredicate(format: "completado == NO AND eliminada == nil AND materia.eliminada == nil")
         let excluidos = Set(AlmacenWidget.completadosPendientes())
         let deberes = ((try? context.fetch(peticion)) ?? []).filter { !excluidos.contains($0.id) }
 
@@ -33,11 +33,11 @@ enum WidgetDataService {
         peticionListas.sortDescriptors = [NSSortDescriptor(key: "orden", ascending: true), NSSortDescriptor(key: "nombre", ascending: true)]
         let listas = ((try? context.fetch(peticionListas)) ?? []).map { WidgetLista(id: $0.id, nombre: $0.nombre) }
 
-        let peticionCuadernos = NSFetchRequest<Cuaderno>(entityName: "Cuaderno")
+        let peticionCuadernos = Cuaderno.fetchRequest()
         peticionCuadernos.sortDescriptors = [NSSortDescriptor(key: "orden", ascending: true), NSSortDescriptor(key: "nombre", ascending: true)]
         let cuadernos = ((try? context.fetch(peticionCuadernos)) ?? []).map { WidgetCuaderno(id: $0.id, nombre: $0.nombre, icono: $0.icono) }
 
-        let peticionNotas = NSFetchRequest<Pagina>(entityName: "Pagina")
+        let peticionNotas = Pagina.fetchRequest()
         peticionNotas.sortDescriptors = [NSSortDescriptor(key: "fechaActualizacion", ascending: false)]
         peticionNotas.fetchLimit = 60
         let notas = ((try? context.fetch(peticionNotas)) ?? []).map {
@@ -69,7 +69,7 @@ enum WidgetDataService {
         let ids = AlmacenWidget.tomarCompletadosPendientes()
         guard !ids.isEmpty else { return }
         let peticion = Deber.fetchRequest()
-        peticion.predicate = NSPredicate(format: "id IN %@", ids as [UUID])
+        peticion.predicate = NSPredicate(format: "id IN %@ AND eliminada == nil", ids as [UUID])
         for deber in (try? context.fetch(peticion)) ?? [] where !deber.completado {
             service.marcar(deber, completado: true)
         }

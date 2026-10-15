@@ -70,8 +70,15 @@ struct MateriaService {
     }
 
     func eliminar(_ materia: Materia) {
-        materia.deberes.forEach { reminders.cancel(for: $0) }
-        persistence.container.viewContext.delete(materia)
+        // Borrado lógico: se marca la lista y todas sus tareas (así se puede sincronizar y recuperar).
+        let ahora = Date.now
+        for deber in materia.deberes where deber.eliminada == nil {
+            reminders.cancel(for: deber)
+            deber.eliminada = ahora
+            deber.fechaActualizacion = ahora
+        }
+        materia.eliminada = ahora
+        materia.fechaActualizacion = ahora
         persistence.save()
     }
 }
@@ -127,7 +134,8 @@ struct DeberService {
 
     func eliminar(_ deber: Deber) {
         reminders.cancel(for: deber)
-        persistence.container.viewContext.delete(deber)
+        deber.eliminada = .now
+        deber.fechaActualizacion = .now
         persistence.save()
     }
 }

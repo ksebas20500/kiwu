@@ -3,7 +3,8 @@ import CoreData
 import SQLite3
 
 final class PersistenceController {
-    static let shared = PersistenceController()
+    /// Bajo XCTest la app anfitriona usa una base en memoria: las pruebas nunca tocan los datos reales.
+    static let shared = PersistenceController(inMemory: ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil)
 
     let container: NSPersistentContainer
 
@@ -20,6 +21,11 @@ final class PersistenceController {
         if inMemory {
             tareas.type = NSInMemoryStoreType
             notas.type = NSInMemoryStoreType
+        }
+        // Migración ligera: añadir atributos opcionales (como `eliminada`) conserva lo que ya hay guardado.
+        for descripcion in [tareas, notas] {
+            descripcion.shouldMigrateStoreAutomatically = true
+            descripcion.shouldInferMappingModelAutomatically = true
         }
         container.persistentStoreDescriptions = [tareas, notas]
 
@@ -53,6 +59,25 @@ final class PersistenceController {
         }
     }
 
+    /// Borra de verdad lo eliminado lógicamente antes de `fecha` (por ejemplo, hace más de 30 días).
+    /// Todavía no se llama desde ningún sitio: solo se activará cuando exista la sincronización. Devuelve cuántas filas borró.
+    @discardableResult
+    func purgar(antesDe fecha: Date, en contexto: NSManagedObjectContext? = nil) -> Int {
+        let contexto = contexto ?? container.viewContext
+        var borradas = 0
+        // Primero los hijos y después los padres.
+        for entidad in ["Deber", "Pagina", "Materia", "Cuaderno"] {
+            let peticion = NSFetchRequest<NSManagedObject>(entityName: entidad)
+            peticion.predicate = NSPredicate(format: "eliminada != nil AND eliminada < %@", fecha as NSDate)
+            for objeto in (try? contexto.fetch(peticion)) ?? [] {
+                contexto.delete(objeto)
+                borradas += 1
+            }
+        }
+        if contexto.hasChanges { try? contexto.save() }
+        return borradas
+    }
+
     private static var ultimoAviso: Date?
 
     /// Registra el error y se lo muestra a la persona (antes se ignoraba en la versión Release).
@@ -72,7 +97,7 @@ final class PersistenceController {
         if Thread.isMainThread { mostrar() } else { DispatchQueue.main.async(execute: mostrar) }
     }
 
-    private static func makeModel() -> NSManagedObjectModel {
+    static func makeModel() -> NSManagedObjectModel {
         let model = NSManagedObjectModel()
 
         let materia = NSEntityDescription()
@@ -86,7 +111,8 @@ final class PersistenceController {
             attribute("bookmarkCarpeta", .binaryDataAttributeType, optional: true),
             attribute("carpetaDisponible", .booleanAttributeType, optional: false),
             attribute("fechaCreacion", .dateAttributeType, optional: false),
-            attribute("fechaActualizacion", .dateAttributeType, optional: false)
+            attribute("fechaActualizacion", .dateAttributeType, optional: false),
+            attribute("eliminada", .dateAttributeType, optional: true)
         ]
 
         let deber = NSEntityDescription()
@@ -102,7 +128,8 @@ final class PersistenceController {
             attribute("contenidoNota", .binaryDataAttributeType, optional: false),
             attribute("estado", .integer16AttributeType, optional: false, defaultValue: 0),
             attribute("fechaCreacion", .dateAttributeType, optional: false),
-            attribute("fechaActualizacion", .dateAttributeType, optional: false)
+            attribute("fechaActualizacion", .dateAttributeType, optional: false),
+            attribute("eliminada", .dateAttributeType, optional: true)
         ]
 
         let deberes = NSRelationshipDescription()
@@ -133,7 +160,8 @@ final class PersistenceController {
             attribute("icono", .stringAttributeType, optional: false),
             attribute("orden", .integer16AttributeType, optional: false),
             attribute("fechaCreacion", .dateAttributeType, optional: false),
-            attribute("fechaActualizacion", .dateAttributeType, optional: false)
+            attribute("fechaActualizacion", .dateAttributeType, optional: false),
+            attribute("eliminada", .dateAttributeType, optional: true)
         ]
 
         let pagina = NSEntityDescription()
@@ -147,7 +175,8 @@ final class PersistenceController {
             attribute("textoPlano", .stringAttributeType, optional: false),
             attribute("favorita", .booleanAttributeType, optional: false),
             attribute("fechaCreacion", .dateAttributeType, optional: false),
-            attribute("fechaActualizacion", .dateAttributeType, optional: false)
+            attribute("fechaActualizacion", .dateAttributeType, optional: false),
+            attribute("eliminada", .dateAttributeType, optional: true)
         ]
 
         let paginas = NSRelationshipDescription()

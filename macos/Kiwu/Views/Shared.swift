@@ -13,7 +13,11 @@ extension Calendar {
 }
 
 extension NSManagedObject {
-    var estaEliminado: Bool { isDeleted || managedObjectContext == nil }
+    var estaEliminado: Bool {
+        if isDeleted || managedObjectContext == nil { return true }
+        // Borrado lógico: las cuatro entidades tienen `eliminada`.
+        return entity.attributesByName["eliminada"] != nil && value(forKey: "eliminada") != nil
+    }
 }
 
 /// Columnas del flujo de trabajo de una tarea.

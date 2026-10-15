@@ -5,11 +5,13 @@ import Combine
 struct ContentView: View {
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Materia.orden, ascending: true), NSSortDescriptor(keyPath: \Materia.nombre, ascending: true)],
+        predicate: NSPredicate(format: "eliminada == nil"),
         animation: .default
     ) private var materias: FetchedResults<Materia>
 
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Deber.fechaEntrega, ascending: true)],
+        predicate: NSPredicate(format: "eliminada == nil AND materia.eliminada == nil"),
         animation: .default
     ) private var deberes: FetchedResults<Deber>
 

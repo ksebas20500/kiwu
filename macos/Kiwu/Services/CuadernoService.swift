@@ -12,7 +12,7 @@ struct CuadernoService {
 
     /// Primer cuaderno; si todavía no existe ninguno, crea "Notas rápidas".
     func primerCuaderno() -> Cuaderno {
-        let peticion = NSFetchRequest<Cuaderno>(entityName: "Cuaderno")
+        let peticion = Cuaderno.fetchRequest()
         peticion.sortDescriptors = [NSSortDescriptor(key: "orden", ascending: true), NSSortDescriptor(key: "nombre", ascending: true)]
         peticion.fetchLimit = 1
         if let existente = try? persistence.container.viewContext.fetch(peticion).first { return existente }
@@ -20,8 +20,8 @@ struct CuadernoService {
     }
 
     func cuaderno(id: UUID) -> Cuaderno? {
-        let peticion = NSFetchRequest<Cuaderno>(entityName: "Cuaderno")
-        peticion.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        let peticion = Cuaderno.fetchRequest()
+        peticion.predicate = NSPredicate(format: "id == %@ AND eliminada == nil", id as CVarArg)
         peticion.fetchLimit = 1
         return try? persistence.container.viewContext.fetch(peticion).first
     }
@@ -34,7 +34,14 @@ struct CuadernoService {
     }
 
     func eliminar(_ cuaderno: Cuaderno) {
-        persistence.container.viewContext.delete(cuaderno)
+        // Borrado lógico: se marca el cuaderno y todas sus páginas.
+        let ahora = Date.now
+        for pagina in cuaderno.paginas where pagina.eliminada == nil {
+            pagina.eliminada = ahora
+            pagina.fechaActualizacion = ahora
+        }
+        cuaderno.eliminada = ahora
+        cuaderno.fechaActualizacion = ahora
         persistence.save()
     }
 
@@ -47,8 +54,8 @@ struct CuadernoService {
 
     /// Nota más reciente del cuaderno que sigue completamente en blanco (sin título, texto ni adjuntos).
     func paginaEnBlanco(en cuaderno: Cuaderno) -> Pagina? {
-        let peticion = NSFetchRequest<Pagina>(entityName: "Pagina")
-        peticion.predicate = NSPredicate(format: "cuaderno == %@ AND titulo == '' AND icono == ''", cuaderno)
+        let peticion = Pagina.fetchRequest()
+        peticion.predicate = NSPredicate(format: "cuaderno == %@ AND eliminada == nil AND titulo == '' AND icono == ''", cuaderno)
         peticion.sortDescriptors = [NSSortDescriptor(key: "fechaCreacion", ascending: false)]
         peticion.fetchLimit = 5
         let candidatas = (try? persistence.container.viewContext.fetch(peticion)) ?? []
@@ -74,7 +81,8 @@ struct CuadernoService {
     }
 
     func eliminar(_ pagina: Pagina) {
-        persistence.container.viewContext.delete(pagina)
+        pagina.eliminada = .now
+        pagina.fechaActualizacion = .now
         persistence.save()
     }
 }
