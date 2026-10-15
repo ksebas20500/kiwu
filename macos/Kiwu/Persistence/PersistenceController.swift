@@ -66,7 +66,7 @@ final class PersistenceController {
         let contexto = contexto ?? container.viewContext
         var borradas = 0
         // Primero los hijos y después los padres.
-        for entidad in ["Deber", "Pagina", "Materia", "Cuaderno"] {
+        for entidad in ["Clase", "Deber", "Pagina", "Horario", "Materia", "Cuaderno"] {
             let peticion = NSFetchRequest<NSManagedObject>(entityName: entidad)
             peticion.predicate = NSPredicate(format: "eliminada != nil AND eliminada < %@", fecha as NSDate)
             for objeto in (try? contexto.fetch(peticion)) ?? [] {
@@ -198,8 +198,60 @@ final class PersistenceController {
         cuaderno.properties.append(paginas)
         pagina.properties.append(paginaCuaderno)
 
-        model.entities = [materia, deber, cuaderno, pagina]
-        model.setEntities([materia, deber], forConfigurationName: "Tareas")
+        // Horario semanal: vive en el almacén de tareas. `materiaId` es solo una referencia (sin relación) a una lista.
+        let horario = NSEntityDescription()
+        horario.name = "Horario"
+        horario.managedObjectClassName = "Horario"
+        horario.properties = [
+            attribute("id", .UUIDAttributeType, optional: false),
+            attribute("nombre", .stringAttributeType, optional: false),
+            attribute("icono", .stringAttributeType, optional: false),
+            attribute("orden", .integer16AttributeType, optional: false),
+            attribute("fechaCreacion", .dateAttributeType, optional: false),
+            attribute("fechaActualizacion", .dateAttributeType, optional: false),
+            attribute("eliminada", .dateAttributeType, optional: true)
+        ]
+
+        let clase = NSEntityDescription()
+        clase.name = "Clase"
+        clase.managedObjectClassName = "Clase"
+        clase.properties = [
+            attribute("id", .UUIDAttributeType, optional: false),
+            attribute("materiaId", .UUIDAttributeType, optional: true),
+            attribute("grupo", .UUIDAttributeType, optional: false),
+            attribute("titulo", .stringAttributeType, optional: false),
+            attribute("diaSemana", .integer16AttributeType, optional: false),
+            attribute("inicioMin", .integer16AttributeType, optional: false),
+            attribute("finMin", .integer16AttributeType, optional: false),
+            attribute("aula", .stringAttributeType, optional: false, defaultValue: ""),
+            attribute("notas", .stringAttributeType, optional: false, defaultValue: ""),
+            attribute("avisoMin", .integer16AttributeType, optional: true),
+            attribute("fechaCreacion", .dateAttributeType, optional: false),
+            attribute("fechaActualizacion", .dateAttributeType, optional: false),
+            attribute("eliminada", .dateAttributeType, optional: true)
+        ]
+
+        let clases = NSRelationshipDescription()
+        clases.name = "clases"
+        clases.destinationEntity = clase
+        clases.minCount = 0
+        clases.maxCount = 0
+        clases.deleteRule = .cascadeDeleteRule
+
+        let claseHorario = NSRelationshipDescription()
+        claseHorario.name = "horario"
+        claseHorario.destinationEntity = horario
+        claseHorario.minCount = 1
+        claseHorario.maxCount = 1
+        claseHorario.deleteRule = .nullifyDeleteRule
+
+        clases.inverseRelationship = claseHorario
+        claseHorario.inverseRelationship = clases
+        horario.properties.append(clases)
+        clase.properties.append(claseHorario)
+
+        model.entities = [materia, deber, cuaderno, pagina, horario, clase]
+        model.setEntities([materia, deber, horario, clase], forConfigurationName: "Tareas")
         model.setEntities([cuaderno, pagina], forConfigurationName: "Notas")
         return model
     }

@@ -267,3 +267,86 @@ extension Pagina: Identifiable {
         self.cuaderno = cuaderno
     }
 }
+
+/// Un horario semanal («Universidad», «Trabajo», «Ocio»…). Contiene clases o actividades que se repiten cada semana.
+@objc(Horario)
+final class Horario: NSManagedObject {
+    @NSManaged var id: UUID
+    @NSManaged var nombre: String
+    @NSManaged var icono: String
+    @NSManaged var orden: Int16
+    @NSManaged var fechaCreacion: Date
+    @NSManaged var fechaActualizacion: Date
+    @NSManaged var eliminada: Date?
+    @NSManaged var clases: Set<Clase>
+}
+
+/// Una clase o actividad en un día de la semana. Una clase que se da varios días son varias filas con el mismo `grupo`.
+/// Las horas son minutos desde las 00:00 en hora local (sin zona horaria). El color no se guarda: se calcula.
+@objc(Clase)
+final class Clase: NSManagedObject {
+    @NSManaged var id: UUID
+    /// Lista de tareas con la que se relaciona (opcional; solo una referencia).
+    @NSManaged var materiaId: UUID?
+    @NSManaged var grupo: UUID
+    @NSManaged var titulo: String
+    @NSManaged var diaSemana: Int16
+    @NSManaged var inicioMin: Int16
+    @NSManaged var finMin: Int16
+    @NSManaged var aula: String
+    @NSManaged var notas: String
+    /// Minutos de antelación del aviso; nil = sin aviso.
+    @NSManaged var avisoMin: NSNumber?
+    @NSManaged var fechaCreacion: Date
+    @NSManaged var fechaActualizacion: Date
+    @NSManaged var eliminada: Date?
+    @NSManaged var horario: Horario
+}
+
+extension Horario: Identifiable {
+    static func fetchRequest() -> NSFetchRequest<Horario> {
+        let peticion = fetchRequestTodas()
+        peticion.predicate = predicadoVivo
+        return peticion
+    }
+
+    static func fetchRequestTodas() -> NSFetchRequest<Horario> {
+        NSFetchRequest<Horario>(entityName: "Horario")
+    }
+
+    convenience init(context: NSManagedObjectContext, nombre: String, icono: String, orden: Int16) {
+        self.init(context: context)
+        id = UUID()
+        self.nombre = nombre
+        self.icono = icono
+        self.orden = orden
+        fechaCreacion = .now
+        fechaActualizacion = .now
+    }
+
+    var clasesVivas: [Clase] { clases.filter { $0.eliminada == nil } }
+}
+
+extension Clase: Identifiable {
+    static func fetchRequest() -> NSFetchRequest<Clase> {
+        let peticion = fetchRequestTodas()
+        peticion.predicate = NSPredicate(format: "eliminada == nil AND horario.eliminada == nil")
+        return peticion
+    }
+
+    static func fetchRequestTodas() -> NSFetchRequest<Clase> {
+        NSFetchRequest<Clase>(entityName: "Clase")
+    }
+
+    var aviso: Int? {
+        get { avisoMin?.intValue }
+        set { avisoMin = newValue.map { NSNumber(value: $0) } }
+    }
+
+    /// Versión sin Core Data, para las reglas del horario.
+    var datos: ClaseHorario {
+        ClaseHorario(id: id, horario: horario.id, materiaId: materiaId, grupo: grupo, titulo: titulo,
+                     diaSemana: Int(diaSemana), inicioMin: Int(inicioMin), finMin: Int(finMin),
+                     aula: aula, notas: notas, avisoMin: aviso)
+    }
+}
