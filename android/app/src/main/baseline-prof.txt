@@ -1,0 +1,4 @@
+# Perfil de arranque: compila de antemano el código propio de la app (pantallas, menú, calendario, editor)
+# para que el primer uso no vaya a trompicones mientras Android aún interpreta el código.
+HSPLapp/kiwu/android/**;->**(**)**
+Lapp/kiwu/android/**;

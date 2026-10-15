@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Ventana de arranque: mismo fondo que la app, claro u oscuro según el sistema. -->
+    <style name="Theme.Kiwu.Arranque" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/kiwu_fondo</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.Kiwu</item>
+    </style>
+
+    <style name="Theme.Kiwu" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/kiwu_fondo</item>
+    </style>
+</resources>

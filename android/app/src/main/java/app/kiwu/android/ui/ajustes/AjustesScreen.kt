@@ -1,0 +1,258 @@
+package app.kiwu.android.ui.ajustes
+
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Colorize
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.Alignment
+import app.kiwu.android.ui.Acentos
+import app.kiwu.android.ui.tonoYSaturacion
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.kiwu.android.BuildConfig
+import app.kiwu.android.KiwuApp
+import app.kiwu.android.data.AjustesUi
+import app.kiwu.android.data.Copia
+import app.kiwu.android.data.ErrorCopia
+import app.kiwu.android.notify.Avisos
+import app.kiwu.android.notify.ProgramadorAvisos
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.time.LocalDate
+
+@Composable
+private fun Seccion(titulo: String, contenido: @Composable () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(titulo, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+        contenido()
+    }
+}
+
+/** Ajustes: apariencia, fondo, avisos del sistema y copia de seguridad. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit) {
+    val contexto = LocalContext.current
+    val alcance = rememberCoroutineScope()
+    val ajustes by app.ajustes.flujo.collectAsStateWithLifecycle(AjustesUi())
+    var mensaje by remember { mutableStateOf<String?>(null) }
+    fun cambiar(f: (AjustesUi) -> AjustesUi) { alcance.launch { app.ajustes.cambiar(f) } }
+
+    val elegirFondo = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            try {
+                contexto.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (e: SecurityException) { /* se usa mientras dure el permiso temporal */ }
+            cambiar { it.copy(fondoUri = uri.toString()) }
+        }
+    }
+    val exportar = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) alcance.launch {
+            mensaje = try {
+                val texto = Copia.exportar(app.db.dao())
+                withContext(Dispatchers.IO) { contexto.contentResolver.openOutputStream(uri)?.use { it.write(texto.toByteArray(Charsets.UTF_8)) } }
+                "Copia guardada"
+            } catch (e: Exception) {
+                "No se pudo guardar la copia: ${e.message}"
+            }
+        }
+    }
+    val importar = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) alcance.launch {
+            mensaje = try {
+                val texto = withContext(Dispatchers.IO) { contexto.contentResolver.openInputStream(uri)?.use { String(it.readBytes(), Charsets.UTF_8) } ?: "" }
+                val r = Copia.importar(app.db.dao(), texto)
+                "Importado: ${r.materias} listas, ${r.deberes} tareas, ${r.cuadernos} cuadernos, ${r.paginas} notas, ${r.horarios} horarios, ${r.clases} clases"
+            } catch (e: ErrorCopia) {
+                e.message
+            } catch (e: Exception) {
+                "No se pudo importar: ${e.message}"
+            }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Ajustes") },
+                navigationIcon = { IconButton(onClick = alVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+            )
+        },
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) { relleno ->
+        Column(Modifier.padding(relleno).fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
+            Seccion("Apariencia") {
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    val opciones = listOf("sistema" to "Sistema", "claro" to "Claro", "oscuro" to "Oscuro")
+                    opciones.forEachIndexed { i, (id, titulo) ->
+                        SegmentedButton(ajustes.tema == id, { cambiar { it.copy(tema = id) } }, SegmentedButtonDefaults.itemShape(i, opciones.size)) { Text(titulo) }
+                    }
+                }
+            }
+            HorizontalDivider()
+            Seccion("Color de la app") {
+                SelectorColor(ajustes.acento) { id -> cambiar { it.copy(acento = id) } }
+            }
+            HorizontalDivider()
+            Seccion("Fondo de imagen") {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { elegirFondo.launch(arrayOf("image/*")) }) { Text(if (ajustes.fondoUri == null) "Elegir imagen" else "Cambiar imagen") }
+                    if (ajustes.fondoUri != null) OutlinedButton(onClick = { cambiar { it.copy(fondoUri = null) } }) { Text("Quitar") }
+                }
+                if (ajustes.fondoUri != null) {
+                    Text("Visibilidad de la imagen", style = MaterialTheme.typography.labelMedium)
+                    Slider(ajustes.fondoVisibilidad, { v -> cambiar { it.copy(fondoVisibilidad = v) } })
+                    Text("Velo para leer mejor el contenido", style = MaterialTheme.typography.labelMedium)
+                    Slider(ajustes.opacidadPaneles, { v -> cambiar { it.copy(opacidadPaneles = v) } })
+                }
+            }
+            HorizontalDivider()
+            Seccion("Recordatorios") {
+                val permiso = Avisos.tienePermiso(contexto)
+                Text(if (permiso) "Las notificaciones están activadas." else "Las notificaciones están desactivadas: no recibirás avisos.", style = MaterialTheme.typography.bodyMedium)
+                if (!permiso) {
+                    OutlinedButton(onClick = {
+                        contexto.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, contexto.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }) { Text("Abrir ajustes de notificaciones") }
+                }
+                if (Build.VERSION.SDK_INT >= 31 && !ProgramadorAvisos(contexto).puedeExactas()) {
+                    Text("Para que los avisos suenen a la hora exacta, permite las alarmas exactas.", style = MaterialTheme.typography.bodyMedium)
+                    OutlinedButton(onClick = {
+                        contexto.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${contexto.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }) { Text("Permitir alarmas exactas") }
+                }
+            }
+            HorizontalDivider()
+            Seccion("Copia de seguridad") {
+                Text("Guarda tus listas, tareas y notas en un archivo .kiwu.json. Es el mismo formato que usa Kiwu para Linux.", style = MaterialTheme.typography.bodyMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { exportar.launch("kiwu-${LocalDate.now()}.kiwu.json") }) { Text("Exportar") }
+                    OutlinedButton(onClick = { importar.launch(arrayOf("application/json", "application/octet-stream", "*/*")) }) { Text("Importar") }
+                }
+                mensaje?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+            }
+            HorizontalDivider()
+            Seccion("Acerca de Kiwu") {
+                Text("Versión ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyMedium)
+                Text("Tus datos se guardan solo en este dispositivo: sin cuentas, sin servidor, sin publicidad ni analíticas. La app solo usa Internet cuando pegas un enlace en una nota, para descargar su vista previa.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 32.dp))
+        }
+    }
+}
+
+/** Fila de colores: los predefinidos, los del sistema (Android 12+) y uno a medida. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SelectorColor(actual: String, alElegir: (String) -> Unit) {
+    var personalizar by remember { mutableStateOf(false) }
+    val personalizado = Acentos.personalizado(actual)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        for (a in Acentos.predefinidos) Muestra(a.muestra, a.titulo, actual == a.id) { alElegir(a.id) }
+        if (Build.VERSION.SDK_INT >= 31) {
+            Muestra(null, "Colores del sistema", actual == Acentos.SISTEMA, Icons.Filled.Palette) { alElegir(Acentos.SISTEMA) }
+        }
+        Muestra(personalizado, "Otro color", personalizado != null, Icons.Filled.Colorize) { personalizar = true }
+    }
+    if (personalizar) {
+        DialogoColor(personalizado ?: Acentos.muestra(Acentos.CORAL)!!, { personalizar = false }) { alElegir(Acentos.aTexto(it)) }
+    }
+}
+
+@Composable
+private fun Muestra(color: Color?, descripcion: String, elegida: Boolean, icono: ImageVector? = null, alPulsar: () -> Unit) {
+    val relleno = color ?: MaterialTheme.colorScheme.surfaceVariant
+    Box(
+        Modifier.size(44.dp).clip(CircleShape).background(relleno)
+            .border(if (elegida) 3.dp else 1.dp, if (elegida) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outlineVariant, CircleShape)
+            .semantics { contentDescription = descripcion + if (elegida) " (elegido)" else "" }
+            .clickable(onClick = alPulsar),
+        contentAlignment = Alignment.Center,
+    ) {
+        when {
+            elegida && icono == null -> Icon(Icons.Filled.Check, null, tint = Color.White)
+            icono != null -> Icon(icono, null, tint = if (color == null) MaterialTheme.colorScheme.onSurfaceVariant else Color.White)
+        }
+    }
+}
+
+@Composable
+private fun DialogoColor(inicial: Color, alCerrar: () -> Unit, alElegir: (Color) -> Unit) {
+    val (t0, s0) = remember(inicial) { tonoYSaturacion(inicial) }
+    var tono by remember { mutableStateOf(t0) }
+    var saturacion by remember { mutableStateOf(s0.coerceIn(0.3f, 1f)) }
+    val color = Color.hsl(tono, saturacion, 0.5f)
+    AlertDialog(
+        onDismissRequest = alCerrar,
+        title = { Text("Otro color") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(12.dp)).background(color))
+                Text("Tono", style = MaterialTheme.typography.labelMedium)
+                Slider(tono, { tono = it }, valueRange = 0f..360f)
+                Text("Intensidad", style = MaterialTheme.typography.labelMedium)
+                Slider(saturacion, { saturacion = it }, valueRange = 0f..1f)
+            }
+        },
+        confirmButton = { TextButton(onClick = { alElegir(color); alCerrar() }) { Text("Usar este color") } },
+        dismissButton = { TextButton(onClick = alCerrar) { Text("Cancelar") } },
+    )
+}

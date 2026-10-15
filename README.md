@@ -45,6 +45,7 @@ Cada sistema tiene su propio instalador y su propia numeración de versiones (m�
 | Sistema | Archivo para instalar a mano | Más información |
 | --- | --- | --- |
 | 🍎 **macOS** 13 o superior | [`Kiwu.dmg`](https://github.com/ksebas20500/kiwu/releases/latest/download/Kiwu.dmg) (universal: Apple Silicon e Intel) | [macos/README.md](macos/README.md) |
+| 🤖 **Android** 8 o superior (en desarrollo) | Se compila desde [`android/`](android/README.md); aún sin APK publicado | [android/README.md](android/README.md) |
 | 🐧 **Linux** (Arch + Hyprland / Wayland) | `kiwu-linux.tar.gz`, en los [releases `linux-v…`](https://github.com/ksebas20500/kiwu/releases?q=linux-v) | [linux/README.md](linux/README.md) |
 
 Descarga la última versión desde [Releases](https://github.com/ksebas20500/kiwu/releases/latest). Cada versión conserva su propio archivo en la [lista de versiones](https://github.com/ksebas20500/kiwu/releases).

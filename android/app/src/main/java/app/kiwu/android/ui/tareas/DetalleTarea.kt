@@ -1,0 +1,248 @@
+package app.kiwu.android.ui.tareas
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
+import app.kiwu.android.data.Repositorio
+import app.kiwu.android.domain.Columna
+import app.kiwu.android.domain.Deber
+import app.kiwu.android.domain.Documento
+import app.kiwu.android.domain.Materia
+import app.kiwu.android.ui.Fechas
+import app.kiwu.android.ui.SelectorFechaHora
+import app.kiwu.android.ui.editor.BarraFormato
+import app.kiwu.android.ui.editor.EditorBloques
+import app.kiwu.android.ui.editor.rememberEstadoEditor
+import app.kiwu.android.ui.editor.OrigenAdjuntos
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
+
+class DetalleTareaViewModel(private val repo: Repositorio, private val alcanceApp: CoroutineScope, val id: String) : ViewModel() {
+    val reglas get() = repo.reglas
+    val deber = repo.deberes.map { lista -> lista.firstOrNull { it.id == id } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    val materias: Flow<List<Materia>> = repo.materias
+
+    private val notaPendiente = MutableStateFlow<String?>(null)
+
+    @OptIn(FlowPreview::class)
+    private val guardadoDeNota = viewModelScope.launch {
+        notaPendiente.debounce(500).distinctUntilChanged().collect { json -> if (json != null) repo.cambiarNota(id, json) }
+    }
+
+    fun editarNota(doc: Documento) {
+        notaPendiente.value = doc.aJson()
+    }
+
+    /** Al salir de la pantalla se guarda ya lo que quedara pendiente (sobrevive a la pantalla). */
+    fun guardarAhora() {
+        val json = notaPendiente.value ?: return
+        alcanceApp.launch { repo.cambiarNota(id, json) }
+    }
+
+    fun cambiarTitulo(titulo: String) = viewModelScope.launch { repo.cambiarTitulo(id, titulo) }
+    fun guardarTituloAhora(titulo: String) { alcanceApp.launch { repo.cambiarTitulo(id, titulo) } }
+    fun marcar(c: Boolean) = viewModelScope.launch { repo.marcar(id, c) }
+    fun mover(c: Columna) = viewModelScope.launch { repo.mover(id, c) }
+    fun ponerFecha(f: Long?) = viewModelScope.launch { repo.ponerFecha(id, f) }
+    fun cambiarRecordatorio(h: Int) = viewModelScope.launch { repo.cambiarRecordatorio(id, h) }
+    fun moverAMateria(m: String) = viewModelScope.launch { repo.moverAMateria(id, m) }
+    fun eliminar() = alcanceApp.launch { repo.eliminarDeber(id) }
+}
+
+private val AvisosDisponibles = listOf(0 to "Sin aviso", 1 to "1 hora antes", 2 to "2 horas antes", 6 to "6 horas antes", 12 to "12 horas antes", 24 to "1 día antes", 48 to "2 días antes", 168 to "1 semana antes")
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVolver: () -> Unit) {
+    val d by vm.deber.collectAsStateWithLifecycle()
+    val materias by vm.materias.collectAsStateWithLifecycle(emptyList())
+    var seleccionarFecha by remember { mutableStateOf(false) }
+    var menuLista by remember { mutableStateOf(false) }
+    var menuAviso by remember { mutableStateOf(false) }
+    var menuFecha by remember { mutableStateOf(false) }
+    val zona = ZoneId.systemDefault()
+
+    val actual = d
+    // Si la tarea desapareció (se eliminó), se vuelve atrás.
+    var existio by remember { mutableStateOf(false) }
+    LaunchedEffect(actual) {
+        if (actual != null) existio = true else if (existio) alVolver()
+    }
+    if (actual == null) return
+
+    var titulo by remember(actual.id) { mutableStateOf(actual.titulo) }
+    LaunchedEffect(titulo) {
+        kotlinx.coroutines.delay(500)
+        vm.cambiarTitulo(titulo)
+    }
+    val tituloActual by androidx.compose.runtime.rememberUpdatedState(titulo)
+    DisposableEffect(vm) {
+        onDispose {
+            vm.guardarAhora()
+            vm.guardarTituloAhora(tituloActual)
+        }
+    }
+
+    val documentoInicial = remember(actual.id) { Documento.deJson(actual.nota) }
+    val editor = rememberEstadoEditor(documentoInicial, vm::editarNota)
+    val columna = vm.reglas.columnaDe(actual)
+    val ahora = System.currentTimeMillis()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {},
+                navigationIcon = { IconButton(onClick = alVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } },
+                actions = {
+                    Checkbox(checked = actual.completado, onCheckedChange = vm::marcar)
+                    IconButton(onClick = { vm.eliminar(); alVolver() }) { Icon(Icons.Filled.Delete, "Eliminar tarea") }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+            )
+        },
+        bottomBar = { BarraFormato(editor, adjuntos) },
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) { relleno ->
+        Column(Modifier.padding(relleno).consumeWindowInsets(relleno).fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
+            TextField(
+                value = titulo, onValueChange = { titulo = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Título", fontSize = 24.sp) },
+                textStyle = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
+                ),
+            )
+
+            Row(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box {
+                    AssistChip(
+                        onClick = { menuFecha = true },
+                        label = { Text(actual.fechaEntrega?.let { Fechas.completa(it, zona) } ?: "Fecha de entrega") },
+                        leadingIcon = { Icon(Icons.Filled.CalendarMonth, null) },
+                    )
+                    DropdownMenu(expanded = menuFecha, onDismissRequest = { menuFecha = false }) {
+                        fun atajo(dias: Long) {
+                            val base = actual.fechaEntrega?.let { java.time.Instant.ofEpochMilli(it).atZone(zona).toLocalTime() } ?: java.time.LocalTime.of(18, 0)
+                            vm.ponerFecha(LocalDate.now(zona).plusDays(dias).atTime(base).atZone(zona).toInstant().toEpochMilli())
+                            menuFecha = false
+                        }
+                        DropdownMenuItem(text = { Text("Hoy") }, onClick = { atajo(0) })
+                        DropdownMenuItem(text = { Text("Mañana") }, onClick = { atajo(1) })
+                        DropdownMenuItem(text = { Text("En una semana") }, onClick = { atajo(7) })
+                        DropdownMenuItem(text = { Text("Elegir día y hora…") }, onClick = { menuFecha = false; seleccionarFecha = true })
+                        if (actual.fechaEntrega != null) {
+                            DropdownMenuItem(text = { Text("Quitar fecha") }, onClick = { menuFecha = false; vm.ponerFecha(null) })
+                        }
+                    }
+                }
+                if (actual.fechaEntrega != null) {
+                    Box {
+                        AssistChip(
+                            onClick = { menuAviso = true },
+                            label = { Text(AvisosDisponibles.firstOrNull { it.first == actual.recordatorioHoras }?.second ?: "${actual.recordatorioHoras} h antes") },
+                            leadingIcon = { Icon(Icons.Filled.Notifications, null) },
+                        )
+                        DropdownMenu(expanded = menuAviso, onDismissRequest = { menuAviso = false }) {
+                            for ((horas, texto) in AvisosDisponibles) {
+                                DropdownMenuItem(text = { Text(texto) }, onClick = { menuAviso = false; vm.cambiarRecordatorio(horas) })
+                            }
+                        }
+                    }
+                }
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box {
+                    AssistChip(onClick = { menuLista = true }, label = { Text(materias.firstOrNull { it.id == actual.materiaId }?.nombre ?: "Lista") })
+                    DropdownMenu(expanded = menuLista, onDismissRequest = { menuLista = false }) {
+                        for (m in materias) DropdownMenuItem(text = { Text(m.nombre) }, onClick = { menuLista = false; vm.moverAMateria(m.id) })
+                    }
+                }
+            }
+
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
+                Columna.entries.forEachIndexed { i, c ->
+                    SegmentedButton(
+                        selected = columna == c, onClick = { vm.mover(c) },
+                        shape = SegmentedButtonDefaults.itemShape(i, Columna.entries.size),
+                    ) { Text(c.titulo) }
+                }
+            }
+
+            EditorBloques(editor, adjuntos, Modifier.fillMaxWidth().padding(top = 8.dp))
+
+            Text(
+                "Editado " + Fechas.completa(actual.actualizada, zona), style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 24.dp),
+            )
+        }
+    }
+
+    if (seleccionarFecha) {
+        SelectorFechaHora(actual.fechaEntrega, alCerrar = { seleccionarFecha = false }) { vm.ponerFecha(it) }
+    }
+}
