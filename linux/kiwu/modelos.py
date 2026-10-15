@@ -217,6 +217,7 @@ class Materia:
     carpeta: Optional[str] = None
     creada: float = 0.0
     actualizada: float = 0.0
+    eliminada: Optional[float] = None
 
 
 @dataclass
@@ -243,6 +244,7 @@ class Cuaderno:
     orden: int = 0
     creada: float = 0.0
     actualizada: float = 0.0
+    eliminada: Optional[float] = None
 
 
 @dataclass

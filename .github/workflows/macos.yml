@@ -1,0 +1,25 @@
+name: macOS
+
+on:
+  push:
+    branches: [main]
+    paths: ["macos/**", "docs/contrato/**", ".github/workflows/macos.yml"]
+  pull_request:
+    paths: ["macos/**", "docs/contrato/**", ".github/workflows/macos.yml"]
+
+jobs:
+  compilar:
+    # Kiwu necesita Xcode 26 (ver macos/README.md). Si este runner no existe en tu cuenta, cámbialo por el más nuevo.
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Contrato de datos (modelo de notas)
+        run: bash macos/Tools/probar-contrato.sh
+      - name: Compilar la app y los widgets (sin firmar)
+        working-directory: macos
+        run: |
+          xcodebuild build \
+            -project Kiwu.xcodeproj \
+            -scheme Kiwu \
+            -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO

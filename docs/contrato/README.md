@@ -1,0 +1,44 @@
+# Contrato de datos multiplataforma
+
+Fuente de verdad del formato de las notas (`NoteDocument` / `NoteBlock` / `TextRun`) que comparten macOS, Linux y, en el futuro, Android.
+
+Cada `notas/<nombre>.json` es una nota escrita como la escribiría macOS, y `notas/<nombre>.esperado.json` dice **qué debe obtener cualquier cliente** al leerla:
+
+- `texto_plano`: el texto legible de la nota (para búsqueda y vistas previas).
+- `tipos`: el `kind` de cada bloque, en orden (un tipo desconocido se lee como `paragraph`).
+- `sangrias`: el nivel de sangría de cada bloque.
+
+Además, cada cliente debe poder escribir la nota y volver a leerla con el mismo resultado.
+
+Quién lo comprueba:
+
+| Cliente | Prueba | Cómo se ejecuta |
+| --- | --- | --- |
+| Linux (Python) | `linux/tests/test_contrato.py` | `cd linux && python3 -m unittest tests.test_contrato` |
+| macOS (Swift) | `macos/Tools/probar-contrato.swift` | `macos/Tools/probar-contrato.sh` |
+
+**Para cambiar el formato**: añade primero una fixture y su `.esperado.json`, y no fusiones el cambio hasta que pasen las pruebas de todos los clientes. Los campos que un cliente no entiende no pueden provocar un fallo al leer.
+
+Límite conocido: Linux conserva los campos desconocidos al reescribir una nota; Swift los descarta. Por eso las fixtures solo exigen lo que ambos cumplen.
+
+
+## Horarios (Android; Linux y macOS pendientes)
+
+La copia `.kiwu.json` admite dos claves opcionales nuevas. El formato sigue siendo `1`: las copias antiguas, sin estas claves, se importan igual, y un cliente que no las conoce las ignora.
+
+```json
+"horarios": [
+  { "id": "UUID", "nombre": "Universidad", "icono": "🎓", "orden": 0, "creada": "ISO-8601", "actualizada": "ISO-8601" }
+],
+"clases": [
+  {
+    "id": "UUID", "horario": "UUID-del-horario", "materia": "UUID-de-una-materia o null",
+    "grupo": "UUID (une las filas de una misma clase en varios días)",
+    "titulo": "Cálculo", "diaSemana": 1, "inicioMin": 480, "finMin": 600,
+    "aula": "204", "notas": "", "avisoMin": 10,
+    "creada": "ISO-8601", "actualizada": "ISO-8601"
+  }
+]
+```
+
+Reglas: `diaSemana` va de 1 (lunes) a 7 (domingo); `inicioMin` y `finMin` son **minutos desde las 00:00 en hora local, sin zona horaria** (`0 ≤ inicio < 1440`, `inicio < fin ≤ 1440`); una clase en varios días son varias filas con el mismo `grupo`; `avisoMin` es nulo si no hay aviso. Al importar se descartan las clases con día u horas inválidos o cuyo horario no existe, y no se pisa lo que ya está (ni se resucita lo eliminado).

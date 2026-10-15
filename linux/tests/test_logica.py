@@ -28,6 +28,22 @@ CREATE TABLE ZMATERIA ( Z_PK INTEGER PRIMARY KEY, Z_ENT INTEGER, Z_OPT INTEGER, 
 CREATE TABLE ZPAGINA ( Z_PK INTEGER PRIMARY KEY, Z_ENT INTEGER, Z_OPT INTEGER, ZFAVORITA INTEGER, ZCUADERNO INTEGER, ZFECHAACTUALIZACION TIMESTAMP, ZFECHACREACION TIMESTAMP, ZICONO VARCHAR, ZTEXTOPLANO VARCHAR, ZTITULO VARCHAR, ZID BLOB, ZCONTENIDO BLOB );
 """
 
+# Esquema v1 (Kiwu para Linux 0.1.0), para probar la migración
+ESQUEMA_V1 = """
+CREATE TABLE materia (id TEXT PRIMARY KEY, nombre TEXT NOT NULL, icono TEXT NOT NULL DEFAULT 'book',
+    orden INTEGER NOT NULL DEFAULT 0, carpeta TEXT, creada REAL NOT NULL, actualizada REAL NOT NULL);
+CREATE TABLE deber (id TEXT PRIMARY KEY, materia_id TEXT NOT NULL REFERENCES materia(id) ON DELETE CASCADE,
+    titulo TEXT NOT NULL, completado INTEGER NOT NULL DEFAULT 0, estado INTEGER NOT NULL DEFAULT 0,
+    fecha_entrega REAL, recordatorio_horas INTEGER NOT NULL DEFAULT 24, fecha_completado REAL,
+    nota TEXT NOT NULL DEFAULT '{"blocks":[]}', creada REAL NOT NULL, actualizada REAL NOT NULL, recordado REAL);
+CREATE TABLE cuaderno (id TEXT PRIMARY KEY, nombre TEXT NOT NULL, icono TEXT NOT NULL DEFAULT 'x',
+    orden INTEGER NOT NULL DEFAULT 0, creada REAL NOT NULL, actualizada REAL NOT NULL);
+CREATE TABLE pagina (id TEXT PRIMARY KEY, cuaderno_id TEXT NOT NULL REFERENCES cuaderno(id) ON DELETE CASCADE,
+    titulo TEXT NOT NULL DEFAULT '', icono TEXT NOT NULL DEFAULT '', contenido TEXT NOT NULL DEFAULT '{"blocks":[]}',
+    texto_plano TEXT NOT NULL DEFAULT '', favorita INTEGER NOT NULL DEFAULT 0, creada REAL NOT NULL,
+    actualizada REAL NOT NULL);
+"""
+
 NOTA_MACOS = (
     '{"blocks":[{"id":"6F1E6C0A-1111-4222-8333-444455556666","kind":"paragraph","text":"Hola mundo",'
     '"indent":0,"isChecked":false,"runs":[{"text":"Hola ","bold":false,"italic":false,"underline":false,'
@@ -104,6 +120,75 @@ class PruebasBaseDeDatos(unittest.TestCase):
         self.assertTrue(self.db.pagina(p.id).favorita)
         self.db.eliminar_cuaderno(c.id)
         self.assertEqual(self.db.paginas(), [])
+
+    def test_borrado_logico_deja_la_fila_marcada(self):
+        d = self.s.crear("A", self.m.id)
+        self.db.eliminar_deber(d.id)
+        self.assertIsNone(self.db.deber(d.id))
+        fila = self.db.con.execute("SELECT eliminada, actualizada FROM deber WHERE id = ?", (d.id,)).fetchone()
+        self.assertIsNotNone(fila["eliminada"])
+        self.assertGreaterEqual(fila["actualizada"], d.actualizada)
+
+    def test_borrar_materia_marca_tambien_sus_tareas(self):
+        d = self.s.crear("A", self.m.id)
+        self.db.eliminar_materia(self.m.id)
+        self.assertEqual(self.db.materias(), [])
+        self.assertEqual(self.db.deberes(), [])
+        fila = self.db.con.execute("SELECT eliminada FROM deber WHERE id = ?", (d.id,)).fetchone()
+        self.assertIsNotNone(fila["eliminada"])
+
+    def test_borrar_cuaderno_marca_tambien_sus_paginas(self):
+        c = self.db.crear_cuaderno("N")
+        p = self.db.crear_pagina(c.id)
+        self.db.eliminar_cuaderno(c.id)
+        self.assertEqual(self.db.cuadernos(), [])
+        self.assertIsNone(self.db.pagina(p.id))
+        fila = self.db.con.execute("SELECT eliminada FROM pagina WHERE id = ?", (p.id,)).fetchone()
+        self.assertIsNotNone(fila["eliminada"])
+
+    def test_lo_eliminado_no_se_puede_editar_ni_cuenta_como_dato(self):
+        d = self.s.crear("A", self.m.id)
+        self.db.eliminar_deber(d.id)
+        self.db.actualizar_deber(d.id, titulo="resucitada")
+        self.assertIsNone(self.db.deber(d.id))
+        self.assertNotIn(d.id, self.db.ids("deber"))
+        self.db.eliminar_materia(self.m.id)
+        self.assertTrue(self.db.esta_vacia())
+
+    def test_importar_no_resucita_lo_eliminado(self):
+        d = self.s.crear("A", self.m.id)
+        self.db.eliminar_deber(d.id)
+        n = self.db.insertar_filas("deber", [{
+            "id": d.id, "materia_id": self.m.id, "titulo": "A", "completado": 0, "estado": 0,
+            "fecha_entrega": None, "recordatorio_horas": 24, "fecha_completado": None, "nota": "{}",
+            "creada": 0.0, "actualizada": 0.0, "recordado": None}])
+        self.assertEqual(n, 0)
+        self.assertEqual(self.db.deberes(), [])
+
+    def test_migra_una_base_v1_sin_perder_datos(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ruta = Path(tmp) / "v1.db"
+            # Base creada por la versión 0.1.0 (esquema v1, sin columna `eliminada`)
+            con = sqlite3.connect(ruta)
+            con.executescript(ESQUEMA_V1)
+            con.execute("INSERT INTO materia (id, nombre, creada, actualizada) VALUES ('M1', 'Vieja', 1, 1)")
+            con.execute("INSERT INTO deber (id, materia_id, titulo, creada, actualizada) VALUES ('D1', 'M1', 'Tarea', 1, 1)")
+            con.execute("PRAGMA user_version = 1")
+            con.commit()
+            con.close()
+
+            db = BaseDeDatos(ruta)
+            self.assertEqual([m.nombre for m in db.materias()], ["Vieja"])
+            self.assertEqual([d.titulo for d in db.deberes()], ["Tarea"])
+            db.eliminar_materia("M1")
+            self.assertEqual(db.deberes(), [])
+            self.assertEqual(db.con.execute("PRAGMA user_version").fetchone()[0], 2)
+            db.cerrar()
+
+            # Abrirla otra vez no debe fallar (la migración es idempotente)
+            db = BaseDeDatos(ruta)
+            self.assertEqual(db.materias(), [])
+            db.cerrar()
 
 
 class PruebasServicio(unittest.TestCase):

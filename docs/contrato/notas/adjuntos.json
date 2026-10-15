@@ -1,0 +1,7 @@
+{"blocks":[
+{"id":"44444444-4444-4444-8444-444444444444","kind":"code","text":"print(1)","indent":0,"isChecked":false,"language":"python"},
+{"id":"55555555-5555-4555-8555-555555555555","kind":"file","text":"","indent":0,"isChecked":false,"fileName":"guia.pdf","bookmark":"AAAA"},
+{"id":"66666666-6666-4666-8666-666666666666","kind":"embed","text":"","indent":0,"isChecked":false,"url":"https://example.com","preview":{"titulo":"Ejemplo","sitio":"example.com"}},
+{"id":"77777777-7777-4777-8777-777777777777","kind":"divider","text":"","indent":0,"isChecked":false},
+{"id":"88888888-8888-4888-8888-888888888888","kind":"image","text":"","indent":0,"isChecked":false,"imageData":"iVBORw0KGgo="}
+]}

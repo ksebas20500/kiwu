@@ -55,7 +55,10 @@ struct MateriaService {
 
     @discardableResult
     func crear(nombre: String) -> Materia {
-        let materia = Materia(context: persistence.container.viewContext, nombre: nombre, orden: Int16(clamping: Int(Date.now.timeIntervalSince1970) % 30000))
+        // Al final de la lista: mayor orden existente + 1 (igual que en Linux; antes se derivaba del reloj y podía repetirse).
+        let contexto = persistence.container.viewContext
+        let mayorOrden = ((try? contexto.fetch(Materia.fetchRequest())) ?? []).map { Int($0.orden) }.max() ?? -1
+        let materia = Materia(context: contexto, nombre: nombre, orden: Int16(clamping: mayorOrden + 1))
         persistence.save()
         return materia
     }

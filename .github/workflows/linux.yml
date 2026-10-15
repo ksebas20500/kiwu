@@ -1,0 +1,24 @@
+name: Linux y contrato
+
+on:
+  push:
+    branches: [main]
+    paths: ["linux/**", "docs/contrato/**", ".github/workflows/linux.yml"]
+  pull_request:
+    paths: ["linux/**", "docs/contrato/**", ".github/workflows/linux.yml"]
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      # Las pruebas no necesitan GTK: la prueba de humo sustituye `gi` por un doble.
+      - name: Pruebas (lógica, contrato, instalador e interfaz de humo)
+        working-directory: linux
+        run: python -m unittest discover -s tests -v

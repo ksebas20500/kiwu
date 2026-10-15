@@ -1,3 +1,4 @@
+import AppKit
 import CoreData
 import SQLite3
 
@@ -24,7 +25,11 @@ final class PersistenceController {
 
         container.loadPersistentStores { _, error in
             if let error {
-                fatalError("No se pudo cargar la base local: \(error)")
+                Self.avisarErrorGrave(
+                    titulo: "Kiwu no pudo abrir tus datos",
+                    detalle: "Tus datos no se han borrado: siguen en la carpeta «Application Support/Kiwu». Cierra Kiwu, haz una copia de esa carpeta y vuelve a abrirlo. Detalle técnico: \(error.localizedDescription)",
+                    cerrar: true
+                )
             }
         }
         container.viewContext.automaticallyMergesChangesFromParent = true
@@ -40,8 +45,31 @@ final class PersistenceController {
             try context.save()
             WidgetDataService.programarActualizacion(context)
         } catch {
-            assertionFailure("No se pudo guardar la base local: \(error)")
+            Self.avisarErrorGrave(
+                titulo: "Kiwu no pudo guardar tus cambios",
+                detalle: "Los últimos cambios siguen en pantalla pero no están guardados. Detalle técnico: \(error.localizedDescription)",
+                cerrar: false
+            )
         }
+    }
+
+    private static var ultimoAviso: Date?
+
+    /// Registra el error y se lo muestra a la persona (antes se ignoraba en la versión Release).
+    /// Los avisos de guardado se limitan a uno por minuto para no bloquear la escritura con diálogos repetidos.
+    private static func avisarErrorGrave(titulo: String, detalle: String, cerrar: Bool) {
+        NSLog("\(titulo): \(detalle)")
+        if !cerrar, let ultimo = ultimoAviso, Date.now.timeIntervalSince(ultimo) < 60 { return }
+        ultimoAviso = .now
+        let mostrar = {
+            let alerta = NSAlert()
+            alerta.alertStyle = .critical
+            alerta.messageText = titulo
+            alerta.informativeText = detalle
+            alerta.runModal()
+            if cerrar { NSApplication.shared.terminate(nil) }
+        }
+        if Thread.isMainThread { mostrar() } else { DispatchQueue.main.async(execute: mostrar) }
     }
 
     private static func makeModel() -> NSManagedObjectModel {

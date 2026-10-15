@@ -9,7 +9,12 @@ from typing import Callable, Iterable, Optional
 
 from .modelos import Cuaderno, Deber, Materia, Pagina, nuevo_id
 
-VERSION_ESQUEMA = 1
+VERSION_ESQUEMA = 2
+
+TABLAS = ("materia", "deber", "cuaderno", "pagina")
+
+# Hijos de cada tabla: al borrar el padre se marcan también como eliminados (borrado lógico en cascada).
+HIJOS = {"materia": (("deber", "materia_id"),), "cuaderno": (("pagina", "cuaderno_id"),)}
 
 ESQUEMA = """
 CREATE TABLE IF NOT EXISTS materia (
@@ -101,7 +106,25 @@ class BaseDeDatos:
         version = self.con.execute("PRAGMA user_version").fetchone()[0]
         if version < 1:
             self.con.executescript(ESQUEMA)
+        if version < 2:
+            # v2: borrado lógico. `eliminada` guarda cuándo se borró la fila (None = viva); así el borrado
+            # se podrá propagar a otros dispositivos al sincronizar.
+            for tabla in TABLAS:
+                columnas = {f["name"] for f in self.con.execute(f"PRAGMA table_info({tabla})")}
+                if "eliminada" not in columnas:
+                    self.con.execute(f"ALTER TABLE {tabla} ADD COLUMN eliminada REAL")
         self.con.execute(f"PRAGMA user_version = {VERSION_ESQUEMA}")
+        self.con.commit()
+
+    def _borrar(self, tabla: str, id_: str) -> None:
+        """Marca la fila (y sus hijos) como eliminada. `actualizada` también cambia: es lo que se sincroniza."""
+        ahora = time.time()
+        self.con.execute(f"UPDATE {tabla} SET eliminada = ?, actualizada = ? WHERE id = ? AND eliminada IS NULL",
+                         (ahora, ahora, id_))
+        for hija, columna in HIJOS.get(tabla, ()):
+            self.con.execute(
+                f"UPDATE {hija} SET eliminada = ?, actualizada = ? WHERE {columna} = ? AND eliminada IS NULL",
+                (ahora, ahora, id_))
         self.con.commit()
 
     def suscribir(self, funcion: Callable[[str], None]) -> None:
@@ -117,16 +140,16 @@ class BaseDeDatos:
     # --- materias -----------------------------------------------------------------------------
 
     def materias(self) -> list[Materia]:
-        filas = self.con.execute("SELECT * FROM materia ORDER BY orden, nombre COLLATE NOCASE").fetchall()
+        filas = self.con.execute("SELECT * FROM materia WHERE eliminada IS NULL ORDER BY orden, nombre COLLATE NOCASE").fetchall()
         return [Materia(**dict(f)) for f in filas]
 
     def materia(self, id_: str) -> Optional[Materia]:
-        f = self.con.execute("SELECT * FROM materia WHERE id = ?", (id_,)).fetchone()
+        f = self.con.execute("SELECT * FROM materia WHERE id = ? AND eliminada IS NULL", (id_,)).fetchone()
         return Materia(**dict(f)) if f else None
 
     def crear_materia(self, nombre: str, id_: Optional[str] = None) -> Materia:
         ahora = time.time()
-        orden = self.con.execute("SELECT COALESCE(MAX(orden), -1) + 1 FROM materia").fetchone()[0]
+        orden = self.con.execute("SELECT COALESCE(MAX(orden), -1) + 1 FROM materia WHERE eliminada IS NULL").fetchone()[0]
         m = Materia(id=id_ or nuevo_id(), nombre=nombre.strip(), orden=orden, creada=ahora, actualizada=ahora)
         self.con.execute(
             "INSERT INTO materia (id, nombre, icono, orden, carpeta, creada, actualizada) VALUES (?,?,?,?,?,?,?)",
@@ -146,17 +169,16 @@ class BaseDeDatos:
         self._avisar("materia")
 
     def eliminar_materia(self, id_: str) -> None:
-        self.con.execute("DELETE FROM materia WHERE id = ?", (id_,))
-        self.con.commit()
+        self._borrar("materia", id_)
         self._avisar("materia")
 
     # --- deberes ------------------------------------------------------------------------------
 
     def deberes(self) -> list[Deber]:
-        return [_deber(f) for f in self.con.execute("SELECT * FROM deber").fetchall()]
+        return [_deber(f) for f in self.con.execute("SELECT * FROM deber WHERE eliminada IS NULL").fetchall()]
 
     def deber(self, id_: str) -> Optional[Deber]:
-        f = self.con.execute("SELECT * FROM deber WHERE id = ?", (id_,)).fetchone()
+        f = self.con.execute("SELECT * FROM deber WHERE id = ? AND eliminada IS NULL", (id_,)).fetchone()
         return _deber(f) if f else None
 
     def crear_deber(self, titulo: str, materia_id: str, fecha: Optional[float] = None,
@@ -182,29 +204,28 @@ class BaseDeDatos:
         campos["actualizada"] = time.time()
         asignaciones = ", ".join(f"{k} = ?" for k in campos)
         valores = [int(v) if isinstance(v, bool) else v for v in campos.values()]
-        self.con.execute(f"UPDATE deber SET {asignaciones} WHERE id = ?", (*valores, id_))
+        self.con.execute(f"UPDATE deber SET {asignaciones} WHERE id = ? AND eliminada IS NULL", (*valores, id_))
         self.con.commit()
         if not silencioso:
             self._avisar("deber")
 
     def eliminar_deber(self, id_: str) -> None:
-        self.con.execute("DELETE FROM deber WHERE id = ?", (id_,))
-        self.con.commit()
+        self._borrar("deber", id_)
         self._avisar("deber")
 
     # --- cuadernos y páginas ------------------------------------------------------------------
 
     def cuadernos(self) -> list[Cuaderno]:
-        filas = self.con.execute("SELECT * FROM cuaderno ORDER BY orden, nombre COLLATE NOCASE").fetchall()
+        filas = self.con.execute("SELECT * FROM cuaderno WHERE eliminada IS NULL ORDER BY orden, nombre COLLATE NOCASE").fetchall()
         return [Cuaderno(**dict(f)) for f in filas]
 
     def cuaderno(self, id_: str) -> Optional[Cuaderno]:
-        f = self.con.execute("SELECT * FROM cuaderno WHERE id = ?", (id_,)).fetchone()
+        f = self.con.execute("SELECT * FROM cuaderno WHERE id = ? AND eliminada IS NULL", (id_,)).fetchone()
         return Cuaderno(**dict(f)) if f else None
 
     def crear_cuaderno(self, nombre: str, icono: str = "📓", id_: Optional[str] = None) -> Cuaderno:
         ahora = time.time()
-        orden = self.con.execute("SELECT COALESCE(MAX(orden), -1) + 1 FROM cuaderno").fetchone()[0]
+        orden = self.con.execute("SELECT COALESCE(MAX(orden), -1) + 1 FROM cuaderno WHERE eliminada IS NULL").fetchone()[0]
         c = Cuaderno(id=id_ or nuevo_id(), nombre=nombre.strip(), icono=icono, orden=orden, creada=ahora, actualizada=ahora)
         self.con.execute("INSERT INTO cuaderno (id, nombre, icono, orden, creada, actualizada) VALUES (?,?,?,?,?,?)",
                          (c.id, c.nombre, c.icono, c.orden, c.creada, c.actualizada))
@@ -219,16 +240,15 @@ class BaseDeDatos:
         self._avisar("cuaderno")
 
     def eliminar_cuaderno(self, id_: str) -> None:
-        self.con.execute("DELETE FROM cuaderno WHERE id = ?", (id_,))
-        self.con.commit()
+        self._borrar("cuaderno", id_)
         self._avisar("cuaderno")
 
     def paginas(self) -> list[Pagina]:
-        filas = self.con.execute("SELECT * FROM pagina ORDER BY actualizada DESC").fetchall()
+        filas = self.con.execute("SELECT * FROM pagina WHERE eliminada IS NULL ORDER BY actualizada DESC").fetchall()
         return [_pagina(f) for f in filas]
 
     def pagina(self, id_: str) -> Optional[Pagina]:
-        f = self.con.execute("SELECT * FROM pagina WHERE id = ?", (id_,)).fetchone()
+        f = self.con.execute("SELECT * FROM pagina WHERE id = ? AND eliminada IS NULL", (id_,)).fetchone()
         return _pagina(f) if f else None
 
     def crear_pagina(self, cuaderno_id: str, id_: Optional[str] = None) -> Pagina:
@@ -251,31 +271,31 @@ class BaseDeDatos:
         campos["actualizada"] = time.time()
         asignaciones = ", ".join(f"{k} = ?" for k in campos)
         valores = [int(v) if isinstance(v, bool) else v for v in campos.values()]
-        self.con.execute(f"UPDATE pagina SET {asignaciones} WHERE id = ?", (*valores, id_))
+        self.con.execute(f"UPDATE pagina SET {asignaciones} WHERE id = ? AND eliminada IS NULL", (*valores, id_))
         self.con.commit()
         if not silencioso:
             self._avisar("pagina")
 
     def eliminar_pagina(self, id_: str) -> None:
-        self.con.execute("DELETE FROM pagina WHERE id = ?", (id_,))
-        self.con.commit()
+        self._borrar("pagina", id_)
         self._avisar("pagina")
 
     # --- utilidades ---------------------------------------------------------------------------
 
     def esta_vacia(self) -> bool:
         return all(
-            self.con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] == 0
+            self.con.execute(f"SELECT COUNT(*) FROM {t} WHERE eliminada IS NULL").fetchone()[0] == 0
             for t in ("materia", "deber", "cuaderno", "pagina")
         )
 
     def ids(self, tabla: str) -> set[str]:
         if tabla not in {"materia", "deber", "cuaderno", "pagina"}:
             raise ValueError(tabla)
-        return {f[0] for f in self.con.execute(f"SELECT id FROM {tabla}").fetchall()}
+        return {f[0] for f in self.con.execute(f"SELECT id FROM {tabla} WHERE eliminada IS NULL").fetchall()}
 
     def insertar_filas(self, tabla: str, filas: Iterable[dict]) -> int:
-        """Inserción masiva para importaciones (ignora los id que ya existen)."""
+        """Inserción masiva para importaciones (ignora los id que ya existen, también los eliminados:
+        un elemento borrado no resucita al importar una copia antigua)."""
         if tabla not in {"materia", "deber", "cuaderno", "pagina"}:
             raise ValueError(tabla)
         total = 0
