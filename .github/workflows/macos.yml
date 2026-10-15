@@ -23,3 +23,11 @@ jobs:
             -scheme Kiwu \
             -destination 'platform=macOS' \
             CODE_SIGNING_ALLOWED=NO
+      - name: Pruebas (reglas del horario, copia de seguridad, borrado lógico, color)
+        working-directory: macos
+        run: |
+          xcodebuild test \
+            -project Kiwu.xcodeproj \
+            -scheme Kiwu \
+            -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO

@@ -64,8 +64,9 @@ macos/
   Kiwu/               La app
     Models/             Entidades y formato de las notas (bloques)
     Persistence/        Core Data (tareas y notas en almacenes separados)
-    Services/           Reglas de negocio: tareas, cuadernos, recordatorios, widgets
-    Views/              Interfaz SwiftUI (tareas, calendario, notas, editor)
+    Services/           Reglas de negocio: tareas, cuadernos, horario, copia de seguridad, recordatorios, widgets
+    Views/              Interfaz SwiftUI (tareas, calendario, notas, horario, editor)
+  KiwuTests/          Pruebas (XCTest): reglas del horario, copia de seguridad, borrado lógico, migración, color
   KiwuWidgets/        Extensión de widgets (WidgetKit + App Intents)
   Shared/             Código compartido entre la app y los widgets
   Config/             Ajustes de compilación, Info.plist y permisos
@@ -77,6 +78,27 @@ macos/
 **Cómo se comunican la app y los widgets.** La app escribe una instantánea JSON en el App Group cada vez que guarda datos; los widgets solo la leen. Cuando completas un deber desde un widget, este lo deja en una cola y la app lo aplica a su base de datos al abrirse. Los enlaces `kiwu://…` llevan al deber, nota o día del calendario correspondiente.
 
 **Nombres que se conservan por compatibilidad.** El identificador de la app (`com.ksebas.gestoruniversitario`), el App Group y los archivos de las bases de datos (`GestorUniversitario.sqlite`, `Notas.sqlite`) mantienen su nombre histórico para que las actualizaciones no pierdan datos.
+
+## Horario
+
+La sección **Horario** (⌘3) reúne tus clases y actividades en varios horarios (Universidad, Trabajo, Ocio…). Una clase puede darse varios días; se ve en **semana** o por **día**, arriba aparece «Ahora / Siguiente», y el formulario avisa si choca con otra clase (es solo una advertencia). Cada clase puede tener un **aviso** (5 a 60 min antes) que llega como notificación del sistema. Las horas se guardan sin zona horaria, igual que en Android y Linux.
+
+## Copia de seguridad
+
+*Archivo → Exportar copia…* e *Importar copia…* (también en Ajustes → Copia) guardan y leen un archivo `.kiwu.json`, el mismo formato de Kiwu para Linux y Android. Al importar no se pisa ni se duplica nada de lo que ya tienes. Las carpetas vinculadas a una lista no se incluyen.
+
+## Color de la app
+
+En Ajustes → Apariencia puedes elegir el color de la app entre ocho predefinidos, los colores del sistema o uno propio. Solo cambia en este Mac (no va en la copia de seguridad). Si el color elegido no se lee bien sobre el fondo, se oscurece o aclara automáticamente.
+
+## Pruebas
+
+```bash
+xcodebuild test -project Kiwu.xcodeproj -scheme Kiwu -destination 'platform=macOS'
+Tools/probar-contrato.sh      # el modelo de notas cumple docs/contrato (sin Xcode)
+```
+
+Se ejecutan también en GitHub Actions (`.github/workflows/macos.yml`).
 
 ## Crear el instalador
 
@@ -98,7 +120,7 @@ swiftc Tools/generar-icono.swift -o /tmp/generar-icono
 ## Pendiente
 
 - Sincronización entre Macs (iCloud).
-- Pruebas automatizadas e integración continua.
+- Widgets del horario (ver `docs/macos-paridad.md`).
 
 ## Licencia
 

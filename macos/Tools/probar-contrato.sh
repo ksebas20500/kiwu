@@ -9,6 +9,7 @@ trap 'rm -rf "$tmp"' EXIT
 
 swiftc -parse-as-library \
     "$raiz/macos/Kiwu/Models/DomainModels.swift" \
+    "$raiz/macos/Kiwu/Services/ReglasHorario.swift" \
     "$raiz/macos/Tools/probar-contrato.swift" \
     -o "$tmp/probar-contrato"
 
