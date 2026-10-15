@@ -5,8 +5,15 @@ import UniformTypeIdentifiers
 private enum PestanaAjustes: String, CaseIterable, Identifiable {
     case apariencia = "Apariencia"
     case atajos = "Atajos"
+    case copia = "Copia"
     var id: String { rawValue }
-    var icono: String { self == .apariencia ? "paintpalette" : "keyboard" }
+    var icono: String {
+        switch self {
+        case .apariencia: return "paintpalette"
+        case .atajos: return "keyboard"
+        case .copia: return "externaldrive"
+        }
+    }
 }
 
 struct AjustesView: View {
@@ -24,7 +31,7 @@ struct AjustesView: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-                .frame(width: 260)
+                .frame(width: 330)
                 Spacer()
                 Button("Listo") { dismiss() }
                     .keyboardShortcut(.defaultAction)
@@ -37,6 +44,7 @@ struct AjustesView: View {
                     switch pestana {
                     case .apariencia: AparienciaAjustes(ajustes: ajustes)
                     case .atajos: AtajosAjustes(ajustes: ajustes)
+                    case .copia: CopiaAjustes()
                     }
                 }
                 .padding(24)
@@ -139,6 +147,28 @@ private struct AparienciaAjustes: View {
     }
 }
 
+// MARK: Copia de seguridad
+
+private struct CopiaAjustes: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Copia de seguridad").font(.headline)
+            Text("Guarda tus listas, tareas, cuadernos, notas y horarios en un archivo .kiwu.json. Es el mismo formato de Kiwu para Linux y Android, así que sirve para pasar tus datos de un dispositivo a otro.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Button("Exportar copia…") { CopiaUI.exportar() }
+                Button("Importar copia…") { CopiaUI.importar() }
+            }
+            Text("Al importar no se modifica ni se duplica lo que ya tienes: solo se añade lo nuevo. Las carpetas vinculadas a una lista no se incluyen.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
 // MARK: Atajos
 
 private struct AtajosAjustes: View {
@@ -230,6 +260,11 @@ struct ComandosApp: Commands {
     @ObservedObject var ajustes = AjustesStore.shared
 
     var body: some Commands {
+        CommandGroup(after: .newItem) {
+            Divider()
+            Button("Exportar copia…") { CopiaUI.exportar() }
+            Button("Importar copia…") { CopiaUI.importar() }
+        }
         CommandMenu("Kiwu") {
             ForEach(AccionApp.allCases) { accion in
                 let atajo = ajustes.atajo(accion)
