@@ -152,11 +152,16 @@ struct HorarioRootView: View {
                     if vista == .semana {
                         SemanaHorarioView(clases: clases, ahora: ahora, mostrarHorario: seleccion == .todos,
                                           onNueva: { hoja = .clase(nil, dia: $0) }, onEditar: { hoja = .clase($0, dia: Int($0.diaSemana)) })
+                            .transition(.opacity.combined(with: .offset(x: -36)))
                     } else {
                         DiaHorarioView(clases: clases, dia: $diaElegido, ahora: ahora, mostrarHorario: seleccion == .todos,
                                        onNueva: { hoja = .clase(nil, dia: $0) }, onEditar: { hoja = .clase($0, dia: Int($0.diaSemana)) })
+                            .transition(.opacity.combined(with: .offset(x: 36)))
                     }
                 }
+                // Pequeño traspaso al cambiar entre semana y día: la vista nueva entra deslizándose y apareciendo.
+                .animation(.easeInOut(duration: 0.22), value: vista)
+                .clipped()
             }
         }
     }
