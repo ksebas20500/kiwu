@@ -91,3 +91,18 @@ final class ReglasHorarioTests: XCTestCase {
         XCTAssertEqual(ReglasHorario.momentoDeAviso(c, desde: fecha(5, 10, 12), calendario: cal), fecha(5, 10, 23, 55))
     }
 }
+
+final class SelectorHoraTests: XCTestCase {
+    func testConversionDeMinutosYHora() {
+        for m in [0, 7, 60, 607, 720, 779, 1439] {
+            XCTAssertEqual(ReglasHorario.minutos(de: ReglasHorario.fecha(deMinutos: m), esFin: false), m)
+        }
+        XCTAssertEqual(ReglasHorario.minutos(de: ReglasHorario.fecha(deMinutos: 600), esFin: true), 600)
+    }
+
+    func testMedianocheAlFinalEsMilCuatrocientos() {
+        XCTAssertEqual(ReglasHorario.minutos(de: ReglasHorario.fecha(deMinutos: 1440), esFin: true), 1440)
+        XCTAssertEqual(ReglasHorario.minutos(de: ReglasHorario.fecha(deMinutos: 0), esFin: false), 0)
+        XCTAssertTrue(ReglasHorario.valida(inicio: 1380, fin: ReglasHorario.minutos(de: ReglasHorario.fecha(deMinutos: 1440), esFin: true)))
+    }
+}

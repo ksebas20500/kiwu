@@ -105,6 +105,9 @@ extension NoteBlockKind {
 struct EmptyStateView: View {
     let titulo: String
     let icono: String
+    /// Botón opcional bajo el texto (queda centrado con el resto).
+    var botonTitulo: String? = nil
+    var botonAccion: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 8) {
@@ -112,6 +115,11 @@ struct EmptyStateView: View {
                 .font(.system(size: 36))
             Text(titulo)
                 .font(.title3)
+            if let botonTitulo, let botonAccion {
+                Button(action: botonAccion) { Label(botonTitulo, systemImage: "plus") }
+                    .buttonStyle(.borderedProminent)
+                    .padding(.top, 8)
+            }
         }
         .foregroundStyle(.secondary)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

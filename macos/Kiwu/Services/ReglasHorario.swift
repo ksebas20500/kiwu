@@ -45,6 +45,18 @@ enum ReglasHorario {
         calendario.component(.hour, from: fecha) * 60 + calendario.component(.minute, from: fecha)
     }
 
+    /// Minutos desde las 00:00 de una hora elegida en un selector. En el fin, las 00:00 son la medianoche del final (1440).
+    static func minutos(de fecha: Date, esFin: Bool, calendario: Calendar = .current) -> Int {
+        let m = minutoDe(fecha, calendario: calendario)
+        return esFin && m == 0 ? minutosDia : m
+    }
+
+    /// Una hora de hoy para mostrarla en un selector (1440 se muestra como las 00:00).
+    static func fecha(deMinutos minutos: Int, calendario: Calendar = .current) -> Date {
+        let m = minutos % minutosDia
+        return calendario.date(bySettingHour: m / 60, minute: m % 60, second: 0, of: .now) ?? .now
+    }
+
     /// Una clase necesita que el fin sea posterior al inicio, dentro del mismo día.
     static func valida(inicio: Int, fin: Int) -> Bool {
         (0..<minutosDia).contains(inicio) && (1...minutosDia).contains(fin) && fin > inicio

@@ -142,10 +142,8 @@ struct HorarioRootView: View {
     @ViewBuilder
     private var contenido: some View {
         if horarios.isEmpty {
-            VStack(spacing: 14) {
-                EmptyStateView(titulo: "Crea tu primer horario", icono: "calendar.day.timeline.left")
-                Button("Nuevo horario") { hoja = .nuevo }.buttonStyle(.borderedProminent)
-            }
+            EmptyStateView(titulo: "Crea tu primer horario", icono: "calendar.day.timeline.left",
+                           botonTitulo: "Nuevo horario") { hoja = .nuevo }
         } else {
             VStack(spacing: 0) {
                 cabecera
@@ -373,10 +371,8 @@ private struct DiaHorarioView: View {
 
             let delDia = clases.filter { Int($0.diaSemana) == dia }.sorted { ($0.inicioMin, $0.finMin, $0.titulo) < ($1.inicioMin, $1.finMin, $1.titulo) }
             if delDia.isEmpty {
-                VStack(spacing: 12) {
-                    EmptyStateView(titulo: "Sin clases el \(ReglasHorario.nombreDia(dia).lowercased())", icono: "calendar")
-                    Button("Añadir clase") { onNueva(dia) }
-                }
+                EmptyStateView(titulo: "Sin clases el \(ReglasHorario.nombreDia(dia).lowercased())", icono: "calendar",
+                               botonTitulo: "Añadir clase") { onNueva(dia) }
             } else {
                 ScrollView {
                     VStack(spacing: 8) {
@@ -557,12 +553,8 @@ private struct ClaseFormView: View {
             }
 
             HStack(spacing: 16) {
-                Picker("Inicio", selection: $inicio) {
-                    ForEach(Array(stride(from: 0, to: 1440, by: 5)), id: \.self) { Text(ReglasHorario.hora($0)).tag($0) }
-                }
-                Picker("Fin", selection: $fin) {
-                    ForEach(Array(stride(from: 5, through: 1440, by: 5)), id: \.self) { Text(ReglasHorario.hora($0)).tag($0) }
-                }
+                SelectorHora(titulo: "Inicio", minutos: $inicio, esFin: false)
+                SelectorHora(titulo: "Fin", minutos: $fin, esFin: true)
             }
             if !horasValidas {
                 Text("La hora de fin debe ser posterior a la de inicio").font(.caption).foregroundStyle(.red)
@@ -611,5 +603,34 @@ private struct ClaseFormView: View {
                                            inicioMin: inicio, finMin: fin, aula: aula, notas: notas, avisoMin: aviso == 0 ? nil : aviso))
         alGuardar()
         dismiss()
+    }
+}
+
+// MARK: Selector de hora
+
+/// Hora y minutos por separado (horas 1–12 con a. m./p. m., minutos 00–59), que se escriben o suben y bajan con las flechas.
+/// Guarda minutos desde las 00:00; en el fin, 12:00 a. m. es la medianoche del final del día (1440).
+private struct SelectorHora: View {
+    let titulo: String
+    @Binding var minutos: Int
+    let esFin: Bool
+
+    private var fecha: Binding<Date> {
+        Binding(
+            get: { ReglasHorario.fecha(deMinutos: minutos) },
+            set: { minutos = ReglasHorario.minutos(de: $0, esFin: esFin) }
+        )
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(titulo)
+            DatePicker(titulo, selection: fecha, displayedComponents: .hourAndMinute)
+                .labelsHidden()
+                .datePickerStyle(.stepperField)
+                // es_US usa 12 horas con a. m./p. m. aunque el Mac esté en formato de 24 h.
+                .environment(\.locale, Locale(identifier: "es_US"))
+                .fixedSize()
+        }
     }
 }
