@@ -2,7 +2,7 @@
 
 Aplicación nativa de macOS (SwiftUI, Core Data y WidgetKit). Para ver qué hace y cómo se ve, consulta el [README principal](../README.md). Aquí está lo técnico de esta versión: instalar, compilar, estructura y cómo crear el instalador.
 
-Versión actual: **2.0** · Etiquetas de versión: `v2.x` (las anteriores, `v1.0.0`, son de TaskFlow).
+Versión actual: **2.1** · Etiquetas de versión: `v2.x` (las anteriores, `v1.0.0`, son de TaskFlow).
 
 ## Requisitos
 

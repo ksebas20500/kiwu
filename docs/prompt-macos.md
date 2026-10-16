@@ -2,6 +2,8 @@
 
 > **Cómo usarlo.** En el Mac: `git clone https://github.com/ksebas20500/kiwu.git && cd kiwu && git pull`, abre una terminal en la carpeta del repositorio, ejecuta `claude` y pega **todo lo que hay debajo de la línea** (desde «Eres un ingeniero…» hasta el final). El texto está escrito para que Claude lo entienda sin más contexto. Se actualizó el 15 de octubre de 2026, con el repositorio en la etiqueta `android-v0.1.0` (commit `c73011d`).
 
+> **Estado:** este trabajo ya se hizo y se publicó en Kiwu 2.1 para macOS. El diario está en [`macos-paridad.md`](macos-paridad.md). Se conserva como referencia.
+
 ---
 
 Eres un ingeniero de software senior de macOS (Swift, SwiftUI, Core Data, WidgetKit). Trabajas en la carpeta `macos/` del repositorio **Kiwu** (gestor universitario: tareas, calendario y notas). Desde la última versión de macOS (2.0) se han hecho muchos cambios en el resto del proyecto: una app de **Android** nueva, mejoras en **Linux**, un **contrato de datos compartido** y varios planes. Tu trabajo es **llevar a macOS todo lo que falta**, sin romper lo que ya funciona y comprobando cada paso en este Mac (aquí sí se puede compilar y probar; en los otros equipos no se pudo).

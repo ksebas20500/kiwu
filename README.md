@@ -5,7 +5,7 @@
 <h1 align="center">Kiwu</h1>
 
 <p align="center">
-  <b>Tareas, tablero, calendario y notas para macOS y Linux.</b><br>
+  <b>Tareas, tablero, calendario, notas y horario para macOS y Linux.</b><br>
   Todo en tu equipo: sin cuentas, sin nube, sin publicidad.
 </p>
 
@@ -114,10 +114,12 @@ También puedes comprobar antes la descarga con el archivo `kiwu-linux.tar.gz.sh
 | Módulo | Qué ofrece |
 | --- | --- |
 | **Tareas** | Listas por materia, deberes con fecha y hora, recordatorios locales, vistas *Hoy* / *Próximos 7 días* / *Todas* / *Completadas*, en **lista o tablero** (Por hacer · En curso · Hecho) |
-| **Calendario** | Mes completo con las entregas en colores pastel; el día se expande con doble clic |
-| **Notas** | Cuadernos, páginas con emoji, favoritas, búsqueda y editor por bloques con menú `/` |
+| **Calendario** | Mes completo con un punto de color por entrega y, debajo, el detalle del día para añadir tareas con hora |
+| **Notas** | Cuadernos, páginas con emoji, favoritas, búsqueda (sin distinguir mayúsculas ni tildes) y editor por bloques con menú `/` |
+| **Horario** (macOS y Android) | Varios horarios (Universidad, Trabajo, Ocio…), clases en varios días, vista de semana y de día, «Ahora / Siguiente», aviso de choques y avisos opcionales antes de cada clase |
 | **Archivos** | Carpeta de tu equipo vinculada a cada lista con explorador integrado, y PDF/Word adjuntos a notas como referencia, sin duplicarlos |
-| **Ajustes** | Atajos de teclado editables, tema claro/oscuro y fondo de imagen con translucidez ajustable |
+| **Ajustes** | Atajos de teclado editables, tema claro/oscuro, color de la app a elegir y fondo de imagen con translucidez ajustable |
+| **Copia de seguridad** | Exportar e importar un archivo `.kiwu.json` que sirve entre macOS, Linux y Android |
 | **Widgets** (solo macOS) | *Deberes*, *Nota rápida* y *Calendario de deberes*, configurables y con acciones directas |
 | **Privacidad** | Todo local: sin cuentas, sin servidor, sin publicidad ni analíticas |
 
@@ -138,9 +140,9 @@ También puedes comprobar antes la descarga con el archivo `kiwu-linux.tar.gz.sh
 | **Widgets** | WidgetKit + App Intents + App Groups | — (no incluidos por ahora) |
 | **Atajos globales** | Menús de la app | Órdenes `kiwu --nueva-tarea` enlazadas en Hyprland (Wayland no permite capturar teclas globales) |
 | **Instalador** | `.dmg` universal (Apple Silicon e Intel) | `.tar.gz` con instalador, `PKGBUILD` y metadatos AppStream |
-| **Pruebas** | — | Python `unittest`: lógica, instaladores y prueba de humo de la interfaz |
+| **Pruebas** | XCTest: reglas del horario, copia de seguridad, borrado lógico y migraciones | Python `unittest`: lógica, instaladores y prueba de humo de la interfaz |
 
-Los dos comparten el **formato de las notas** (JSON con bloques y formato) y el mismo diseño; los datos de macOS se pueden importar en Linux.
+Los dos comparten el **formato de las notas** (JSON con bloques y formato) y el mismo diseño; los datos se pueden mover entre macOS, Linux y Android con la copia de seguridad `.kiwu.json`, y los de macOS también se pueden importar directamente en Linux.
 
 ## Privacidad
 

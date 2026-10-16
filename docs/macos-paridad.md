@@ -1,6 +1,6 @@
 # macOS: paridad con Android y Linux
 
-Diario del trabajo descrito en [`prompt-macos.md`](prompt-macos.md). Rama: `macos-paridad`. Actualizado el 15 de octubre de 2026.
+Diario del trabajo descrito en [`prompt-macos.md`](prompt-macos.md). Rama: `macos-paridad`. Publicado como **Kiwu 2.1** (etiqueta `v2.1.0`) el 15 de octubre de 2026.
 
 ## Estado por bloque
 
