@@ -45,16 +45,23 @@ enum ReglasHorario {
         calendario.component(.hour, from: fecha) * 60 + calendario.component(.minute, from: fecha)
     }
 
-    /// Minutos desde las 00:00 de una hora elegida en un selector. En el fin, las 00:00 son la medianoche del final (1440).
-    static func minutos(de fecha: Date, esFin: Bool, calendario: Calendar = .current) -> Int {
-        let m = minutoDe(fecha, calendario: calendario)
-        return esFin && m == 0 ? minutosDia : m
+    /// Una hora en formato de 12 horas: (1...12, 0...59, es p. m.). Los 1440 se muestran como 12:00 a. m.
+    static func partes12(_ minutos: Int) -> (hora: Int, minuto: Int, pm: Bool) {
+        let m = minutos % minutosDia
+        let h24 = m / 60
+        return (h24 % 12 == 0 ? 12 : h24 % 12, m % 60, h24 >= 12)
     }
 
-    /// Una hora de hoy para mostrarla en un selector (1440 se muestra como las 00:00).
-    static func fecha(deMinutos minutos: Int, calendario: Calendar = .current) -> Date {
-        let m = minutos % minutosDia
-        return calendario.date(bySettingHour: m / 60, minute: m % 60, second: 0, of: .now) ?? .now
+    /// Minutos desde las 00:00 de una hora de 12 horas. En el fin, 12:00 a. m. es la medianoche del final (1440).
+    static func minutos(hora12: Int, minuto: Int, pm: Bool, esFin: Bool) -> Int {
+        let resultado = (hora12 % 12 + (pm ? 12 : 0)) * 60 + minuto
+        return esFin && resultado == 0 ? minutosDia : resultado
+    }
+
+    /// «8:05 a. m.», «12:00 p. m.».
+    static func hora12(_ minutos: Int) -> String {
+        let p = partes12(minutos)
+        return String(format: "%d:%02d %@", p.hora, p.minuto, p.pm ? "p. m." : "a. m.")
     }
 
     /// Una clase necesita que el fin sea posterior al inicio, dentro del mismo día.

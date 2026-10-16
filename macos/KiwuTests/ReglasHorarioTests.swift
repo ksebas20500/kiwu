@@ -93,16 +93,22 @@ final class ReglasHorarioTests: XCTestCase {
 }
 
 final class SelectorHoraTests: XCTestCase {
-    func testConversionDeMinutosYHora() {
-        for m in [0, 7, 60, 607, 720, 779, 1439] {
-            XCTAssertEqual(ReglasHorario.minutos(de: ReglasHorario.fecha(deMinutos: m), esFin: false), m)
+    func testPartesYMinutosSeInvierten() {
+        for m in [0, 5, 60, 607, 720, 779, 1380, 1439] {
+            let p = ReglasHorario.partes12(m)
+            XCTAssertTrue((1...12).contains(p.hora))
+            XCTAssertEqual(ReglasHorario.minutos(hora12: p.hora, minuto: p.minuto, pm: p.pm, esFin: false), m)
         }
-        XCTAssertEqual(ReglasHorario.minutos(de: ReglasHorario.fecha(deMinutos: 600), esFin: true), 600)
     }
 
-    func testMedianocheAlFinalEsMilCuatrocientos() {
-        XCTAssertEqual(ReglasHorario.minutos(de: ReglasHorario.fecha(deMinutos: 1440), esFin: true), 1440)
-        XCTAssertEqual(ReglasHorario.minutos(de: ReglasHorario.fecha(deMinutos: 0), esFin: false), 0)
-        XCTAssertTrue(ReglasHorario.valida(inicio: 1380, fin: ReglasHorario.minutos(de: ReglasHorario.fecha(deMinutos: 1440), esFin: true)))
+    func testMedianocheYMediodia() {
+        XCTAssertEqual(ReglasHorario.hora12(0), "12:00 a. m.")
+        XCTAssertEqual(ReglasHorario.hora12(720), "12:00 p. m.")
+        XCTAssertEqual(ReglasHorario.hora12(485), "8:05 a. m.")
+        XCTAssertEqual(ReglasHorario.hora12(1439), "11:59 p. m.")
+        XCTAssertEqual(ReglasHorario.minutos(hora12: 12, minuto: 0, pm: false, esFin: true), 1440)
+        XCTAssertEqual(ReglasHorario.minutos(hora12: 12, minuto: 0, pm: false, esFin: false), 0)
+        XCTAssertEqual(ReglasHorario.partes12(1440).hora, 12)
+        XCTAssertFalse(ReglasHorario.partes12(1440).pm)
     }
 }

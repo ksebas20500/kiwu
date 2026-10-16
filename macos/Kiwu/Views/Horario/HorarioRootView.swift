@@ -606,31 +606,190 @@ private struct ClaseFormView: View {
     }
 }
 
-// MARK: Selector de hora
+// MARK: Selector de hora (ruedas, como el reloj de Android)
 
-/// Hora y minutos por separado (horas 1–12 con a. m./p. m., minutos 00–59), que se escriben o suben y bajan con las flechas.
-/// Guarda minutos desde las 00:00; en el fin, 12:00 a. m. es la medianoche del final del día (1440).
+/// Botón con la hora; al pulsarlo se abre un cuadro con ruedas de horas (1–12), minutos (00–59) y a. m./p. m.
 private struct SelectorHora: View {
     let titulo: String
     @Binding var minutos: Int
     let esFin: Bool
-
-    private var fecha: Binding<Date> {
-        Binding(
-            get: { ReglasHorario.fecha(deMinutos: minutos) },
-            set: { minutos = ReglasHorario.minutos(de: $0, esFin: esFin) }
-        )
-    }
+    @State private var abierto = false
 
     var body: some View {
         HStack(spacing: 8) {
             Text(titulo)
-            DatePicker(titulo, selection: fecha, displayedComponents: .hourAndMinute)
-                .labelsHidden()
-                .datePickerStyle(.stepperField)
-                // es_US usa 12 horas con a. m./p. m. aunque el Mac esté en formato de 24 h.
-                .environment(\.locale, Locale(identifier: "es_US"))
-                .fixedSize()
+            Button { abierto = true } label: {
+                Text(ReglasHorario.hora12(minutos)).monospacedDigit().frame(minWidth: 82)
+            }
+            .popover(isPresented: $abierto, arrowEdge: .bottom) {
+                PanelRuedaHora(titulo: esFin ? "Hora de fin" : "Hora de inicio", minutos: minutos, esFin: esFin) {
+                    if let nuevo = $0 { minutos = nuevo }
+                    abierto = false
+                }
+            }
         }
+    }
+}
+
+private struct PanelRuedaHora: View {
+    let titulo: String
+    let esFin: Bool
+    let alTerminar: (Int?) -> Void
+    @State private var hora: Int      // 0...11 (se muestra 1...12)
+    @State private var minuto: Int    // 0...59
+    @State private var pm: Bool
+
+    init(titulo: String, minutos: Int, esFin: Bool, alTerminar: @escaping (Int?) -> Void) {
+        self.titulo = titulo
+        self.esFin = esFin
+        self.alTerminar = alTerminar
+        let partes = ReglasHorario.partes12(minutos)
+        _hora = State(initialValue: partes.hora - 1)
+        _minuto = State(initialValue: partes.minuto)
+        _pm = State(initialValue: partes.pm)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(titulo).font(.title3.weight(.semibold))
+            HStack(spacing: 0) {
+                RuedaNumeros(cantidad: 12, valor: $hora) { String($0 + 1) }
+                    .frame(width: 78)
+                Text(":").font(.system(size: 30, weight: .bold)).frame(width: 18)
+                RuedaNumeros(cantidad: 60, valor: $minuto) { String(format: "%02d", $0) }
+                    .frame(width: 78)
+                VStack(spacing: 8) {
+                    botonPeriodo("a. m.", activo: !pm) { pm = false }
+                    botonPeriodo("p. m.", activo: pm) { pm = true }
+                }
+                .padding(.leading, 14)
+            }
+            .frame(maxWidth: .infinity)
+            HStack {
+                Spacer()
+                Button("Cancelar") { alTerminar(nil) }
+                Button("Aceptar") {
+                    alTerminar(ReglasHorario.minutos(hora12: hora + 1, minuto: minuto, pm: pm, esFin: esFin))
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(18)
+        .frame(width: 330)
+    }
+
+    private func botonPeriodo(_ texto: String, activo: Bool, _ accion: @escaping () -> Void) -> some View {
+        Button(action: accion) {
+            Text(texto)
+                .font(.system(size: 15, weight: activo ? .bold : .regular))
+                .foregroundStyle(activo ? Color.primary : .secondary)
+                .frame(width: 58, height: 40)
+                .background(RoundedRectangle(cornerRadius: 10).fill(activo ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.05)))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// Rueda de números que gira sin fin y se detiene en uno (como el selector de alarma del reloj):
+/// se arrastra, se gira con la rueda o el trackpad, o se pulsa un número cercano.
+private struct RuedaNumeros: View {
+    let cantidad: Int
+    @Binding var valor: Int
+    let texto: (Int) -> String
+
+    private let alto: CGFloat = 44
+    private let filas = 5
+    @State private var desplazamiento: CGFloat = 0
+    @State private var ultimoArrastre: CGFloat = 0
+    @State private var asentado: DispatchWorkItem?
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 12).fill(Color.accentColor.opacity(0.16)).frame(height: alto)
+            ZStack {
+                ForEach(-3...3, id: \.self) { k in
+                    let distancia = abs(CGFloat(k) + desplazamiento / alto)
+                    Text(texto(((valor + k) % cantidad + cantidad) % cantidad))
+                        .font(.system(size: distancia < 0.5 ? 30 : 24, weight: distancia < 0.5 ? .bold : .regular))
+                        .monospacedDigit()
+                        .opacity(max(0.2, 1 - Double(distancia) * 0.4))
+                        .frame(maxWidth: .infinity, minHeight: alto, maxHeight: alto)
+                        .contentShape(Rectangle())
+                        .offset(y: CGFloat(k) * alto + desplazamiento)
+                        .onTapGesture { if k != 0 { withAnimation(.easeOut(duration: 0.15)) { valor = ((valor + k) % cantidad + cantidad) % cantidad } } }
+                }
+            }
+        }
+        .frame(height: alto * CGFloat(filas))
+        .clipped()
+        .gesture(
+            DragGesture(minimumDistance: 2)
+                .onChanged { gesto in
+                    mover(gesto.translation.height - ultimoArrastre)
+                    ultimoArrastre = gesto.translation.height
+                }
+                .onEnded { _ in
+                    ultimoArrastre = 0
+                    asentar()
+                }
+        )
+        .background(CapturaRueda { mover($0); programarAsentado() })
+        .accessibilityElement()
+        .accessibilityValue(texto(valor))
+        .accessibilityAdjustableAction { direccion in
+            valor = ((valor + (direccion == .increment ? 1 : -1)) % cantidad + cantidad) % cantidad
+        }
+    }
+
+    /// Desplaza la rueda; al pasar de media fila cambia el número del centro (por el camino corto, sin fin).
+    private func mover(_ delta: CGFloat) {
+        desplazamiento += delta
+        while desplazamiento > alto / 2 { valor = (valor - 1 + cantidad) % cantidad; desplazamiento -= alto }
+        while desplazamiento < -alto / 2 { valor = (valor + 1) % cantidad; desplazamiento += alto }
+    }
+
+    private func asentar() {
+        withAnimation(.easeOut(duration: 0.18)) { desplazamiento = 0 }
+    }
+
+    /// Con la rueda del ratón o el trackpad, se asienta cuando dejan de llegar eventos.
+    private func programarAsentado() {
+        asentado?.cancel()
+        let trabajo = DispatchWorkItem { asentar() }
+        asentado = trabajo
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: trabajo)
+    }
+}
+
+/// Recoge los eventos de la rueda del ratón / trackpad que ocurren sobre su vista.
+private struct CapturaRueda: NSViewRepresentable {
+    let alMover: (CGFloat) -> Void
+
+    func makeNSView(context: Context) -> NSView { VistaCaptura(alMover: alMover) }
+    func updateNSView(_ vista: NSView, context: Context) { (vista as? VistaCaptura)?.alMover = alMover }
+
+    final class VistaCaptura: NSView {
+        var alMover: (CGFloat) -> Void
+        private var monitor: Any?
+
+        init(alMover: @escaping (CGFloat) -> Void) {
+            self.alMover = alMover
+            super.init(frame: .zero)
+        }
+        required init?(coder: NSCoder) { fatalError() }
+
+        override func viewDidMoveToWindow() {
+            if let monitor { NSEvent.removeMonitor(monitor); self.monitor = nil }
+            guard window != nil else { return }
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] evento in
+                guard let self, evento.window === self.window,
+                      self.bounds.contains(self.convert(evento.locationInWindow, from: nil)) else { return evento }
+                // Una rueda de ratón da saltos grandes por clic; el trackpad ya manda píxeles.
+                self.alMover(evento.hasPreciseScrollingDeltas ? evento.scrollingDeltaY : evento.scrollingDeltaY * 12)
+                return nil
+            }
+        }
+
+        deinit { if let monitor { NSEvent.removeMonitor(monitor) } }
     }
 }
