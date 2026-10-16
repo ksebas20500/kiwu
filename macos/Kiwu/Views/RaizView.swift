@@ -39,11 +39,16 @@ struct RaizView: View {
 
             Divider()
 
-            switch modulo {
-            case .tareas: ContentView()
-            case .notas: NotasRootView()
-            case .horario: HorarioRootView()
+            // Al cambiar de sección, la nueva aparece con un fundido y un pequeño deslizamiento.
+            ZStack {
+                switch modulo {
+                case .tareas: ContentView().transition(transicion)
+                case .notas: NotasRootView().transition(transicion)
+                case .horario: HorarioRootView().transition(transicion)
+                }
             }
+            .animation(.easeInOut(duration: 0.22), value: modulo)
+            .clipped()
         }
         .frame(minWidth: 1060, minHeight: 620)
         .background(FondoApp(ajustes: ajustes))
@@ -68,6 +73,8 @@ struct RaizView: View {
             sincronizarWidget()
         }
     }
+
+    private var transicion: AnyTransition { .opacity.combined(with: .offset(x: 28)) }
 
     /// Aplica los deberes completados desde el widget y refresca sus datos.
     private func sincronizarWidget() {
