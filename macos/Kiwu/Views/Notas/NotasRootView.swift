@@ -117,7 +117,8 @@ struct NotasRootView: View {
                 )
                 .id(pagina.id)
             } else {
-                EmptyStateView(titulo: "Selecciona o crea una nota", icono: "note.text")
+                EmptyStateView(titulo: "Selecciona o crea una nota", icono: "note.text",
+                               botonTitulo: cuadernos.isEmpty ? nil : "Nueva nota", botonAccion: crearPagina)
             }
         }
         .onAppear(perform: asegurarCuadernoInicial)

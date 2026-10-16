@@ -59,7 +59,12 @@ struct PaginaListView: View {
             }
             .overlay {
                 if paginas.isEmpty {
-                    EmptyStateView(titulo: busqueda.isEmpty ? "Sin notas" : "Sin resultados", icono: busqueda.isEmpty ? "note.text" : "magnifyingglass")
+                    if busqueda.isEmpty {
+                        EmptyStateView(titulo: "Sin notas", icono: "note.text",
+                                       botonTitulo: puedeCrear ? "Nueva nota" : nil, botonAccion: onNueva)
+                    } else {
+                        EmptyStateView(titulo: "Sin resultados", icono: "magnifyingglass")
+                    }
                 }
             }
         }
