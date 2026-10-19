@@ -1,5 +1,6 @@
 package app.kiwu.android.ui.tareas
 
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -121,11 +122,29 @@ fun TareasScreen(
                 }
             }
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                when {
-                    estado.elemento == Elemento.Calendario -> CalendarioScreen(vm, estado, alAbrirTarea)
-                    materia != null && estado.subvista == "archivos" -> archivos(materia)
-                    verTablero -> Tablero(vm, estado, alAbrirTarea) { dialogoNuevaLista = true }
-                    else -> ListaTareas(vm, estado, alAbrirTarea) { dialogoNuevaLista = true }
+                // Fundido suave al cambiar de sección desde el menú (Calendario ↔ listas ↔ archivos). Solo cambia la clave
+                // al cambiar de tipo de vista, no al pasar de una lista a otra.
+                val tipo = when {
+                    estado.elemento == Elemento.Calendario -> "calendario"
+                    materia != null && estado.subvista == "archivos" -> "archivos"
+                    verTablero -> "tablero"
+                    else -> "lista"
+                }
+                androidx.compose.animation.AnimatedContent(
+                    targetState = tipo,
+                    transitionSpec = {
+                        (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220, 40)) +
+                            androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(260), initialScale = 0.97f)) togetherWith
+                            androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120))
+                    },
+                    label = "seccionTareas",
+                ) { t ->
+                    when (t) {
+                        "calendario" -> CalendarioScreen(vm, estado, alAbrirTarea)
+                        "archivos" -> materia?.let { archivos(it) }
+                        "tablero" -> Tablero(vm, estado, alAbrirTarea) { dialogoNuevaLista = true }
+                        else -> ListaTareas(vm, estado, alAbrirTarea) { dialogoNuevaLista = true }
+                    }
                 }
             }
         }

@@ -1,5 +1,6 @@
 package app.kiwu.android.ui
 
+import androidx.compose.animation.togetherWith
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -135,10 +136,24 @@ private fun Principal(app: KiwuApp, alAbrirTarea: (String) -> Unit, alAbrirPagin
         },
     ) { relleno ->
         Box(Modifier.padding(relleno).consumeWindowInsets(relleno).fillMaxSize()) {
-            when (modulo) {
-                "notas" -> NotasScreen(notasVm, alAbrirPagina, abrirMenu)
-                "horario" -> HorarioScreen(horarioVm, abrirMenu)
-                else -> TareasScreen(tareasVm, alAbrirTarea, abrirMenu, archivos = { m -> ArchivosScreen(m) { carpeta -> tareasVm.vincularCarpeta(m.id, carpeta) } })
+            // Transición corta entre pestañas: fundido con un deslizamiento pequeño hacia el lado al que se avanza.
+            val orden = listOf("tareas", "notas", "horario")
+            androidx.compose.animation.AnimatedContent(
+                targetState = modulo,
+                transitionSpec = {
+                    val dir = if (orden.indexOf(targetState) > orden.indexOf(initialState)) 1 else -1
+                    (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220, 40)) +
+                        androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(260)) { dir * it / 10 }) togetherWith
+                        (androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)) +
+                            androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(260)) { -dir * it / 10 })
+                },
+                label = "modulo",
+            ) { destino ->
+                when (destino) {
+                    "notas" -> NotasScreen(notasVm, alAbrirPagina, abrirMenu)
+                    "horario" -> HorarioScreen(horarioVm, abrirMenu)
+                    else -> TareasScreen(tareasVm, alAbrirTarea, abrirMenu, archivos = { m -> ArchivosScreen(m) { carpeta -> tareasVm.vincularCarpeta(m.id, carpeta) } })
+                }
             }
         }
     }

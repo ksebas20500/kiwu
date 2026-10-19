@@ -73,6 +73,11 @@ Las dos versiones se pueden instalar a la vez: tienen identificadores distintos 
 - 104 pruebas automáticas (dominio, contrato con macOS y Linux, copia de seguridad, Room y migración, editor, horario, tablero y colores), sin fallos; lint sin errores.
 - Variante optimizada (R8) compilada y probada en un emulador y, en parte, en un teléfono real (vivo V2418, Android 16).
 
+### Actualización posterior (mismo 0.1.0)
+
+- Transiciones suaves entre Tareas, Notas y Horario, entre la vista de día y la de semana, y entre Calendario y el resto de secciones de Tareas.
+- Arreglo: al elegir una fecha en «Añadir tarea», el recuadro ya no se ensancha a lo alto.
+
 ### Limitaciones conocidas
 
 - **Sin sincronización** entre dispositivos todavía: está planificada con Supabase (ver `docs/plan-sincronizacion.md`).

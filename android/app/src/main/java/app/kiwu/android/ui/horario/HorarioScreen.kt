@@ -1,5 +1,6 @@
 package app.kiwu.android.ui.horario
 
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -166,10 +167,23 @@ fun HorarioScreen(vm: HorarioViewModel, alAbrirMenu: () -> Unit) {
                 item { TextButton(onClick = { nuevoHorario = true }) { Text("+ Horario") } }
             }
             TarjetaAhora(estado)
-            if (vista == "semana") {
-                VistaSemana(estado, hoy, alAbrir = { edicion = Edicion(it.grupo, it.diaSemana) })
-            } else {
-                VistaDia(estado, hoy, diaSel, alElegirDia = { diaSel = it }, alAbrir = { edicion = Edicion(it.grupo, it.diaSemana) })
+            // Al pasar de día a semana el contenido entra desde la derecha; al volver, desde la izquierda.
+            androidx.compose.animation.AnimatedContent(
+                targetState = vista,
+                transitionSpec = {
+                    val dir = if (targetState == "semana") 1 else -1
+                    (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220, 40)) +
+                        androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(260)) { dir * it / 8 }) togetherWith
+                        (androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)) +
+                            androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(260)) { -dir * it / 8 })
+                },
+                label = "vistaHorario",
+            ) { v ->
+                if (v == "semana") {
+                    VistaSemana(estado, hoy, alAbrir = { edicion = Edicion(it.grupo, it.diaSemana) })
+                } else {
+                    VistaDia(estado, hoy, diaSel, alElegirDia = { diaSel = it }, alAbrir = { edicion = Edicion(it.grupo, it.diaSemana) })
+                }
             }
         }
     }

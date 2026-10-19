@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -169,6 +170,13 @@ fun CampoNuevaTarea(
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
     ) {
+        Column {
+        // La fecha elegida va en su propia línea: en una fila con el campo le quitaba el ancho y el recuadro crecía a lo alto.
+        if (diaFijo != null) {
+            hora?.let { (h, m) -> Box(Modifier.padding(start = 12.dp, top = 8.dp).clickable { hora = null }) { Chip("%02d:%02d  ✕".format(h, m)) } }
+        } else {
+            fecha?.let { f -> Box(Modifier.padding(start = 12.dp, top = 8.dp).clickable { fecha = null }) { Chip(Fechas.corta(f, System.currentTimeMillis()) + "  ✕") } }
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             val puesta = if (diaFijo != null) hora != null else fecha != null
             IconButton(onClick = { selector = true }) {
@@ -178,15 +186,10 @@ fun CampoNuevaTarea(
                     tint = if (puesta) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (diaFijo != null) {
-                hora?.let { (h, m) -> Box(Modifier.clickable { hora = null }) { Chip("%02d:%02d  ✕".format(h, m)) } }
-            } else {
-                fecha?.let { f -> Box(Modifier.clickable { fecha = null }) { Chip(Fechas.corta(f, System.currentTimeMillis()) + "  ✕") } }
-            }
             TextField(
                 value = texto,
                 onValueChange = { texto = it },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).widthIn(min = 96.dp),
                 placeholder = { Text(if (materias.isEmpty()) "Crea una lista primero" else marcador) },
                 enabled = materias.isNotEmpty(),
                 singleLine = true,
@@ -213,6 +216,7 @@ fun CampoNuevaTarea(
             IconButton(onClick = enviar, enabled = texto.isNotBlank() && elegida != null) {
                 Icon(Icons.AutoMirrored.Filled.Send, "Añadir")
             }
+        }
         }
     }
     if (selector) {
