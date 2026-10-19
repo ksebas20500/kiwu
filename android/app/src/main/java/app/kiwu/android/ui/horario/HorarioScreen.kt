@@ -179,10 +179,13 @@ fun HorarioScreen(vm: HorarioViewModel, alAbrirMenu: () -> Unit) {
                 },
                 label = "vistaHorario",
             ) { v ->
-                if (v == "semana") {
-                    VistaSemana(estado, hoy, alAbrir = { edicion = Edicion(it.grupo, it.diaSemana) })
-                } else {
-                    VistaDia(estado, hoy, diaSel, alElegirDia = { diaSel = it }, alAbrir = { edicion = Edicion(it.grupo, it.diaSemana) })
+                // Cada vista tiene varias piezas seguidas (pestañas, título, lista): sin una columna se apilarían unas sobre otras.
+                Column(Modifier.fillMaxSize()) {
+                    if (v == "semana") {
+                        VistaSemana(estado, hoy, alAbrir = { edicion = Edicion(it.grupo, it.diaSemana) })
+                    } else {
+                        VistaDia(estado, hoy, diaSel, alElegirDia = { diaSel = it }, alAbrir = { edicion = Edicion(it.grupo, it.diaSemana) })
+                    }
                 }
             }
         }
