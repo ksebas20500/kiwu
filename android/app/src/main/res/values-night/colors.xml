@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="kiwu_fondo">#FF1A1110</color>
+    <color name="kiwu_splash_fondo">#FF15152B</color>
 </resources>

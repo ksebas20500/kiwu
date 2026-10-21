@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="kiwu_fondo">#FFFFF8F6</color>
+    <!-- Fondo de la pantalla de arranque: lavanda muy suave, a juego con el morado y azul del icono. -->
+    <color name="kiwu_splash_fondo">#FFEEF0FF</color>
 </resources>
