@@ -22,12 +22,12 @@ val appPrueba = "ca-app-pub-3940256099942544~3347511713"
 
 android {
     namespace = "app.kiwu.android"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "app.kiwu.android"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
     }

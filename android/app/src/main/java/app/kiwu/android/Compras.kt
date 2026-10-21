@@ -55,9 +55,9 @@ class Compras(private val contexto: Context) {
                     }
                 }
                 val consulta = QueryProductDetailsParams.Product.newBuilder().setProductId(PRODUCTO).setProductType(BillingClient.ProductType.INAPP).build()
-                c.queryProductDetailsAsync(QueryProductDetailsParams.newBuilder().setProductList(listOf(consulta)).build()) { r, lista ->
+                c.queryProductDetailsAsync(QueryProductDetailsParams.newBuilder().setProductList(listOf(consulta)).build()) { r, resultado ->
                     if (r.responseCode == BillingClient.BillingResponseCode.OK) {
-                        detalles = lista.firstOrNull()
+                        detalles = resultado.productDetailsList.firstOrNull()
                         _precio.value = detalles?.oneTimePurchaseOfferDetails?.formattedPrice
                     }
                 }
