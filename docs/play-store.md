@@ -53,8 +53,8 @@ Kiwu es gratis y muestra un banner pequeño en las listas de Tareas y Notas, nun
 | Recurso | Medidas | Estado |
 | --- | --- | --- |
 | Icono de la app | 512×512 px, PNG, sin transparencia, máx. 1 MB | Se genera a partir de `docs/media/icono.png` |
-| Gráfico de funciones | 1024×500 px, JPG o PNG | Pendiente |
-| Capturas de teléfono | 2 a 8, relación entre 16:9 y 9:16, lado menor ≥ 320 px, lado mayor ≤ 3840 px | Pendiente |
+| Gráfico de funciones | 1024×500 px, JPG o PNG | Listo: `docs/media/play/grafico-funciones-1024x500.png` |
+| Capturas de teléfono | 2 a 8, relación máx. 2:1, lado menor ≥ 320 px, lado mayor ≤ 3840 px | Listas (6, 1080×1920) en `docs/media/play/capturas/`; originales en `docs/media/play store/` |
 | Capturas de tablet de 7 y 10 pulgadas | Opcionales (recomendadas) | Opcional |
 
 ### Capturas recomendadas (teléfono, en este orden)
