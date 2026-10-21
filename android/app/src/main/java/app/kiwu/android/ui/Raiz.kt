@@ -37,6 +37,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import app.kiwu.android.KiwuApp
 import app.kiwu.android.data.AjustesUi
+import app.kiwu.android.domain.Elemento
 import app.kiwu.android.ui.editor.rememberOrigenAdjuntos
 import app.kiwu.android.ui.ajustes.AjustesScreen
 import app.kiwu.android.ui.archivos.ArchivosScreen
@@ -128,10 +129,16 @@ private fun Principal(app: KiwuApp, alAbrirTarea: (String) -> Unit, alAbrirPagin
         // Las pantallas de dentro ya gestionan la barra de estado; la barra inferior gestiona la de navegación.
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
+            androidx.compose.foundation.layout.Column {
+            // Banner pequeño solo en las listas de Tareas y de Notas (no en Horario, Calendario, editor ni detalle).
+            val tareasEstado by tareasVm.estado.collectAsStateWithLifecycle()
+            val verBanner = modulo == "notas" || (modulo == "tareas" && tareasEstado.elemento != Elemento.Calendario)
+            if (verBanner) BannerAnuncio()
             NavigationBar {
                 NavigationBarItem(selected = modulo == "tareas", onClick = { modulo = "tareas" }, icon = { Icon(Icons.Filled.CheckCircle, null) }, label = { Text("Tareas") })
                 NavigationBarItem(selected = modulo == "notas", onClick = { modulo = "notas" }, icon = { Icon(Icons.Filled.Description, null) }, label = { Text("Notas") })
                 NavigationBarItem(selected = modulo == "horario", onClick = { modulo = "horario" }, icon = { Icon(Icons.Filled.Schedule, null) }, label = { Text("Horario") })
+            }
             }
         },
     ) { relleno ->

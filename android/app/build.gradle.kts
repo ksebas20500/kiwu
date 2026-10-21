@@ -19,7 +19,10 @@ android {
     }
 
     buildTypes {
+        // Días sin anuncios desde la primera vez que se abre la app. En pruebas (depuración y minificado) son 0 para poder verlos.
+        debug { buildConfigField("int", "DIAS_SIN_ANUNCIOS", "0") }
         release {
+            buildConfigField("int", "DIAS_SIN_ANUNCIOS", "4")
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
@@ -29,6 +32,7 @@ android {
             signingConfig = signingConfigs.getByName("debug")
             matchingFallbacks += "release"
             applicationIdSuffix = ".min"
+            buildConfigField("int", "DIAS_SIN_ANUNCIOS", "0")
         }
     }
 
@@ -81,6 +85,7 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.splashscreen)
+    implementation(libs.play.services.ads)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

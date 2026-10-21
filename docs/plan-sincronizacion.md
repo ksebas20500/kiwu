@@ -159,3 +159,14 @@ Estimación orientativa para una persona: S0 2 semanas, S1–S2 3 semanas, S3 3 
 1. Si «compartir» entra en la primera versión de la cuenta o después.
 2. Qué hacer con las imágenes ya incrustadas en notas existentes: migrarlas al primer arranque tras actualizar.
 3. Marca y dominio antes de abrir cuentas a público (ver [marca-nombres.md](marca-nombres.md)): cambiar el nombre después de tener cuentas es más caro. El proyecto de Supabase se crea con el nombre definitivo.
+
+## Alternativa futura: copia y sincronización con Google Drive
+
+Idea para una mejora posterior, junto con las cuentas de usuario. No está decidida ni empezada.
+
+- **Cómo:** la app guarda sus datos en la carpeta oculta de la aplicación en el Drive del usuario (`appDataFolder`, permiso `drive.appdata`) y se inicia sesión con la cuenta de Google del teléfono. Referencia: otras apps de tareas ofrecen «Sincronización de cuenta» con un interruptor de sincronización automática.
+- **Coste:** sin servidor propio. Los datos usan la cuota de Drive del usuario. Solo requiere un proyecto gratuito de Google Cloud con la API de Drive, la pantalla de consentimiento de OAuth y un ID de cliente de Android.
+- **Ventajas:** gratis, privado (los datos quedan en el Drive del usuario) y sin cuentas ni contraseñas propias.
+- **Desventajas:** no es en tiempo real, hay que resolver los conflictos de edición en dos dispositivos y cada plataforma (Android, macOS, Linux) debe implementarlo por separado.
+- **Orden sugerido:** 1) copia manual a Drive («Guardar copia» / «Restaurar») usando el formato de `docs/contrato/README.md`; 2) sincronización automática con resolución de conflictos; 3) decidir entonces si se mantiene Supabase o se usa Drive.
+- **Relación con la monetización:** la compra de «quitar anuncios» es independiente; Google Play la asocia a la cuenta de Play Store del usuario sin necesitar este sistema (ver `plan-monetizacion.md`).
