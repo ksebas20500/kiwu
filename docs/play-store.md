@@ -84,3 +84,7 @@ Consejos: usa datos de ejemplo bonitos y realistas (sin nombres ni datos persona
 1. En el repositorio, Settings → Pages → «Deploy from a branch», rama `main`, carpeta `/docs`.
 2. La política queda en `https://ksebas20500.github.io/kiwu/privacidad` (revisa la dirección exacta que muestre Pages).
 3. Pega esa URL en Play Console y en AdMob.
+
+## Versión con el gato mago (Canva)
+
+Alternativa con la nueva identidad visual, en `docs/media/play/gato/`: `icono-512.png`, `grafico-funciones-1024x500.png` y `capturas/` (las mismas 6 capturas reales sobre el fondo morado). Las imágenes con móvil dibujado por IA (`4.png` a `9.png` de `docs/media/play/`) **no se usan**: la IA rehízo la interfaz y salen textos deformados; Google rechaza capturas que no reflejen la app real.
