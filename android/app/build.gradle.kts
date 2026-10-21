@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,18 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
 }
+
+// Datos privados de publicación: viven FUERA del repositorio, en la carpeta kiwu-claves del usuario (o la de la variable KIWU_CLAVES).
+//  - keystore.properties: clave de subida a Google Play (storeFile, storePassword, keyAlias, keyPassword).
+//  - admob.properties: appId y banner reales de AdMob. Sin ellos se usan los anuncios de PRUEBA de Google.
+val carpetaClaves = File(System.getenv("KIWU_CLAVES") ?: "${System.getProperty("user.home")}/kiwu-claves")
+fun leerPropiedades(nombre: String) = Properties().apply { File(carpetaClaves, nombre).takeIf { it.exists() }?.inputStream()?.use { load(it) } }
+val clave = leerPropiedades("keystore.properties")
+val admob = leerPropiedades("admob.properties")
+val admobApp = admob.getProperty("appId") ?: "ca-app-pub-3940256099942544~3347511713"
+val admobBanner = admob.getProperty("banner") ?: "ca-app-pub-3940256099942544/9214589741"
+val bannerPrueba = "ca-app-pub-3940256099942544/9214589741"
+val appPrueba = "ca-app-pub-3940256099942544~3347511713"
 
 android {
     namespace = "app.kiwu.android"
@@ -18,11 +32,29 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        if (clave.getProperty("storeFile") != null) {
+            create("subida") {
+                storeFile = file(clave.getProperty("storeFile"))
+                storePassword = clave.getProperty("storePassword")
+                keyAlias = clave.getProperty("keyAlias")
+                keyPassword = clave.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         // Días sin anuncios desde la primera vez que se abre la app. En pruebas (depuración y minificado) son 0 para poder verlos.
-        debug { buildConfigField("int", "DIAS_SIN_ANUNCIOS", "0") }
+        debug {
+            buildConfigField("int", "DIAS_SIN_ANUNCIOS", "0")
+            buildConfigField("String", "BLOQUE_BANNER", "\"$bannerPrueba\"")
+            manifestPlaceholders["admobAppId"] = appPrueba
+        }
         release {
             buildConfigField("int", "DIAS_SIN_ANUNCIOS", "4")
+            buildConfigField("String", "BLOQUE_BANNER", "\"$admobBanner\"")
+            manifestPlaceholders["admobAppId"] = admobApp
+            signingConfigs.findByName("subida")?.let { signingConfig = it }
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
@@ -33,6 +65,8 @@ android {
             matchingFallbacks += "release"
             applicationIdSuffix = ".min"
             buildConfigField("int", "DIAS_SIN_ANUNCIOS", "0")
+            buildConfigField("String", "BLOQUE_BANNER", "\"$bannerPrueba\"")
+            manifestPlaceholders["admobAppId"] = appPrueba
         }
     }
 
@@ -86,6 +120,8 @@ dependencies {
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.splashscreen)
     implementation(libs.play.services.ads)
+    implementation(libs.ump)
+    implementation(libs.billing)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

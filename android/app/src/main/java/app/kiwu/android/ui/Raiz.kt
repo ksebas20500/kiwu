@@ -101,6 +101,8 @@ fun Raiz(app: KiwuApp, abrirTarea: String? = null, inicial: AjustesUi = AjustesU
 @Composable
 private fun Principal(app: KiwuApp, alAbrirTarea: (String) -> Unit, alAbrirPagina: (String) -> Unit, alAjustes: () -> Unit) {
     var modulo by rememberSaveable { mutableStateOf("tareas") }
+    // Facturación de Google Play: se conecta pasado el arranque para no retrasarlo.
+    LaunchedEffect(Unit) { app.compras.iniciar() }
     val tareasVm: TareasViewModel = viewModel(factory = viewModelFactory { initializer { TareasViewModel(app.repo, app.ajustes) } })
     val notasVm: NotasViewModel = viewModel(factory = viewModelFactory { initializer { NotasViewModel(app.repo) } })
     val horarioVm: HorarioViewModel = viewModel(factory = viewModelFactory { initializer { HorarioViewModel(app.repo) } })

@@ -190,9 +190,29 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit) {
                 mensaje?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
             }
             HorizontalDivider()
+            Seccion("Anuncios") {
+                val sinAnuncios by app.compras.sinAnuncios.collectAsStateWithLifecycle()
+                val precio by app.compras.precio.collectAsStateWithLifecycle()
+                Text(
+                    if (sinAnuncios) "Gracias por apoyar Kiwu: ya no verás anuncios."
+                    else "Kiwu es gratis y muestra un banner pequeño en las listas de Tareas y Notas. Todas las funciones son las mismas con o sin anuncios; el pago único solo los quita.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (!sinAnuncios) {
+                    Button(
+                        enabled = precio != null,
+                        onClick = { (contexto as? android.app.Activity)?.let { app.compras.comprar(it) } },
+                    ) { Text(precio?.let { "Quitar anuncios · $it" } ?: "Quitar anuncios") }
+                }
+                // Solo en las variantes de prueba: simula la compra sin pasar por Google Play.
+                if (BuildConfig.BUILD_TYPE != "release") {
+                    OutlinedButton(onClick = { app.compras.simular(!sinAnuncios) }) { Text(if (sinAnuncios) "Prueba: volver a mostrar anuncios" else "Prueba: simular compra") }
+                }
+            }
+            HorizontalDivider()
             Seccion("Acerca de Kiwu") {
                 Text("Versión ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyMedium)
-                Text("Tus datos se guardan solo en este dispositivo: sin cuentas, sin servidor, sin publicidad ni analíticas. La app solo usa Internet cuando pegas un enlace en una nota, para descargar su vista previa.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Tus datos se guardan solo en este dispositivo: sin cuentas ni servidor propio. La app usa Internet para descargar la vista previa de los enlaces que pegas en una nota y para mostrar el banner de anuncios (Google AdMob), que puede usar el identificador de publicidad del teléfono según tu consentimiento.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 32.dp))
         }

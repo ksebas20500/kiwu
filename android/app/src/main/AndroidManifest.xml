@@ -14,10 +14,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Kiwu">
 
-        <!-- ID de aplicación de PRUEBA de AdMob: cambiar por el real antes de publicar en Play Store. -->
+        <!-- ID de aplicación de AdMob: de prueba en depuración y minificado; en release sale de admob.properties (ver build.gradle.kts). -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="${admobAppId}" />
 
         <activity
             android:name=".MainActivity"

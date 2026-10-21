@@ -19,6 +19,7 @@ class KiwuApp : Application() {
     val db by lazy { KiwuDb.obtener(this) }
     val repo by lazy { Repositorio(db.dao()) }
     val ajustes by lazy { AjustesStore(this) }
+    val compras by lazy { Compras(this) }
 
     /** Alcance que sobrevive a las pantallas: para guardar lo pendiente cuando se cierra una (p. ej. una nota). */
     val alcance = CoroutineScope(SupervisorJob() + Dispatchers.Default)
