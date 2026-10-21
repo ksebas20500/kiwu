@@ -14,6 +14,7 @@ Capturas y vídeos que usa el README (si cambias un nombre, actualiza también e
 | `widgets_deberes.png` | Widget Deberes |
 | `widgets_calendario.png` | Widget Calendario de deberes |
 | `icono.png` | Icono de la app (cabecera del README) |
+| `android/*.png` | Capturas de Android (tareas, calendario, notas, horario por día y por semana, ajustes) |
 
 ## Cómo sacarlas
 
