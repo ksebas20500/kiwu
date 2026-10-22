@@ -36,10 +36,17 @@ class Repositorio(
 
     // --- listas (materias) ----------------------------------------------------------------------
 
-    suspend fun crearMateria(nombre: String): Materia {
+    /** Crea una lista; con [grupoId] nace ya dentro de esa carpeta y con [emoji] (opcional) como icono. */
+    suspend fun crearMateria(nombre: String, emoji: String? = null, grupoId: String? = null): Materia {
         val t = reloj()
-        val m = Materia(nombre = nombre.trim(), orden = dao.siguienteOrdenMateria(), creada = t, actualizada = t)
+        val grupo = grupoId?.takeIf { dao.grupo(it) != null }
+        val m = Materia(
+            nombre = nombre.trim(), orden = dao.siguienteOrdenMateria(), grupoId = grupo,
+            emoji = emoji?.trim()?.takeIf { it.isNotEmpty() }, creada = t, actualizada = t,
+        )
         dao.guardarMateria(m)
+        // Si la carpeta estaba plegada se despliega, para que se vea la lista recién creada.
+        if (grupo != null) plegarGrupo(grupo, false)
         return m
     }
 
@@ -55,10 +62,10 @@ class Repositorio(
 
     suspend fun materia(id: String): Materia? = dao.materia(id)
 
-    /** Emoji (null = el icono de siempre) y color (`#RRGGBB`, null = automático) de una lista. */
-    suspend fun editarAspectoMateria(id: String, emoji: String?, color: String?) {
+    /** Cambia el nombre y el emoji de una lista (con emoji null o vacío vuelve el icono de siempre). */
+    suspend fun editarMateria(id: String, nombre: String, emoji: String?) {
         val m = dao.materia(id) ?: return
-        dao.guardarMateria(m.copy(emoji = emoji?.trim()?.takeIf { it.isNotEmpty() }, color = ReglasHorario.colorValido(color), actualizada = reloj()))
+        dao.guardarMateria(m.copy(nombre = nombre.trim().ifEmpty { m.nombre }, emoji = emoji?.trim()?.takeIf { it.isNotEmpty() }, actualizada = reloj()))
     }
 
     /** Mete una lista en una carpeta o la deja suelta (con null). Si la carpeta no existe, queda suelta. */
@@ -67,6 +74,8 @@ class Repositorio(
         val destino = grupoId?.takeIf { dao.grupo(it) != null }
         if (m.grupoId == destino) return
         dao.guardarMateria(m.copy(grupoId = destino, actualizada = reloj()))
+        // La carpeta que recibe la lista se despliega, para que se vea dónde ha quedado.
+        if (destino != null) plegarGrupo(destino, false)
     }
 
     /** Sube (-1) o baja (+1) una lista un puesto entre las de su misma carpeta (o entre las sueltas). */
@@ -83,16 +92,16 @@ class Repositorio(
 
     // --- carpetas de listas -----------------------------------------------------------------------
 
-    suspend fun crearGrupo(nombre: String, icono: String = "📁", color: String? = null): GrupoLista {
+    suspend fun crearGrupo(nombre: String, icono: String? = null): GrupoLista {
         val t = reloj()
-        val g = GrupoLista(nombre = nombre.trim(), icono = icono, color = ReglasHorario.colorValido(color), orden = dao.siguienteOrdenGrupo(), creada = t, actualizada = t)
+        val g = GrupoLista(nombre = nombre.trim(), icono = icono?.trim()?.takeIf { it.isNotEmpty() } ?: "📁", orden = dao.siguienteOrdenGrupo(), creada = t, actualizada = t)
         dao.guardarGrupo(g)
         return g
     }
 
-    suspend fun editarGrupo(id: String, nombre: String, icono: String, color: String?) {
+    suspend fun editarGrupo(id: String, nombre: String, icono: String?) {
         val g = dao.grupo(id) ?: return
-        dao.guardarGrupo(g.copy(nombre = nombre.trim().ifEmpty { g.nombre }, icono = icono.trim().ifEmpty { g.icono }, color = ReglasHorario.colorValido(color), actualizada = reloj()))
+        dao.guardarGrupo(g.copy(nombre = nombre.trim().ifEmpty { g.nombre }, icono = icono?.trim()?.takeIf { it.isNotEmpty() } ?: "📁", actualizada = reloj()))
     }
 
     suspend fun plegarGrupo(id: String, plegado: Boolean) {

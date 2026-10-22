@@ -22,8 +22,7 @@ data class Materia(
     val carpeta: String? = null,
     /** Carpeta de listas (grupo) en la que está en el menú de Tareas; null = lista suelta. */
     @ColumnInfo(name = "grupo_id") val grupoId: String? = null,
-    /** Color de la lista como `#RRGGBB` (null = automático) y emoji propio (null = el icono de lista). */
-    val color: String? = null,
+    /** Emoji propio de la lista (opcional; null = el icono de lista de siempre). */
     val emoji: String? = null,
     val creada: Long,
     val actualizada: Long,
@@ -38,9 +37,8 @@ data class Materia(
 data class GrupoLista(
     @PrimaryKey val id: String = nuevoId(),
     val nombre: String,
+    /** Emoji de la carpeta (el de una carpeta por defecto). */
     val icono: String = "📁",
-    /** `#RRGGBB` o null (color automático). */
-    val color: String? = null,
     val orden: Int = 0,
     /** Si la carpeta está plegada en el menú. */
     val plegado: Boolean = false,

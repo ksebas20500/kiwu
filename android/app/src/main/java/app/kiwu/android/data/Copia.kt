@@ -80,9 +80,8 @@ object Copia {
             put("materias", buildJsonArray {
                 for (m in materias) add(buildJsonObject {
                     put("id", m.id); put("nombre", m.nombre); put("orden", m.orden); put("carpeta", JsonNull)
-                    // Campos opcionales (Android 0.3): carpeta de listas, color y emoji.
+                    // Campos opcionales (Android 0.3): carpeta de listas y emoji.
                     put("grupo", m.grupoId?.let { JsonPrimitive(it) } ?: JsonNull)
-                    put("color", m.color?.let { JsonPrimitive(it) } ?: JsonNull)
                     put("emoji", m.emoji?.let { JsonPrimitive(it) } ?: JsonNull)
                     put("creada", iso(m.creada)); put("actualizada", iso(m.actualizada))
                 })
@@ -90,7 +89,7 @@ object Copia {
             put("grupos", buildJsonArray {
                 for (g in grupos) add(buildJsonObject {
                     put("id", g.id); put("nombre", g.nombre); put("icono", g.icono); put("orden", g.orden)
-                    put("color", g.color?.let { JsonPrimitive(it) } ?: JsonNull); put("plegado", g.plegado)
+                    put("plegado", g.plegado)
                     put("creada", iso(g.creada)); put("actualizada", iso(g.actualizada))
                 })
             })
@@ -151,7 +150,7 @@ object Copia {
             val id = g.cadena("id") ?: return@mapNotNull null
             val nombre = g.cadena("nombre") ?: return@mapNotNull null
             GrupoLista(
-                id = id, nombre = nombre, icono = g.cadena("icono") ?: "📁", color = ReglasHorario.colorValido(g.cadena("color")),
+                id = id, nombre = nombre, icono = g.cadena("icono") ?: "📁",
                 orden = g.entero("orden", 0), plegado = g.logico("plegado"),
                 creada = desdeIso(g["creada"]) ?: 0L, actualizada = desdeIso(g["actualizada"]) ?: 0L,
             )
@@ -163,7 +162,7 @@ object Copia {
             Materia(
                 id = id, nombre = nombre, orden = m.entero("orden", 0),
                 // Campos opcionales: las copias antiguas no los traen (lista suelta y aspecto automático).
-                grupoId = m.cadena("grupo")?.takeIf { it in idsGrupo }, color = ReglasHorario.colorValido(m.cadena("color")),
+                grupoId = m.cadena("grupo")?.takeIf { it in idsGrupo },
                 emoji = m.cadena("emoji")?.takeIf { it.isNotBlank() },
                 creada = desdeIso(m["creada"]) ?: 0L, actualizada = desdeIso(m["actualizada"]) ?: 0L,
             )

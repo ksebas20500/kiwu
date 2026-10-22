@@ -73,14 +73,16 @@ class CarpetasTest {
 
     @Test
     fun laCarpetaSePliegaYSeEdita() = runBlocking {
-        val g = repo.crearGrupo("Idiomas", "🌍", "#43A047")
+        val g = repo.crearGrupo("Idiomas", "🌍")
         repo.plegarGrupo(g.id, true)
-        repo.editarGrupo(g.id, "Idiomas y más", "📚", "no-es-un-color")
+        repo.editarGrupo(g.id, "Idiomas y más", "📚")
         val leida = repo.grupos.first().single()
         assertTrue(leida.plegado)
         assertEquals("Idiomas y más", leida.nombre)
         assertEquals("📚", leida.icono)
-        assertNull(leida.color) // un color inválido se ignora
+        // sin emoji vuelve la carpeta de siempre
+        repo.editarGrupo(g.id, "Idiomas y más", null)
+        assertEquals("📁", repo.grupos.first().single().icono)
     }
 
     @Test
@@ -106,21 +108,45 @@ class CarpetasTest {
     }
 
     @Test
-    fun elAspectoDeLaListaSeGuardaYUnColorMaloSeIgnora() = runBlocking {
-        val m = repo.crearMateria("Química")
-        repo.editarAspectoMateria(m.id, "🧪", "#e53935")
-        assertEquals("🧪", repo.materia(m.id)!!.emoji); assertEquals("#E53935", repo.materia(m.id)!!.color)
-        repo.editarAspectoMateria(m.id, " ", "rojo")
-        assertNull(repo.materia(m.id)!!.emoji); assertNull(repo.materia(m.id)!!.color)
+    fun elEmojiDeLaListaEsOpcional() = runBlocking {
+        val m = repo.crearMateria("Química", emoji = "🧪")
+        assertEquals("🧪", repo.materia(m.id)!!.emoji)
+        repo.editarMateria(m.id, "Química 2", " ")
+        assertNull(repo.materia(m.id)!!.emoji)
+        assertEquals("Química 2", repo.materia(m.id)!!.nombre)
+        assertNull(repo.crearMateria("Sin emoji").emoji)
+    }
+
+    @Test
+    fun unaListaPuedeNacerDentroDeUnaCarpetaVaciaYLaDespliega() = runBlocking {
+        val g = repo.crearGrupo("Trabajo", "💼")
+        repo.plegarGrupo(g.id, true)
+        val m = repo.crearMateria("Informes", grupoId = g.id)
+        assertEquals(g.id, repo.materia(m.id)!!.grupoId)
+        assertTrue(!repo.grupos.first().single().plegado)
+    }
+
+    @Test
+    fun crearEnUnaCarpetaQueNoExisteDejaLaListaSuelta() = runBlocking {
+        assertNull(repo.crearMateria("Huérfana", grupoId = "no-existe").grupoId)
+    }
+
+    @Test
+    fun moverUnaListaDespliegaLaCarpetaDestino() = runBlocking {
+        val g = repo.crearGrupo("Plegada")
+        repo.plegarGrupo(g.id, true)
+        val m = repo.crearMateria("Suelta")
+        repo.moverMateriaAGrupo(m.id, g.id)
+        assertTrue(!repo.grupos.first().single().plegado)
     }
 
     @Test
     fun lasCarpetasViajanEnLaCopiaDeSeguridad() = runBlocking {
-        val g = repo.crearGrupo("Semestre 3", "🎓", "#1E88E5")
-        repo.plegarGrupo(g.id, true)
+        val g = repo.crearGrupo("Semestre 3", "🎓")
         val m = repo.crearMateria("Cálculo")
         repo.moverMateriaAGrupo(m.id, g.id)
-        repo.editarAspectoMateria(m.id, "📐", "#FB8C00")
+        repo.editarMateria(m.id, "Cálculo", "📐")
+        repo.plegarGrupo(g.id, true)
         val texto = Copia.exportar(db.dao())
 
         val contexto = ApplicationProvider.getApplicationContext<Context>()
@@ -129,9 +155,9 @@ class CarpetasTest {
             val r = Copia.importar(otra.dao(), texto)
             assertEquals(1, r.grupos); assertEquals(1, r.materias)
             val grupo = otra.dao().gruposAhora().single()
-            assertEquals("Semestre 3", grupo.nombre); assertEquals("🎓", grupo.icono); assertEquals("#1E88E5", grupo.color); assertTrue(grupo.plegado)
+            assertEquals("Semestre 3", grupo.nombre); assertEquals("🎓", grupo.icono); assertTrue(grupo.plegado)
             val lista = otra.dao().materia(m.id)!!
-            assertEquals(g.id, lista.grupoId); assertEquals("📐", lista.emoji); assertEquals("#FB8C00", lista.color)
+            assertEquals(g.id, lista.grupoId); assertEquals("📐", lista.emoji)
             // importar otra vez no duplica nada
             assertEquals(0, Copia.importar(otra.dao(), texto).grupos)
         } finally {
@@ -144,17 +170,16 @@ class CarpetasTest {
         val r = Copia.importar(db.dao(), """{"formato":1,"app":"kiwu","materias":[{"id":"M1","nombre":"Uni"}]}""")
         assertEquals(1, r.materias); assertEquals(0, r.grupos)
         val m = db.dao().materia("M1")!!
-        assertNull(m.grupoId); assertNull(m.color); assertNull(m.emoji)
+        assertNull(m.grupoId); assertNull(m.emoji)
     }
 
     @Test
     fun unaListaQueApuntaAUnaCarpetaInexistenteSeImportaSuelta() = runBlocking {
         val texto = """{"formato":1,"app":"kiwu","grupos":[{"id":"G1","nombre":"Real"}],
-            "materias":[{"id":"M1","nombre":"Buena","grupo":"G1"},{"id":"M2","nombre":"Huérfana","grupo":"NO","color":"verde"}]}"""
+            "materias":[{"id":"M1","nombre":"Buena","grupo":"G1"},{"id":"M2","nombre":"Huérfana","grupo":"NO"}]}"""
         Copia.importar(db.dao(), texto)
         assertEquals("G1", db.dao().materia("M1")!!.grupoId)
         assertNull(db.dao().materia("M2")!!.grupoId)
-        assertNull(db.dao().materia("M2")!!.color)
     }
 
     // --- árbol del menú (sin base de datos) ----------------------------------------------------------

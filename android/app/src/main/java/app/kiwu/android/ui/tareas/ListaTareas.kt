@@ -31,14 +31,17 @@ import app.kiwu.android.ui.EstadoVacio
 /** Vista de lista: pendientes, y una sección plegable con las completadas. */
 @Composable
 fun ListaTareas(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String) -> Unit, alCrearLista: () -> Unit) {
+    val enCarpeta = estado.elemento is Elemento.DeGrupo
     var completadasVisibles by rememberSaveable { mutableStateOf(true) }
     val mostrarLista = estado.materiaActual == null
     val puedeCrear = estado.elemento != Elemento.Completadas
 
     Column(Modifier.fillMaxSize()) {
         when {
-            estado.cargado && estado.materias.isEmpty() -> EstadoVacio(Icons.Filled.CheckCircle, "Crea una lista para empezar", Modifier.weight(1f)) {
-                Button(onClick = alCrearLista, modifier = Modifier.padding(top = 16.dp)) { Text("Crear lista") }
+            estado.cargado && estado.materiasDelContexto.isEmpty() -> EstadoVacio(
+                Icons.Filled.CheckCircle, if (enCarpeta) "Esta carpeta está vacía" else "Crea una lista para empezar", Modifier.weight(1f),
+            ) {
+                Button(onClick = alCrearLista, modifier = Modifier.padding(top = 16.dp)) { Text(if (enCarpeta) "Crear una lista aquí" else "Crear lista") }
             }
             estado.pendientes.isEmpty() && estado.completados.isEmpty() ->
                 EstadoVacio(Icons.Filled.CheckCircle, "Sin tareas", Modifier.weight(1f))
@@ -78,7 +81,7 @@ fun ListaTareas(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String) -> 
             }
         }
         if (puedeCrear) {
-            CampoNuevaTarea(estado.materias, estado.materiaActual, alCrear = { t, m, f -> vm.crearTarea(t, m, f) })
+            CampoNuevaTarea(estado.materiasDelContexto, estado.materiaActual, alCrear = { t, m, f -> vm.crearTarea(t, m, f) })
         }
     }
 }

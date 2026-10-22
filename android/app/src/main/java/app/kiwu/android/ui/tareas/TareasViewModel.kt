@@ -41,6 +41,8 @@ data class TareasEstado(
     val aspecto: String = "plegable",
     val contadores: Boolean = true,
 ) {
+    /** Las listas con las que se trabaja ahora: las de la carpeta abierta, o todas. */
+    val materiasDelContexto: List<Materia> get() = (elemento as? Elemento.DeGrupo)?.let { e -> materias.filter { it.grupoId == e.id } } ?: materias
     val grupoActual: GrupoLista? get() = (elemento as? Elemento.DeGrupo)?.let { e -> grupos.firstOrNull { it.id == e.id } }
     val materiaActual: Materia? get() = (elemento as? Elemento.DeMateria)?.let { e -> materias.firstOrNull { it.id == e.id } }
     val nombres: Map<String, String> get() = materias.associate { it.id to it.nombre }
@@ -118,10 +120,13 @@ class TareasViewModel(private val repo: Repositorio, private val ajustes: Ajuste
 
     fun eliminarTarea(id: String) = viewModelScope.launch { repo.eliminarDeber(id) }
 
-    fun crearLista(nombre: String) = viewModelScope.launch {
-        val m = repo.crearMateria(nombre)
+    /** Crea una lista (con emoji opcional), suelta o ya dentro de una carpeta, y la abre. */
+    fun crearLista(nombre: String, emoji: String? = null, grupoId: String? = null) = viewModelScope.launch {
+        val m = repo.crearMateria(nombre, emoji, grupoId)
         ir(Elemento.DeMateria(m.id))
     }
+
+    fun editarLista(id: String, nombre: String, emoji: String?) = viewModelScope.launch { repo.editarMateria(id, nombre, emoji) }
 
     fun renombrarLista(id: String, nombre: String) = viewModelScope.launch { repo.renombrarMateria(id, nombre) }
 
@@ -132,15 +137,19 @@ class TareasViewModel(private val repo: Repositorio, private val ajustes: Ajuste
 
     // --- carpetas de listas ---------------------------------------------------------------------
 
-    fun crearGrupo(nombre: String) = viewModelScope.launch { repo.crearGrupo(nombre) }
+    /** Crea una carpeta (con emoji opcional) y entra en ella, aunque aún no tenga listas. */
+    fun crearGrupo(nombre: String, emoji: String? = null) = viewModelScope.launch {
+        val g = repo.crearGrupo(nombre, emoji)
+        ir(Elemento.DeGrupo(g.id))
+    }
 
     /** Crea una carpeta y mete en ella una lista. */
-    fun crearGrupoYMover(nombre: String, materiaId: String) = viewModelScope.launch {
-        val g = repo.crearGrupo(nombre)
+    fun crearGrupoYMover(nombre: String, emoji: String?, materiaId: String) = viewModelScope.launch {
+        val g = repo.crearGrupo(nombre, emoji)
         repo.moverMateriaAGrupo(materiaId, g.id)
     }
 
-    fun editarGrupo(id: String, nombre: String, icono: String, color: String?) = viewModelScope.launch { repo.editarGrupo(id, nombre, icono, color) }
+    fun editarGrupo(id: String, nombre: String, emoji: String?) = viewModelScope.launch { repo.editarGrupo(id, nombre, emoji) }
 
     fun plegarGrupo(id: String, plegado: Boolean) = viewModelScope.launch { repo.plegarGrupo(id, plegado) }
 
@@ -154,8 +163,6 @@ class TareasViewModel(private val repo: Repositorio, private val ajustes: Ajuste
     fun moverOrdenLista(id: String, delta: Int) = viewModelScope.launch { repo.moverOrdenMateria(id, delta) }
 
     fun moverOrdenGrupo(id: String, delta: Int) = viewModelScope.launch { repo.moverOrdenGrupo(id, delta) }
-
-    fun editarAspectoLista(id: String, emoji: String?, color: String?) = viewModelScope.launch { repo.editarAspectoMateria(id, emoji, color) }
 
     fun vincularCarpeta(id: String, carpeta: String?) = viewModelScope.launch { repo.vincularCarpeta(id, carpeta) }
 }

@@ -278,14 +278,13 @@ abstract class KiwuDb : RoomDatabase() {
         }
 
         /**
-         * v3 → v4: carpetas de listas. Tabla nueva `grupo_lista` y tres columnas opcionales en `materia`
-         * (carpeta, color y emoji): las listas existentes quedan sueltas y con su aspecto de siempre.
+         * v3 → v4: carpetas de listas. Tabla nueva `grupo_lista` y dos columnas opcionales en `materia`
+         * (carpeta y emoji): las listas existentes quedan sueltas y con su aspecto de siempre.
          */
         val MIGRACION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("CREATE TABLE IF NOT EXISTS `grupo_lista` (`id` TEXT NOT NULL, `nombre` TEXT NOT NULL, `icono` TEXT NOT NULL, `color` TEXT, `orden` INTEGER NOT NULL, `plegado` INTEGER NOT NULL, `creada` INTEGER NOT NULL, `actualizada` INTEGER NOT NULL, `eliminada` INTEGER, PRIMARY KEY(`id`))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `grupo_lista` (`id` TEXT NOT NULL, `nombre` TEXT NOT NULL, `icono` TEXT NOT NULL, `orden` INTEGER NOT NULL, `plegado` INTEGER NOT NULL, `creada` INTEGER NOT NULL, `actualizada` INTEGER NOT NULL, `eliminada` INTEGER, PRIMARY KEY(`id`))")
                 db.execSQL("ALTER TABLE `materia` ADD COLUMN `grupo_id` TEXT")
-                db.execSQL("ALTER TABLE `materia` ADD COLUMN `color` TEXT")
                 db.execSQL("ALTER TABLE `materia` ADD COLUMN `emoji` TEXT")
             }
         }

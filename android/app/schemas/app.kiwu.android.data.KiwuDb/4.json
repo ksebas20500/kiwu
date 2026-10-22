@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 4,
-    "identityHash": "fbb11117f02ac9b58f36220baf108735",
+    "identityHash": "0a5ac2b78c0d599ec87523fbdba729a6",
     "entities": [
       {
         "tableName": "materia",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `nombre` TEXT NOT NULL, `icono` TEXT NOT NULL, `orden` INTEGER NOT NULL, `carpeta` TEXT, `grupo_id` TEXT, `color` TEXT, `emoji` TEXT, `creada` INTEGER NOT NULL, `actualizada` INTEGER NOT NULL, `eliminada` INTEGER, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `nombre` TEXT NOT NULL, `icono` TEXT NOT NULL, `orden` INTEGER NOT NULL, `carpeta` TEXT, `grupo_id` TEXT, `emoji` TEXT, `creada` INTEGER NOT NULL, `actualizada` INTEGER NOT NULL, `eliminada` INTEGER, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -41,12 +41,6 @@
           {
             "fieldPath": "grupoId",
             "columnName": "grupo_id",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "color",
-            "columnName": "color",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -552,7 +546,7 @@
       },
       {
         "tableName": "grupo_lista",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `nombre` TEXT NOT NULL, `icono` TEXT NOT NULL, `color` TEXT, `orden` INTEGER NOT NULL, `plegado` INTEGER NOT NULL, `creada` INTEGER NOT NULL, `actualizada` INTEGER NOT NULL, `eliminada` INTEGER, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `nombre` TEXT NOT NULL, `icono` TEXT NOT NULL, `orden` INTEGER NOT NULL, `plegado` INTEGER NOT NULL, `creada` INTEGER NOT NULL, `actualizada` INTEGER NOT NULL, `eliminada` INTEGER, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -571,12 +565,6 @@
             "columnName": "icono",
             "affinity": "TEXT",
             "notNull": true
-          },
-          {
-            "fieldPath": "color",
-            "columnName": "color",
-            "affinity": "TEXT",
-            "notNull": false
           },
           {
             "fieldPath": "orden",
@@ -622,7 +610,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'fbb11117f02ac9b58f36220baf108735')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '0a5ac2b78c0d599ec87523fbdba729a6')"
     ]
   }
 }

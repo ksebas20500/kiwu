@@ -75,14 +75,14 @@ class MigracionTest {
             close()
         }
         val db = ayudante.runMigrationsAndValidate("migracion3", 4, true, KiwuDb.MIGRACION_3_4)
-        db.query("SELECT nombre, orden, carpeta, grupo_id, color, emoji FROM materia").use {
+        db.query("SELECT nombre, orden, carpeta, grupo_id, emoji FROM materia").use {
             assertEquals(1, it.count)
             it.moveToFirst()
             assertEquals("Uni", it.getString(0)); assertEquals(2, it.getInt(1)); assertEquals("content://x", it.getString(2))
-            assertEquals(true, it.isNull(3)); assertEquals(true, it.isNull(4)); assertEquals(true, it.isNull(5))
+            assertEquals(true, it.isNull(3)); assertEquals(true, it.isNull(4))
         }
         db.query("SELECT titulo FROM deber").use { it.moveToFirst(); assertEquals("Estudiar", it.getString(0)) }
-        db.execSQL("INSERT INTO grupo_lista (id, nombre, icono, color, orden, plegado, creada, actualizada, eliminada) VALUES ('G1', 'Semestre 3', '📁', NULL, 0, 0, 1, 1, NULL)")
+        db.execSQL("INSERT INTO grupo_lista (id, nombre, icono, orden, plegado, creada, actualizada, eliminada) VALUES ('G1', 'Semestre 3', '📁', 0, 0, 1, 1, NULL)")
         db.execSQL("UPDATE materia SET grupo_id = 'G1' WHERE id = 'M1'")
         db.query("SELECT COUNT(*) FROM grupo_lista").use { it.moveToFirst(); assertEquals(1, it.getInt(0)) }
     }

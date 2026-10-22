@@ -59,7 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kiwu.android.domain.Elemento
 import app.kiwu.android.domain.Materia
 import app.kiwu.android.ui.DialogoConfirmar
-import app.kiwu.android.ui.DialogoTexto
+
 import app.kiwu.android.ui.calendario.CalendarioScreen
 import kotlinx.coroutines.launch
 
@@ -152,7 +152,12 @@ fun TareasScreen(
     }
 
     if (dialogoNuevaLista) {
-        DialogoTexto("Nueva lista", "Nombre de la materia", accion = "Crear", alCerrar = { dialogoNuevaLista = false }) { vm.crearLista(it) }
+        // Si se está viendo una carpeta, la lista nace dentro de ella.
+        val carpeta = (estado.elemento as? Elemento.DeGrupo)?.id
+        DialogoNuevoElemento(
+            titulo = if (carpeta != null) "Nueva lista en ${estado.grupoActual?.nombre ?: "la carpeta"}" else "Nueva lista",
+            etiqueta = "Nombre de la materia", accion = "Crear", alCerrar = { dialogoNuevaLista = false },
+        ) { nombre, emoji -> vm.crearLista(nombre, emoji, carpeta) }
     }
 }
 

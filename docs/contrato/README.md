@@ -46,18 +46,18 @@ Reglas: `materia` es la lista de tareas vinculada a la clase (Android muestra su
 
 ## Carpetas de listas (Android; Linux y macOS pendientes)
 
-La copia `.kiwu.json` admite una clave opcional nueva, `grupos`, y tres campos opcionales en cada elemento de `materias`. El formato sigue siendo `1`: las copias antiguas, sin estas claves, se importan igual (las listas quedan sueltas y con su aspecto de siempre), y un cliente que no las conoce las ignora.
+La copia `.kiwu.json` admite una clave opcional nueva, `grupos`, y dos campos opcionales en cada elemento de `materias` (`grupo` y `emoji`). El formato sigue siendo `1`: las copias antiguas, sin estas claves, se importan igual (las listas quedan sueltas y con su aspecto de siempre), y un cliente que no las conoce las ignora.
 
 ```json
 "grupos": [
-  { "id": "UUID", "nombre": "Semestre 3", "icono": "📁", "color": "#1E88E5 o null", "orden": 0, "plegado": false,
+  { "id": "UUID", "nombre": "Semestre 3", "icono": "📁", "orden": 0, "plegado": false,
     "creada": "ISO-8601", "actualizada": "ISO-8601" }
 ],
 "materias": [
   { "id": "UUID", "nombre": "Cálculo", "orden": 0, "carpeta": null,
-    "grupo": "UUID-de-una-carpeta o null", "color": "#FB8C00 o null", "emoji": "📐 o null", "...": "..." }
+    "grupo": "UUID-de-una-carpeta o null", "emoji": "📐 o null", "...": "..." }
 ]
 ```
 
-Reglas: una lista está como mucho en **una** carpeta y las carpetas **no se anidan**. `materias[].grupo` es el `id` de una carpeta de `grupos`: si no existe, la lista se importa suelta. `color` es `#RRGGBB` (cualquier otro valor se ignora) y `emoji` es texto libre. **No confundir** con `materias[].carpeta`, que es la carpeta de archivos del dispositivo vinculada a la lista y no viaja entre dispositivos. Al importar no se pisa lo que ya está ni se resucita lo eliminado. Borrar una carpeta no borra sus listas.
+Reglas: una lista está como mucho en **una** carpeta y las carpetas **no se anidan**. `materias[].grupo` es el `id` de una carpeta de `grupos`: si no existe, la lista se importa suelta. `icono` (de la carpeta) y `emoji` (de la lista, opcional) son texto libre. **No confundir** con `materias[].carpeta`, que es la carpeta de archivos del dispositivo vinculada a la lista y no viaja entre dispositivos. Al importar no se pisa lo que ya está ni se resucita lo eliminado. Borrar una carpeta no borra sus listas.
 

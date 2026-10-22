@@ -107,7 +107,7 @@ fun Tablero(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String) -> Unit
 
     Box(Modifier.fillMaxSize().onGloballyPositioned { raiz = it.positionInRoot() }) {
         Column(Modifier.fillMaxSize()) {
-            if (estado.cargado && estado.materias.isEmpty()) {
+            if (estado.cargado && estado.materiasDelContexto.isEmpty()) {
                 EstadoVacio(Icons.Filled.CheckCircle, "Crea una lista para empezar", Modifier.weight(1f)) {
                     Button(onClick = alCrearLista, modifier = Modifier.padding(top = 16.dp)) { Text("Crear lista") }
                 }
@@ -150,7 +150,7 @@ fun Tablero(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String) -> Unit
                     }
                 }
             }
-            if (puedeCrear) CampoNuevaTarea(estado.materias, estado.materiaActual, alCrear = { t, m, f -> vm.crearTarea(t, m, f) })
+            if (puedeCrear) CampoNuevaTarea(estado.materiasDelContexto, estado.materiaActual, alCrear = { t, m, f -> vm.crearTarea(t, m, f) })
         }
 
         // La tarjeta que flota bajo el dedo.
