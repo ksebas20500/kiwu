@@ -12,6 +12,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /** Contenedor de dependencias de la app (sin framework de inyección: son solo dos objetos). */
@@ -40,7 +42,10 @@ class KiwuApp : Application() {
         Avisos.crearCanal(this)
         AvisosClases.crearCanal(this)
         val programador = ProgramadorAvisos(this)
-        alcance.launch { repo.deberes.collect { programador.reconciliar(it) } }
+        alcance.launch {
+            kotlinx.coroutines.flow.combine(repo.deberes, ajustes.flujo.map { it.segundoAvisoMin }.distinctUntilChanged()) { deberes, segundo -> deberes to segundo }
+                .collect { (deberes, segundo) -> programador.reconciliar(deberes, segundo) }
+        }
         val programadorClases = ProgramadorClases(this)
         alcance.launch { repo.clases.collect { programadorClases.reconciliar(it) } }
     }

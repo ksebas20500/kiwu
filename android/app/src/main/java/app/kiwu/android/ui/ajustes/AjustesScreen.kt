@@ -28,6 +28,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.Alignment
 import app.kiwu.android.ui.Acentos
+import app.kiwu.android.ui.FondoArchivos
+import app.kiwu.android.ui.FondoEnVivo
 import app.kiwu.android.ui.tonoYSaturacion
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -85,7 +87,7 @@ private fun Seccion(titulo: String, contenido: @Composable () -> Unit) {
 }
 
 /** Ajustes: apariencia, fondo, avisos del sistema y copia de seguridad. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit) {
     val contexto = LocalContext.current
@@ -94,12 +96,12 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit) {
     var mensaje by remember { mutableStateOf<String?>(null) }
     fun cambiar(f: (AjustesUi) -> AjustesUi) { alcance.launch { app.ajustes.cambiar(f) } }
 
+    var encuadrando by remember { mutableStateOf(false) }
     val elegirFondo = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
-            try {
-                contexto.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            } catch (e: SecurityException) { /* se usa mientras dure el permiso temporal */ }
-            cambiar { it.copy(fondoUri = uri.toString()) }
+        if (uri != null) alcance.launch {
+            // La app guarda su propia copia de la foto: así no depende del permiso ni de que el archivo siga donde estaba.
+            val guardada = withContext(Dispatchers.IO) { FondoArchivos.guardarOrigen(contexto, uri) }
+            if (guardada) encuadrando = true else mensaje = "No se pudo abrir esa imagen"
         }
     }
     val exportar = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -153,20 +155,46 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit) {
             }
             HorizontalDivider()
             Seccion("Fondo de imagen") {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { elegirFondo.launch(arrayOf("image/*")) }) { Text(if (ajustes.fondoUri == null) "Elegir imagen" else "Cambiar imagen") }
-                    if (ajustes.fondoUri != null) OutlinedButton(onClick = { cambiar { it.copy(fondoUri = null) } }) { Text("Quitar") }
+                    if (ajustes.fondoUri != null && FondoArchivos.origen(contexto).exists()) {
+                        OutlinedButton(onClick = { encuadrando = true }) { Text("Encuadrar") }
+                    }
+                    if (ajustes.fondoUri != null) OutlinedButton(onClick = {
+                        FondoArchivos.borrar(contexto)
+                        cambiar { it.copy(fondoUri = null) }
+                    }) { Text("Quitar") }
                 }
                 if (ajustes.fondoUri != null) {
+                    // Los deslizadores se mueven con un valor propio (sin esperar al guardado) y el fondo los aplica al instante.
+                    var visibilidad by remember(ajustes.fondoVisibilidad) { mutableStateOf(ajustes.fondoVisibilidad) }
+                    var velo by remember(ajustes.opacidadPaneles) { mutableStateOf(ajustes.opacidadPaneles) }
                     Text("Visibilidad de la imagen", style = MaterialTheme.typography.labelMedium)
-                    Slider(ajustes.fondoVisibilidad, { v -> cambiar { it.copy(fondoVisibilidad = v) } })
+                    Slider(
+                        visibilidad, { v -> visibilidad = v; FondoEnVivo.visibilidad = v },
+                        onValueChangeFinished = { cambiar { it.copy(fondoVisibilidad = visibilidad) }; FondoEnVivo.visibilidad = null },
+                    )
                     Text("Velo para leer mejor el contenido", style = MaterialTheme.typography.labelMedium)
-                    Slider(ajustes.opacidadPaneles, { v -> cambiar { it.copy(opacidadPaneles = v) } })
+                    Slider(
+                        velo, { v -> velo = v; FondoEnVivo.velo = v },
+                        onValueChangeFinished = { cambiar { it.copy(opacidadPaneles = velo) }; FondoEnVivo.velo = null },
+                    )
                 }
             }
             HorizontalDivider()
             Seccion("Recordatorios") {
                 val permiso = Avisos.tienePermiso(contexto)
+                // Segundo aviso: otro recordatorio unos minutos antes de la entrega, por si se borró o se olvidó el primero.
+                Text("Segundo aviso", style = MaterialTheme.typography.labelMedium)
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for ((minutos, texto) in listOf(0 to "Sin segundo aviso", 5 to "5 min antes", 10 to "10 min antes", 15 to "15 min antes", 30 to "30 min antes", 60 to "1 h antes")) {
+                        androidx.compose.material3.FilterChip(
+                            selected = ajustes.segundoAvisoMin == minutos,
+                            onClick = { cambiar { it.copy(segundoAvisoMin = minutos) } },
+                            label = { Text(texto) },
+                        )
+                    }
+                }
                 Text(if (permiso) "Las notificaciones están activadas." else "Las notificaciones están desactivadas: no recibirás avisos.", style = MaterialTheme.typography.bodyMedium)
                 if (!permiso) {
                     OutlinedButton(onClick = {
@@ -216,6 +244,19 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit) {
             }
             androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 32.dp))
         }
+    }
+    if (encuadrando) {
+        EncuadreFondo(
+            alCancelar = { encuadrando = false },
+            alAceptar = { bitmap ->
+                alcance.launch {
+                    val direccion = withContext(Dispatchers.IO) { FondoArchivos.guardarEncuadre(contexto, bitmap) }
+                    bitmap.recycle()
+                    if (direccion != null) cambiar { it.copy(fondoUri = direccion) } else mensaje = "No se pudo guardar el fondo"
+                    encuadrando = false
+                }
+            },
+        )
     }
 }
 
