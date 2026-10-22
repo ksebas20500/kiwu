@@ -2,7 +2,7 @@
 
 App nativa de Android (Kotlin, Jetpack Compose, Room). Mismas funciones que la de escritorio, sin widgets. Para ver qué hace Kiwu, consulta el [README principal](../README.md); la ruta de desarrollo está en [docs/android-plan.md](../docs/android-plan.md).
 
-Versión actual: **0.1.0** (en desarrollo) · Android 8.0 (API 26) o superior.
+Versión actual: **0.2.0** (en desarrollo) · Android 8.0 (API 26) o superior.
 
 ## Qué incluye
 
