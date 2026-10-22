@@ -42,3 +42,24 @@ La copia `.kiwu.json` admite dos claves opcionales nuevas. El formato sigue sien
 ```
 
 Reglas: `materia` es la lista de tareas vinculada a la clase (Android muestra sus tareas en la hoja de la clase y puntos en el horario); `color` (opcional, desde Android 0.3) es el color elegido para la clase como `#RRGGBB`, y `null` o ausente significa color automático: un valor que no sea `#RRGGBB` se ignora al importar, y las copias sin este campo se importan igual. `diaSemana` va de 1 (lunes) a 7 (domingo); `inicioMin` y `finMin` son **minutos desde las 00:00 en hora local, sin zona horaria** (`0 ≤ inicio < 1440`, `inicio < fin ≤ 1440`); una clase en varios días son varias filas con el mismo `grupo`; `avisoMin` es nulo si no hay aviso. Al importar se descartan las clases con día u horas inválidos o cuyo horario no existe, y no se pisa lo que ya está (ni se resucita lo eliminado).
+
+
+## Carpetas de listas (Android; Linux y macOS pendientes)
+
+La copia `.kiwu.json` admite una clave opcional nueva, `grupos`, y dos campos opcionales en cada elemento de `materias` (`grupo` y `emoji`). El formato sigue siendo `1`: las copias antiguas, sin estas claves, se importan igual (las listas quedan sueltas y con su aspecto de siempre), y un cliente que no las conoce las ignora.
+
+```json
+"grupos": [
+  { "id": "UUID", "nombre": "Semestre 3", "icono": "📁", "orden": 0, "plegado": false,
+    "creada": "ISO-8601", "actualizada": "ISO-8601" }
+],
+"materias": [
+  { "id": "UUID", "nombre": "Cálculo", "orden": 0, "carpeta": null,
+    "grupo": "UUID-de-una-carpeta o null", "emoji": "📐 o null", "...": "..." }
+]
+```
+
+Reglas: una lista está como mucho en **una** carpeta y las carpetas **no se anidan**. `materias[].grupo` es el `id` de una carpeta de `grupos`: si no existe, la lista se importa suelta. `icono` (de la carpeta) y `emoji` (de la lista, opcional) son texto libre. **No confundir** con `materias[].carpeta`, que es la carpeta de archivos del dispositivo vinculada a la lista y no viaja entre dispositivos. Al importar no se pisa lo que ya está ni se resucita lo eliminado. Borrar una carpeta no borra sus listas.
+
+**Eventos (Android 0.3.2):** no añaden campos. Un evento es un `deber` cuya `materia` tiene el id fijo `eventos` (lista «Eventos»); no se completa. Un cliente que no los conoce lo ve como una tarea más de una lista llamada «Eventos».
+

@@ -128,7 +128,7 @@ fun CalendarioScreen(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String
                     )
                 }
             }
-            CampoNuevaTarea(estado.materias, null, alCrear = { t, m, f -> vm.crearTareaEnDia(t, m, diaSel, f) }, marcador = "Añadir tarea a este día", diaFijo = diaSel)
+            CampoNuevaTarea(estado.materias + app.kiwu.android.ui.tareas.ListaEventos, null, alCrear = { t, m, f -> vm.crearTareaEnDia(t, m, diaSel, f) }, marcador = "Añadir tarea a este día", diaFijo = diaSel)
         }
     }
 }

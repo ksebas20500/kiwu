@@ -63,6 +63,7 @@ import app.kiwu.android.ui.ColorPastel
 import app.kiwu.android.ui.EstadoVacio
 import app.kiwu.android.ui.Pasteles
 import kotlinx.coroutines.delay
+import app.kiwu.android.domain.esEvento
 import kotlin.math.roundToInt
 
 /** Tarea que se está arrastrando: dónde está el dedo, cuánto mide la tarjeta y en qué punto de ella se agarró. */
@@ -71,7 +72,8 @@ private class Arrastre(val tarea: Deber, val color: ColorPastel?, val tamano: In
 /** Tablero: Por hacer · En curso · Hecho. La tarea se mueve arrastrándola (pulsación larga) o con su menú. */
 @Composable
 fun Tablero(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String) -> Unit, alCrearLista: () -> Unit) {
-    val todas = estado.pendientes + estado.completados
+    // Los eventos no se completan: no van en el tablero.
+    val todas = (estado.pendientes + estado.completados).filter { !it.esEvento }
     val colores = remember(todas.map { it.id }) { Pasteles.asignar(todas.map { it.id }) }
     val puedeCrear = estado.elemento != Elemento.Completadas
 
@@ -107,7 +109,7 @@ fun Tablero(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String) -> Unit
 
     Box(Modifier.fillMaxSize().onGloballyPositioned { raiz = it.positionInRoot() }) {
         Column(Modifier.fillMaxSize()) {
-            if (estado.cargado && estado.materias.isEmpty()) {
+            if (estado.cargado && estado.materiasDelContexto.isEmpty()) {
                 EstadoVacio(Icons.Filled.CheckCircle, "Crea una lista para empezar", Modifier.weight(1f)) {
                     Button(onClick = alCrearLista, modifier = Modifier.padding(top = 16.dp)) { Text("Crear lista") }
                 }
@@ -150,7 +152,7 @@ fun Tablero(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String) -> Unit
                     }
                 }
             }
-            if (puedeCrear) CampoNuevaTarea(estado.materias, estado.materiaActual, alCrear = { t, m, f -> vm.crearTarea(t, m, f) })
+            if (puedeCrear) CampoNuevaTarea(estado.materiasDelContexto, estado.materiaActual, alCrear = { t, m, f -> vm.crearTarea(t, m, f) })
         }
 
         // La tarjeta que flota bajo el dedo.

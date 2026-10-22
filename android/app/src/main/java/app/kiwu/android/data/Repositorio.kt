@@ -5,13 +5,17 @@ import app.kiwu.android.domain.Columna
 import app.kiwu.android.domain.Cuaderno
 import app.kiwu.android.domain.Deber
 import app.kiwu.android.domain.Documento
+import app.kiwu.android.domain.GrupoLista
 import app.kiwu.android.domain.Horario
 import app.kiwu.android.domain.nuevoId
 import app.kiwu.android.domain.Materia
 import app.kiwu.android.domain.Pagina
 import app.kiwu.android.domain.Reglas
 import app.kiwu.android.domain.ReglasHorario
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import app.kiwu.android.domain.ID_EVENTOS
 
 /**
  * Punto único de acceso a los datos para la interfaz: aplica las reglas de `domain` y guarda con el DAO.
@@ -22,21 +26,30 @@ class Repositorio(
     val reglas: Reglas = Reglas(),
     private val reloj: () -> Long = System::currentTimeMillis,
 ) {
-    val materias: Flow<List<Materia>> = dao.materias()
+    /** Las listas que se ven y se eligen; la lista especial de eventos queda aparte. */
+    val materias: Flow<List<Materia>> = dao.materias().map { l -> l.filter { it.id != ID_EVENTOS } }
     val deberes: Flow<List<Deber>> = dao.deberes()
     val cuadernos: Flow<List<Cuaderno>> = dao.cuadernos()
     val paginas: Flow<List<ResumenPagina>> = dao.paginas()
     val horarios: Flow<List<Horario>> = dao.horarios()
     val clases: Flow<List<Clase>> = dao.clases()
+    val grupos: Flow<List<GrupoLista>> = dao.grupos()
 
     fun ahora(): Long = reloj()
 
     // --- listas (materias) ----------------------------------------------------------------------
 
-    suspend fun crearMateria(nombre: String): Materia {
+    /** Crea una lista; con [grupoId] nace ya dentro de esa carpeta y con [emoji] (opcional) como icono. */
+    suspend fun crearMateria(nombre: String, emoji: String? = null, grupoId: String? = null): Materia {
         val t = reloj()
-        val m = Materia(nombre = nombre.trim(), orden = dao.siguienteOrdenMateria(), creada = t, actualizada = t)
+        val grupo = grupoId?.takeIf { dao.grupo(it) != null }
+        val m = Materia(
+            nombre = nombre.trim(), orden = dao.siguienteOrdenMateria(), grupoId = grupo,
+            emoji = emoji?.trim()?.takeIf { it.isNotEmpty() }, creada = t, actualizada = t,
+        )
         dao.guardarMateria(m)
+        // Si la carpeta estaba plegada se despliega, para que se vea la lista recién creada.
+        if (grupo != null) plegarGrupo(grupo, false)
         return m
     }
 
@@ -52,13 +65,83 @@ class Repositorio(
 
     suspend fun materia(id: String): Materia? = dao.materia(id)
 
+    /** Cambia el nombre y el emoji de una lista (con emoji null o vacío vuelve el icono de siempre). */
+    suspend fun editarMateria(id: String, nombre: String, emoji: String?) {
+        val m = dao.materia(id) ?: return
+        dao.guardarMateria(m.copy(nombre = nombre.trim().ifEmpty { m.nombre }, emoji = emoji?.trim()?.takeIf { it.isNotEmpty() }, actualizada = reloj()))
+    }
+
+    /** Mete una lista en una carpeta o la deja suelta (con null). Si la carpeta no existe, queda suelta. */
+    suspend fun moverMateriaAGrupo(materiaId: String, grupoId: String?) {
+        val m = dao.materia(materiaId) ?: return
+        val destino = grupoId?.takeIf { dao.grupo(it) != null }
+        if (m.grupoId == destino) return
+        dao.guardarMateria(m.copy(grupoId = destino, actualizada = reloj()))
+        // La carpeta que recibe la lista se despliega, para que se vea dónde ha quedado.
+        if (destino != null) plegarGrupo(destino, false)
+    }
+
+    /** Sube (-1) o baja (+1) una lista un puesto entre las de su misma carpeta (o entre las sueltas). */
+    suspend fun moverOrdenMateria(id: String, delta: Int) {
+        val m = dao.materia(id) ?: return
+        val hermanas = dao.materias().first().filter { it.grupoId == m.grupoId }.sortedWith(compareBy<Materia> { it.orden }.thenBy { it.nombre.lowercase() })
+        val i = hermanas.indexOfFirst { it.id == id }
+        val j = i + delta
+        if (i < 0 || j !in hermanas.indices) return
+        val nuevas = hermanas.toMutableList().apply { add(j, removeAt(i)) }
+        val t = reloj()
+        dao.guardarMaterias(nuevas.mapIndexed { n, x -> x.copy(orden = n, actualizada = t) })
+    }
+
+    // --- carpetas de listas -----------------------------------------------------------------------
+
+    suspend fun crearGrupo(nombre: String, icono: String? = null): GrupoLista {
+        val t = reloj()
+        val g = GrupoLista(nombre = nombre.trim(), icono = icono?.trim()?.takeIf { it.isNotEmpty() } ?: "📁", orden = dao.siguienteOrdenGrupo(), creada = t, actualizada = t)
+        dao.guardarGrupo(g)
+        return g
+    }
+
+    suspend fun editarGrupo(id: String, nombre: String, icono: String?) {
+        val g = dao.grupo(id) ?: return
+        dao.guardarGrupo(g.copy(nombre = nombre.trim().ifEmpty { g.nombre }, icono = icono?.trim()?.takeIf { it.isNotEmpty() } ?: "📁", actualizada = reloj()))
+    }
+
+    suspend fun plegarGrupo(id: String, plegado: Boolean) {
+        val g = dao.grupo(id) ?: return
+        if (g.plegado != plegado) dao.guardarGrupo(g.copy(plegado = plegado, actualizada = reloj()))
+    }
+
+    /** Sube (-1) o baja (+1) una carpeta un puesto. */
+    suspend fun moverOrdenGrupo(id: String, delta: Int) {
+        val todas = dao.gruposAhora()
+        val i = todas.indexOfFirst { it.id == id }
+        val j = i + delta
+        if (i < 0 || j !in todas.indices) return
+        val nuevas = todas.toMutableList().apply { add(j, removeAt(i)) }
+        val t = reloj()
+        dao.guardarGrupos(nuevas.mapIndexed { n, x -> x.copy(orden = n, actualizada = t) })
+    }
+
+    /** Elimina la carpeta; sus listas (y las tareas de ellas) se conservan como listas sueltas. */
+    suspend fun eliminarGrupoListas(id: String) = dao.eliminarGrupoListas(id, reloj())
+
     suspend fun eliminarMateria(id: String) = dao.eliminarMateria(id, reloj())
 
     // --- tareas ---------------------------------------------------------------------------------
 
+    /** Crea una tarea; si [materiaId] es [ID_EVENTOS] es un evento (la lista especial se crea la primera vez). */
     suspend fun crearDeber(titulo: String, materiaId: String, fecha: Long? = null): Deber {
         val t = reloj()
-        val d = Deber(materiaId = materiaId, titulo = titulo.trim(), fechaEntrega = fecha, creada = t, actualizada = t)
+        val evento = materiaId == ID_EVENTOS
+        if (evento && dao.materia(ID_EVENTOS) == null) {
+            dao.guardarMateria(Materia(id = ID_EVENTOS, nombre = "Eventos", emoji = "📅", orden = -1, creada = t, actualizada = t))
+        }
+        // Un evento avisa 1 hora antes por defecto (las tareas, 1 día antes).
+        val d = Deber(
+            materiaId = materiaId, titulo = titulo.trim(), fechaEntrega = fecha, creada = t, actualizada = t,
+            recordatorioHoras = if (evento) 1 else 24,
+        )
         dao.guardarDeber(d)
         return d
     }

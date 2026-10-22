@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ksebas20500/kiwu/releases/download/android-v0.1.0/kiwu-android-0.1.0.apk"><b>⬇️ Descargar para Android</b></a>
+  <a href="https://github.com/ksebas20500/kiwu/releases/download/android-v0.2.1/kiwu-android-0.2.1.apk"><b>⬇️ Descargar para Android</b></a>
   &nbsp;·&nbsp;
   <a href="https://github.com/ksebas20500/kiwu/releases/latest/download/Kiwu.dmg"><b>🍎 Descargar para macOS</b></a>
   &nbsp;·&nbsp;
@@ -64,20 +64,20 @@ Cada sistema tiene su propio instalador y su propia numeración de versiones (m�
 | Sistema | Archivo para instalar a mano | Más información |
 | --- | --- | --- |
 | 🍎 **macOS** 13 o superior | [`Kiwu.dmg`](https://github.com/ksebas20500/kiwu/releases/latest/download/Kiwu.dmg) (universal: Apple Silicon e Intel) | [macos/README.md](macos/README.md) |
-| 🤖 **Android** 8 o superior | [`kiwu-android-0.1.0.apk`](https://github.com/ksebas20500/kiwu/releases/download/android-v0.1.0/kiwu-android-0.1.0.apk) | [android/README.md](android/README.md) |
+| 🤖 **Android** 8 o superior | [`kiwu-android-0.2.1.apk`](https://github.com/ksebas20500/kiwu/releases/download/android-v0.2.1/kiwu-android-0.2.1.apk) | [android/README.md](android/README.md) |
 | 🐧 **Linux** (Arch + Hyprland / Wayland) | `kiwu-linux.tar.gz`, en los [releases `linux-v…`](https://github.com/ksebas20500/kiwu/releases?q=linux-v) | [linux/README.md](linux/README.md) |
 
 Descarga la última versión desde [Releases](https://github.com/ksebas20500/kiwu/releases/latest). Cada versión conserva su propio archivo en la [lista de versiones](https://github.com/ksebas20500/kiwu/releases).
 
 ### 🤖 Android
 
-1. Descarga [`kiwu-android-0.1.0.apk`](https://github.com/ksebas20500/kiwu/releases/download/android-v0.1.0/kiwu-android-0.1.0.apk) desde el teléfono (o pásalo desde el ordenador).
+1. Descarga [`kiwu-android-0.2.1.apk`](https://github.com/ksebas20500/kiwu/releases/download/android-v0.2.1/kiwu-android-0.2.1.apk) desde el teléfono (o pásalo desde el ordenador).
 2. Ábrelo. Si Android te lo pide, permite **instalar apps de esta fuente** solo para esa vez.
 3. Abre **Kiwu** y empieza por crear tu primera lista (la materia o el trabajo de tus tareas).
 
-Es una versión de prueba (`0.1.0`), así que puede cambiar con el tiempo. Si quieres comprobar la descarga, la lista de sumas de verificación está en [`SHA256SUMS.txt`](https://github.com/ksebas20500/kiwu/releases/download/android-v0.1.0/SHA256SUMS.txt) del mismo release. Los avisos de tareas y clases funcionan mejor si permites las notificaciones y las **alarmas exactas** cuando la app te lo pida.
+Es una versión de prueba (`0.2.1`), así que puede cambiar con el tiempo. Si quieres comprobar la descarga, la lista de sumas de verificación está en [`SHA256SUMS.txt`](https://github.com/ksebas20500/kiwu/releases/download/android-v0.2.1/SHA256SUMS.txt) del mismo release. Los avisos de tareas y clases funcionan mejor si permites las notificaciones y las **alarmas exactas** cuando la app te lo pida.
 
-El release trae también `kiwu-android-0.1.0-debug.apk`, que es solo para desarrollo y va más lento: usa siempre el primero. Para compilarlo tú mismo, mira [android/README.md](android/README.md).
+El release trae también `kiwu-android-0.2.1-debug.apk`, que es solo para desarrollo y va más lento: usa siempre el primero. Para compilarlo tú mismo, mira [android/README.md](android/README.md).
 
 ### 🍎 macOS
 

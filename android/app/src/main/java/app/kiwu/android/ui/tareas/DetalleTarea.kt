@@ -59,6 +59,7 @@ import app.kiwu.android.domain.Documento
 import app.kiwu.android.domain.Materia
 import app.kiwu.android.ui.Fechas
 import app.kiwu.android.ui.SelectorFechaHora
+import app.kiwu.android.domain.esEvento
 import app.kiwu.android.ui.editor.BarraFormato
 import app.kiwu.android.ui.editor.EditorBloques
 import app.kiwu.android.ui.editor.rememberEstadoEditor
@@ -157,8 +158,8 @@ fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVo
                 title = {},
                 navigationIcon = { IconButton(onClick = alVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } },
                 actions = {
-                    Checkbox(checked = actual.completado, onCheckedChange = vm::marcar)
-                    IconButton(onClick = { vm.eliminar(); alVolver() }) { Icon(Icons.Filled.Delete, "Eliminar tarea") }
+                    if (!actual.esEvento) Checkbox(checked = actual.completado, onCheckedChange = vm::marcar)
+                    IconButton(onClick = { vm.eliminar(); alVolver() }) { Icon(Icons.Filled.Delete, if (actual.esEvento) "Eliminar evento" else "Eliminar tarea") }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
@@ -196,7 +197,7 @@ fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVo
                 Box {
                     AssistChip(
                         onClick = { menuFecha = true },
-                        label = { Text(actual.fechaEntrega?.let { Fechas.dia(it, zona) } ?: "Fecha de entrega") },
+                        label = { Text(actual.fechaEntrega?.let { Fechas.dia(it, zona) } ?: if (actual.esEvento) "Fecha del evento" else "Fecha de entrega") },
                         leadingIcon = { Icon(Icons.Filled.CalendarMonth, null) },
                     )
                     DropdownMenu(expanded = menuFecha, onDismissRequest = { menuFecha = false }) {
@@ -239,7 +240,7 @@ fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVo
                 }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (!actual.esEvento) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box {
                     AssistChip(onClick = { menuLista = true }, label = { Text(materias.firstOrNull { it.id == actual.materiaId }?.nombre ?: "Lista") })
                     DropdownMenu(expanded = menuLista, onDismissRequest = { menuLista = false }) {
@@ -248,7 +249,7 @@ fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVo
                 }
             }
 
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
+            if (!actual.esEvento) SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
                 Columna.entries.forEachIndexed { i, c ->
                     SegmentedButton(
                         selected = columna == c, onClick = { vm.mover(c) },

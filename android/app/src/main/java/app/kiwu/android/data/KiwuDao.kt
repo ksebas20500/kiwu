@@ -17,6 +17,7 @@ import app.kiwu.android.domain.Clase
 import app.kiwu.android.domain.Cuaderno
 import app.kiwu.android.domain.Deber
 import app.kiwu.android.domain.Horario
+import app.kiwu.android.domain.GrupoLista
 import app.kiwu.android.domain.Materia
 import app.kiwu.android.domain.Pagina
 import kotlinx.coroutines.flow.Flow
@@ -52,6 +53,48 @@ abstract class KiwuDao {
 
     @Upsert
     abstract suspend fun guardarMateria(m: Materia)
+
+    @Upsert
+    abstract suspend fun guardarMaterias(filas: List<Materia>)
+
+    // --- carpetas de listas (grupos) --------------------------------------------------------------
+
+    @Query("SELECT * FROM grupo_lista WHERE eliminada IS NULL ORDER BY orden, nombre COLLATE NOCASE")
+    abstract fun grupos(): Flow<List<GrupoLista>>
+
+    @Query("SELECT * FROM grupo_lista WHERE eliminada IS NULL ORDER BY orden, nombre COLLATE NOCASE")
+    abstract suspend fun gruposAhora(): List<GrupoLista>
+
+    @Query("SELECT * FROM grupo_lista WHERE id = :id AND eliminada IS NULL")
+    abstract suspend fun grupo(id: String): GrupoLista?
+
+    @Query("SELECT COALESCE(MAX(orden), -1) + 1 FROM grupo_lista WHERE eliminada IS NULL")
+    abstract suspend fun siguienteOrdenGrupo(): Int
+
+    @Upsert
+    abstract suspend fun guardarGrupo(g: GrupoLista)
+
+    @Upsert
+    abstract suspend fun guardarGrupos(filas: List<GrupoLista>)
+
+    @Query("UPDATE grupo_lista SET eliminada = :ahora, actualizada = :ahora WHERE id = :id AND eliminada IS NULL")
+    protected abstract suspend fun marcarGrupoListas(id: String, ahora: Long)
+
+    @Query("UPDATE materia SET grupo_id = NULL, actualizada = :ahora WHERE grupo_id = :id AND eliminada IS NULL")
+    protected abstract suspend fun soltarListasDeGrupo(id: String, ahora: Long)
+
+    /** Borra la carpeta (borrado lógico) y deja sueltas sus listas: las listas y sus tareas **no** se tocan. */
+    @Transaction
+    open suspend fun eliminarGrupoListas(id: String, ahora: Long) {
+        soltarListasDeGrupo(id, ahora)
+        marcarGrupoListas(id, ahora)
+    }
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    abstract suspend fun insertarGrupos(filas: List<GrupoLista>): List<Long>
+
+    @Query("SELECT id FROM grupo_lista WHERE eliminada IS NULL")
+    abstract suspend fun idsGrupos(): List<String>
 
     @Query("UPDATE materia SET eliminada = :ahora, actualizada = :ahora WHERE id = :id AND eliminada IS NULL")
     protected abstract suspend fun marcarMateria(id: String, ahora: Long)
@@ -207,8 +250,8 @@ abstract class KiwuDao {
 }
 
 @Database(
-    entities = [Materia::class, Deber::class, Cuaderno::class, Pagina::class, Horario::class, Clase::class],
-    version = 3,
+    entities = [Materia::class, Deber::class, Cuaderno::class, Pagina::class, Horario::class, Clase::class, GrupoLista::class],
+    version = 4,
     exportSchema = true,
 )
 abstract class KiwuDb : RoomDatabase() {
@@ -234,9 +277,21 @@ abstract class KiwuDb : RoomDatabase() {
             }
         }
 
+        /**
+         * v3 → v4: carpetas de listas. Tabla nueva `grupo_lista` y dos columnas opcionales en `materia`
+         * (carpeta y emoji): las listas existentes quedan sueltas y con su aspecto de siempre.
+         */
+        val MIGRACION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `grupo_lista` (`id` TEXT NOT NULL, `nombre` TEXT NOT NULL, `icono` TEXT NOT NULL, `orden` INTEGER NOT NULL, `plegado` INTEGER NOT NULL, `creada` INTEGER NOT NULL, `actualizada` INTEGER NOT NULL, `eliminada` INTEGER, PRIMARY KEY(`id`))")
+                db.execSQL("ALTER TABLE `materia` ADD COLUMN `grupo_id` TEXT")
+                db.execSQL("ALTER TABLE `materia` ADD COLUMN `emoji` TEXT")
+            }
+        }
+
         fun obtener(contexto: Context): KiwuDb = instancia ?: synchronized(this) {
             instancia ?: Room.databaseBuilder(contexto.applicationContext, KiwuDb::class.java, "kiwu.db")
-                .addMigrations(MIGRACION_1_2, MIGRACION_2_3)
+                .addMigrations(MIGRACION_1_2, MIGRACION_2_3, MIGRACION_3_4)
                 .build().also { instancia = it }
         }
     }

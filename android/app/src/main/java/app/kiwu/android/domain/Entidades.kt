@@ -20,6 +20,28 @@ data class Materia(
     val orden: Int = 0,
     /** Carpeta vinculada: dirección `content://` de un árbol del selector de archivos. Solo vale en este dispositivo. */
     val carpeta: String? = null,
+    /** Carpeta de listas (grupo) en la que está en el menú de Tareas; null = lista suelta. */
+    @ColumnInfo(name = "grupo_id") val grupoId: String? = null,
+    /** Emoji propio de la lista (opcional; null = el icono de lista de siempre). */
+    val emoji: String? = null,
+    val creada: Long,
+    val actualizada: Long,
+    val eliminada: Long? = null,
+)
+
+/**
+ * Carpeta de listas del menú de Tareas (un solo nivel: las carpetas no se anidan). En el código se llama «grupo» para no
+ * confundirla con [Materia.carpeta], que es la carpeta de archivos del teléfono vinculada a una lista.
+ */
+@Entity(tableName = "grupo_lista")
+data class GrupoLista(
+    @PrimaryKey val id: String = nuevoId(),
+    val nombre: String,
+    /** Emoji de la carpeta (el de una carpeta por defecto). */
+    val icono: String = "📁",
+    val orden: Int = 0,
+    /** Si la carpeta está plegada en el menú. */
+    val plegado: Boolean = false,
     val creada: Long,
     val actualizada: Long,
     val eliminada: Long? = null,
@@ -48,6 +70,15 @@ data class Deber(
     val recordado: Long? = null,
     val eliminada: Long? = null,
 )
+
+/**
+ * Id fijo de la lista especial «Eventos»: guarda cosas que pasan (cumpleaños, charlas) y no se completan. Es una lista
+ * como las demás para la base de datos y la copia, pero no se ve entre las listas, no entra en carpetas ni se puede
+ * borrar. Un [Deber] es un evento si vive en ella.
+ */
+const val ID_EVENTOS = "eventos"
+
+val Deber.esEvento: Boolean get() = materiaId == ID_EVENTOS
 
 @Entity(tableName = "cuaderno")
 data class Cuaderno(

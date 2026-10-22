@@ -27,6 +27,12 @@ data class AjustesUi(
     val opacidadPaneles: Float = 0.45f,
     /** Segundo aviso: minutos antes de la entrega (0 = sin segundo aviso). Vale para todas las tareas con fecha. */
     val segundoAvisoMin: Int = 0,
+    /** Aspecto del menú de Tareas: plegable | compacto | color. */
+    val menuAspecto: String = "plegable",
+    /** Orden de las listas del menú: manual | alfabetico | pendientes. */
+    val menuOrden: String = "manual",
+    /** Si el menú muestra el número de tareas pendientes. */
+    val menuContadores: Boolean = true,
 )
 
 class AjustesStore(private val contexto: Context) {
@@ -38,6 +44,9 @@ class AjustesStore(private val contexto: Context) {
         val visibilidad = floatPreferencesKey("fondo_visibilidad")
         val opacidad = floatPreferencesKey("opacidad_paneles")
         val segundoAviso = androidx.datastore.preferences.core.intPreferencesKey("segundo_aviso_min")
+        val menuAspecto = stringPreferencesKey("menu_aspecto")
+        val menuOrden = stringPreferencesKey("menu_orden")
+        val menuContadores = androidx.datastore.preferences.core.booleanPreferencesKey("menu_contadores")
     }
 
     private fun leer(p: Preferences) = AjustesUi(
@@ -48,6 +57,9 @@ class AjustesStore(private val contexto: Context) {
         fondoVisibilidad = (p[Claves.visibilidad] ?: 0.5f).coerceIn(0f, 1f),
         opacidadPaneles = (p[Claves.opacidad] ?: 0.45f).coerceIn(0f, 1f),
         segundoAvisoMin = (p[Claves.segundoAviso] ?: 0).coerceAtLeast(0),
+        menuAspecto = (p[Claves.menuAspecto] ?: "plegable").takeIf { it in setOf("plegable", "compacto", "color") } ?: "plegable",
+        menuOrden = (p[Claves.menuOrden] ?: "manual").takeIf { it in setOf("manual", "alfabetico", "pendientes") } ?: "manual",
+        menuContadores = p[Claves.menuContadores] ?: true,
     )
 
     val flujo: Flow<AjustesUi> = contexto.almacen.data.map(::leer)
@@ -62,6 +74,9 @@ class AjustesStore(private val contexto: Context) {
             p[Claves.visibilidad] = nuevo.fondoVisibilidad
             p[Claves.opacidad] = nuevo.opacidadPaneles
             p[Claves.segundoAviso] = nuevo.segundoAvisoMin
+            p[Claves.menuAspecto] = nuevo.menuAspecto
+            p[Claves.menuOrden] = nuevo.menuOrden
+            p[Claves.menuContadores] = nuevo.menuContadores
         }
     }
 }
