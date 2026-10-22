@@ -35,10 +35,10 @@ La copia `.kiwu.json` admite dos claves opcionales nuevas. El formato sigue sien
     "id": "UUID", "horario": "UUID-del-horario", "materia": "UUID-de-una-materia o null",
     "grupo": "UUID (une las filas de una misma clase en varios días)",
     "titulo": "Cálculo", "diaSemana": 1, "inicioMin": 480, "finMin": 600,
-    "aula": "204", "notas": "", "avisoMin": 10,
+    "aula": "204", "notas": "", "avisoMin": 10, "color": "#1E88E5 o null",
     "creada": "ISO-8601", "actualizada": "ISO-8601"
   }
 ]
 ```
 
-Reglas: `diaSemana` va de 1 (lunes) a 7 (domingo); `inicioMin` y `finMin` son **minutos desde las 00:00 en hora local, sin zona horaria** (`0 ≤ inicio < 1440`, `inicio < fin ≤ 1440`); una clase en varios días son varias filas con el mismo `grupo`; `avisoMin` es nulo si no hay aviso. Al importar se descartan las clases con día u horas inválidos o cuyo horario no existe, y no se pisa lo que ya está (ni se resucita lo eliminado).
+Reglas: `materia` es la lista de tareas vinculada a la clase (Android muestra sus tareas en la hoja de la clase y puntos en el horario); `color` (opcional, desde Android 0.3) es el color elegido para la clase como `#RRGGBB`, y `null` o ausente significa color automático: un valor que no sea `#RRGGBB` se ignora al importar, y las copias sin este campo se importan igual. `diaSemana` va de 1 (lunes) a 7 (domingo); `inicioMin` y `finMin` son **minutos desde las 00:00 en hora local, sin zona horaria** (`0 ≤ inicio < 1440`, `inicio < fin ≤ 1440`); una clase en varios días son varias filas con el mismo `grupo`; `avisoMin` es nulo si no hay aviso. Al importar se descartan las clases con día u horas inválidos o cuyo horario no existe, y no se pisa lo que ya está (ni se resucita lo eliminado).

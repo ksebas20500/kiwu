@@ -53,6 +53,8 @@ data class Clase(
     val notas: String = "",
     /** Minutos de antelación del aviso; null = sin aviso. */
     @ColumnInfo(name = "aviso_min") val avisoMin: Int? = null,
+    /** Color elegido para la clase como `#RRGGBB`; null = color automático (el de siempre). */
+    val color: String? = null,
     val creada: Long,
     val actualizada: Long,
     val eliminada: Long? = null,
@@ -60,6 +62,9 @@ data class Clase(
 
 /** Reglas del horario: funciones puras, sin base de datos (equivalente a `Reglas` para las tareas). */
 object ReglasHorario {
+    /** Un color de clase válido es `#RRGGBB` (hexadecimal). Cualquier otra cosa se ignora y se usa el color automático. */
+    fun colorValido(texto: String?): String? = texto?.trim()?.takeIf { Regex("^#[0-9A-Fa-f]{6}$").matches(it) }?.uppercase()
+
     const val MINUTOS_DIA = 1440
 
     val diasLargos = listOf("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo")
@@ -142,4 +147,61 @@ object ReglasHorario {
         1 -> "mañana"
         else -> diasLargos[(dia - 1).coerceIn(0, 6)].lowercase()
     }
+}
+
+/** Cómo de urgente es una tarea pendiente: decide el color del punto que se ve en la clase del horario. */
+enum class UrgenciaTarea { Vencida, Pronto, Normal }
+
+/** Un punto en la tarjeta de la clase: una tarea pendiente con fecha cercana (o vencida). */
+data class PuntoTarea(val id: String, val urgencia: UrgenciaTarea)
+
+/** Dónde se coloca una tarea en la hoja de tareas de una clase. */
+enum class SeccionTarea(val titulo: String) {
+    Vencidas("Vencidas"), EstaSemana("Esta semana"), Proximas("Próximas"), SinFecha("Sin fecha"),
+}
+
+/** Tareas de la lista vinculada a una clase: qué puntos se dibujan y cómo se agrupan en su hoja. Funciones puras. */
+object TareasDeClase {
+    /** Solo cuentan para los puntos las tareas con fecha dentro de este margen (más las vencidas): las lejanas no. */
+    const val DIAS_VENTANA = 14
+    private const val DIA_MS = 24L * 60 * 60 * 1000
+
+    fun pendientes(deberes: List<Deber>, materiaId: String?): List<Deber> =
+        if (materiaId == null) emptyList() else deberes.filter { it.materiaId == materiaId && !it.completado && it.eliminada == null }
+
+    fun hechas(deberes: List<Deber>, materiaId: String?): List<Deber> =
+        if (materiaId == null) emptyList() else deberes.filter { it.materiaId == materiaId && it.completado && it.eliminada == null }
+
+    fun urgencia(fecha: Long, ahora: Long): UrgenciaTarea = when {
+        fecha < ahora -> UrgenciaTarea.Vencida
+        fecha <= ahora + 2 * DIA_MS -> UrgenciaTarea.Pronto
+        else -> UrgenciaTarea.Normal
+    }
+
+    /** Puntos de la clase, de más a menos urgente (y por fecha). Sin fecha o con fecha lejana no hay punto. */
+    fun puntos(deberes: List<Deber>, materiaId: String?, ahora: Long): List<PuntoTarea> =
+        pendientes(deberes, materiaId)
+            .filter { it.fechaEntrega != null && it.fechaEntrega <= ahora + DIAS_VENTANA * DIA_MS }
+            .sortedBy { it.fechaEntrega }
+            .map { PuntoTarea(it.id, urgencia(it.fechaEntrega!!, ahora)) }
+            .sortedBy { it.urgencia.ordinal }
+
+    /** La urgencia más alta entre los puntos (para el punto único de la vista de semana), o null si no hay puntos. */
+    fun masUrgente(puntos: List<PuntoTarea>): UrgenciaTarea? = puntos.minByOrNull { it.urgencia.ordinal }?.urgencia
+
+    fun seccion(d: Deber, ahora: Long): SeccionTarea {
+        val f = d.fechaEntrega ?: return SeccionTarea.SinFecha
+        return when {
+            f < ahora -> SeccionTarea.Vencidas
+            f <= ahora + 7 * DIA_MS -> SeccionTarea.EstaSemana
+            else -> SeccionTarea.Proximas
+        }
+    }
+
+    /** Las pendientes agrupadas por sección, en orden, cada una por fecha de entrega. Las secciones vacías no aparecen. */
+    fun agrupadas(pendientes: List<Deber>, ahora: Long): List<Pair<SeccionTarea, List<Deber>>> =
+        SeccionTarea.entries.mapNotNull { s ->
+            val filas = pendientes.filter { seccion(it, ahora) == s }.sortedWith(compareBy({ it.fechaEntrega ?: Long.MAX_VALUE }, { it.titulo }))
+            if (filas.isEmpty()) null else s to filas
+        }
 }

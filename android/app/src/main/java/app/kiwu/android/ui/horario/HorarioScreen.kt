@@ -3,6 +3,16 @@ package app.kiwu.android.ui.horario
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import app.kiwu.android.ui.ajustes.DialogoColor
+import app.kiwu.android.domain.UrgenciaTarea
+import app.kiwu.android.domain.TareasDeClase
+import app.kiwu.android.domain.PuntoTarea
+import app.kiwu.android.domain.Deber
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -96,13 +106,16 @@ val EmojisHorario = listOf("🎓", "💼", "🌴", "🏋️", "🎮", "🎵", "�
 private class Edicion(val grupo: String?, val dia: Int)
 
 /** Color de una clase: el mismo para todas las clases de una misma materia o grupo. */
-private fun colorDe(c: Clase): ColorPastel = Pasteles.colores[Pasteles.indicePreferido(c.materiaId ?: c.grupo)]
+private fun colorDe(c: Clase): ColorPastel = ColoresClase.de(c)
 
 /** Módulo de horarios: varios horarios semanales (Universidad, Trabajo, Ocio…), vista por día o por semana. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HorarioScreen(vm: HorarioViewModel, alAbrirMenu: () -> Unit) {
+fun HorarioScreen(vm: HorarioViewModel, alAbrirMenu: () -> Unit, alAbrirTarea: (String) -> Unit = {}, alAbrirLista: (String) -> Unit = {}) {
     val estado by vm.estado.collectAsStateWithLifecycle()
+    val deberes by vm.deberes.collectAsStateWithLifecycle()
+    // Clase cuya hoja de tareas está abierta (se guarda su id: si la clase se edita o se borra, la hoja se actualiza o se cierra).
+    var hojaId by rememberSaveable { mutableStateOf<String?>(null) }
     val hoy = remember(estado.ahora) { ReglasHorario.diaDe(LocalDate.now(ZoneId.systemDefault())) }
     var diaSel by rememberSaveable { mutableIntStateOf(hoy) }
     // null = automática: semana en pantallas anchas, un día en el teléfono.
@@ -182,9 +195,9 @@ fun HorarioScreen(vm: HorarioViewModel, alAbrirMenu: () -> Unit) {
                 // Cada vista tiene varias piezas seguidas (pestañas, título, lista): sin una columna se apilarían unas sobre otras.
                 Column(Modifier.fillMaxSize()) {
                     if (v == "semana") {
-                        VistaSemana(estado, hoy, alAbrir = { edicion = Edicion(it.grupo, it.diaSemana) })
+                        VistaSemana(estado, hoy, deberes, alAbrir = { hojaId = it.id }, alEditar = { edicion = Edicion(it.grupo, it.diaSemana) })
                     } else {
-                        VistaDia(estado, hoy, diaSel, alElegirDia = { diaSel = it }, alAbrir = { edicion = Edicion(it.grupo, it.diaSemana) })
+                        VistaDia(estado, hoy, diaSel, deberes, alElegirDia = { diaSel = it }, alAbrir = { hojaId = it.id }, alEditar = { edicion = Edicion(it.grupo, it.diaSemana) })
                     }
                 }
             }
@@ -192,6 +205,21 @@ fun HorarioScreen(vm: HorarioViewModel, alAbrirMenu: () -> Unit) {
     }
 
     edicion?.let { e -> FormularioClase(vm, estado, e, alCerrar = { edicion = null }) }
+    val claseHoja = hojaId?.let { id -> estado.todas.firstOrNull { it.id == id } }
+    if (claseHoja != null) {
+        HojaTareasClase(
+            clase = claseHoja, estado = estado, deberes = deberes,
+            alCerrar = { hojaId = null },
+            alEditar = { hojaId = null; edicion = Edicion(claseHoja.grupo, claseHoja.diaSemana) },
+            alEliminar = { vm.eliminarClase(claseHoja.grupo); hojaId = null },
+            alAbrirTarea = { hojaId = null; alAbrirTarea(it) },
+            alAbrirLista = { hojaId = null; alAbrirLista(it) },
+            marcar = { id, hecha -> vm.marcarTarea(id, hecha) },
+            crearTarea = { titulo, materiaId, fecha -> vm.crearTarea(titulo, materiaId, fecha) },
+            vincular = { vm.vincular(claseHoja.grupo, it) },
+            crearYVincular = { vm.crearListaYVincular(claseHoja.grupo, it) },
+        )
+    }
     if (nuevoHorario) DialogoHorario(null, alCerrar = { nuevoHorario = false }) { nombre, icono -> vm.crearHorario(nombre, icono) }
     editarHorario?.let { h -> DialogoHorario(h, alCerrar = { editarHorario = null }) { nombre, icono -> vm.editarHorario(h.id, nombre, icono) } }
     eliminarHorario?.let { h ->
@@ -244,7 +272,7 @@ private fun TarjetaAhora(estado: HorarioEstado) {
 }
 
 @Composable
-private fun VistaDia(estado: HorarioEstado, hoy: Int, diaSel: Int, alElegirDia: (Int) -> Unit, alAbrir: (Clase) -> Unit) {
+private fun VistaDia(estado: HorarioEstado, hoy: Int, diaSel: Int, deberes: List<Deber>, alElegirDia: (Int) -> Unit, alAbrir: (Clase) -> Unit, alEditar: (Clase) -> Unit) {
     TabRow(
         selectedTabIndex = diaSel - 1,
         containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurface,
@@ -274,16 +302,21 @@ private fun VistaDia(estado: HorarioEstado, hoy: Int, diaSel: Int, alElegirDia: 
         items(delDia, key = { it.id }) { c ->
             TarjetaClase(
                 c, nombreHorario = if (estado.seleccion == null && estado.horarios.size > 1) estado.nombres[c.horarioId] else null,
-                enCurso = c.diaSemana == dia && minuto >= c.inicioMin && minuto < c.finMin, alClic = { alAbrir(c) },
+                enCurso = c.diaSemana == dia && minuto >= c.inicioMin && minuto < c.finMin, alClic = { alAbrir(c) }, alLargo = { alEditar(c) },
+                puntos = TareasDeClase.puntos(deberes, c.materiaId, estado.ahora),
             )
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TarjetaClase(c: Clase, nombreHorario: String?, enCurso: Boolean, alClic: () -> Unit) {
+private fun TarjetaClase(c: Clase, nombreHorario: String?, enCurso: Boolean, alClic: () -> Unit, alLargo: () -> Unit, puntos: List<PuntoTarea>) {
     val color = colorDe(c)
-    Surface(Modifier.fillMaxWidth().clickable(onClick = alClic), shape = RoundedCornerShape(12.dp), color = color.fondo, contentColor = color.texto) {
+    Surface(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).combinedClickable(onClick = alClic, onLongClick = alLargo),
+        shape = RoundedCornerShape(12.dp), color = color.fondo, contentColor = color.texto,
+    ) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.width(64.dp)) {
                 Text(ReglasHorario.hora(c.inicioMin), fontWeight = FontWeight.Bold)
@@ -294,14 +327,34 @@ private fun TarjetaClase(c: Clase, nombreHorario: String?, enCurso: Boolean, alC
                 val detalle = listOfNotNull(c.aula.takeIf { it.isNotBlank() }, nombreHorario).joinToString(" · ")
                 if (detalle.isNotEmpty()) Text(detalle, fontSize = 13.sp, color = color.texto.copy(alpha = 0.8f))
             }
-            if (enCurso) Text("Ahora", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            if (puntos.isNotEmpty()) PuntosTareas(puntos, color.texto)
+            if (enCurso) Text("Ahora", Modifier.padding(start = 8.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
         }
     }
 }
 
-/** Vista de la semana: siete columnas con un eje de horas; las clases que coinciden se reparten el ancho. */
+/** Color del punto de una tarea: rojo si está vencida, ámbar si vence pronto y neutro si no hay prisa. */
+private fun colorUrgencia(u: UrgenciaTarea, neutro: Color): Color = when (u) {
+    UrgenciaTarea.Vencida -> Color(0xFFD32F2F)
+    UrgenciaTarea.Pronto -> Color(0xFFF9A825)
+    UrgenciaTarea.Normal -> neutro.copy(alpha = 0.6f)
+}
+
+/** Hasta tres puntos (uno por tarea pendiente, la más urgente primero) y «+N» si hay más. */
 @Composable
-private fun VistaSemana(estado: HorarioEstado, hoy: Int, alAbrir: (Clase) -> Unit) {
+private fun PuntosTareas(puntos: List<PuntoTarea>, neutro: Color) {
+    Row(Modifier.padding(start = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        for (p in puntos.take(3)) {
+            Box(Modifier.size(10.dp).background(colorUrgencia(p.urgencia, neutro), CircleShape).border(1.dp, neutro.copy(alpha = 0.5f), CircleShape))
+        }
+        if (puntos.size > 3) Text("+${puntos.size - 3}", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+/** Vista de la semana: siete columnas con un eje de horas; las clases que coinciden se reparten el ancho. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun VistaSemana(estado: HorarioEstado, hoy: Int, deberes: List<Deber>, alAbrir: (Clase) -> Unit, alEditar: (Clase) -> Unit) {
     val clases = estado.clases
     val primera = if (clases.isEmpty()) 7 else min(7, clases.minOf { it.inicioMin } / 60)
     val ultima = if (clases.isEmpty()) 19 else min(24, max(19, (clases.maxOf { it.finMin } + 59) / 60))
@@ -345,10 +398,18 @@ private fun VistaSemana(estado: HorarioEstado, hoy: Int, alAbrir: (Clase) -> Uni
                     val h = altoHora * ((c.finMin - c.inicioMin) / 60f)
                     Box(
                         Modifier.offset(x = ancho * (carril.getValue(c.id)) / carriles, y = y).width(ancho / carriles).height(h).padding(1.dp)
-                            .clip(RoundedCornerShape(5.dp)).background(color.fondo).clickable { alAbrir(c) }.padding(horizontal = 1.dp, vertical = 2.dp),
+                            .clip(RoundedCornerShape(5.dp)).background(color.fondo).combinedClickable(onClick = { alAbrir(c) }, onLongClick = { alEditar(c) }).padding(horizontal = 1.dp, vertical = 2.dp),
                     ) {
                         // Las columnas de la semana son estrechas en el teléfono: letra pequeña para que las palabras no se partan.
                         Text(c.titulo, fontSize = 9.sp, lineHeight = 10.sp, color = color.texto, maxLines = 5, overflow = TextOverflow.Ellipsis)
+                        // Un solo punto con el número de tareas con fecha cercana (color de la más urgente).
+                        val puntos = TareasDeClase.puntos(deberes, c.materiaId, estado.ahora)
+                        TareasDeClase.masUrgente(puntos)?.let { u ->
+                            Box(
+                                Modifier.align(Alignment.TopEnd).size(12.dp).background(colorUrgencia(u, color.texto), CircleShape).border(1.dp, color.texto.copy(alpha = 0.5f), CircleShape),
+                                contentAlignment = Alignment.Center,
+                            ) { Text("${puntos.size}", fontSize = 8.sp, lineHeight = 8.sp, fontWeight = FontWeight.Bold, color = Color.White) }
+                        }
                     }
                 }
             }
@@ -396,6 +457,8 @@ private fun FormularioClase(vm: HorarioViewModel, estado: HorarioEstado, edicion
     var aula by remember { mutableStateOf(base?.aula ?: "") }
     var notas by remember { mutableStateOf(base?.notas ?: "") }
     var aviso by remember { mutableStateOf(base?.avisoMin) }
+    var color by remember { mutableStateOf(ReglasHorario.colorValido(base?.color)) }
+    var otroColor by remember { mutableStateOf(false) }
     var elegirHora by remember { mutableStateOf<String?>(null) }
     var confirmarEliminar by remember { mutableStateOf(false) }
     var menuHorario by remember { mutableStateOf(false) }
@@ -414,14 +477,20 @@ private fun FormularioClase(vm: HorarioViewModel, estado: HorarioEstado, edicion
                     TextButton(
                         enabled = puedeGuardar,
                         onClick = {
-                            vm.guardarClase(horarioId, edicion.grupo, titulo.trim(), materiaId, dias, inicio, fin, aula, notas, aviso)
+                            vm.guardarClase(horarioId, edicion.grupo, titulo.trim(), materiaId, dias, inicio, fin, aula, notas, aviso, color)
                             alCerrar()
                         },
                     ) { Text("Guardar") }
                 }
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     OutlinedTextField(
-                        titulo, { titulo = it; if (materiaId != null && estado.materias.none { m -> m.id == materiaId && m.nombre == it }) materiaId = null },
+                        titulo, {
+                            titulo = it
+                            // Si el nombre coincide con una de tus listas se vincula sola; si ya no coincide, se desvincula.
+                            val coincide = estado.materias.firstOrNull { m -> m.nombre.trim().equals(it.trim(), ignoreCase = true) }
+                            if (coincide != null) materiaId = coincide.id
+                            else if (materiaId != null) materiaId = null
+                        },
                         label = { Text("Materia o actividad") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
                     )
@@ -467,6 +536,8 @@ private fun FormularioClase(vm: HorarioViewModel, estado: HorarioEstado, edicion
                         }
                     }
                     OutlinedTextField(aula, { aula = it }, label = { Text("Aula o lugar (opcional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Text("Color de la clase", style = MaterialTheme.typography.labelMedium)
+                    SelectorColorClase(color, alElegir = { color = it }, alOtro = { otroColor = true })
                     Text("Aviso", style = MaterialTheme.typography.labelMedium)
                     Box {
                         OutlinedButton(onClick = { menuAviso = true }) { Text(aviso?.let { textoAviso(it) } ?: "Sin aviso") }
@@ -487,6 +558,13 @@ private fun FormularioClase(vm: HorarioViewModel, estado: HorarioEstado, edicion
         }
     }
 
+    if (otroColor) {
+        DialogoColor(
+            inicial = color?.let { Color(android.graphics.Color.parseColor(it)) } ?: Color(0xFF8E24AA),
+            alCerrar = { otroColor = false },
+            alElegir = { color = ColoresClase.hex(it) },
+        )
+    }
     when (elegirHora) {
         "inicio" -> SelectorHora(inicio / 60, inicio % 60, alCerrar = { elegirHora = null }, titulo = "Hora de inicio", paso = 5) { h, m ->
             inicio = h * 60 + m

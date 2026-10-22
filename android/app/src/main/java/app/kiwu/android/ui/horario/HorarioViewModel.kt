@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.kiwu.android.data.Repositorio
 import app.kiwu.android.domain.Clase
+import app.kiwu.android.domain.Deber
 import app.kiwu.android.domain.Horario
 import app.kiwu.android.domain.Materia
 import app.kiwu.android.domain.ReglasHorario
@@ -55,6 +56,21 @@ class HorarioViewModel(private val repo: Repositorio) : ViewModel() {
         HorarioEstado(horarios, clases, materias, actual, ahora, cargado = true)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HorarioEstado())
 
+    /** Todas las tareas (para los puntos de las clases y la hoja de tareas). */
+    val deberes: StateFlow<List<Deber>> = repo.deberes.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun marcarTarea(id: String, hecha: Boolean) = viewModelScope.launch { repo.marcar(id, hecha) }
+
+    fun crearTarea(titulo: String, materiaId: String, fecha: Long?) = viewModelScope.launch { repo.crearDeber(titulo, materiaId, fecha) }
+
+    fun vincular(grupo: String, materiaId: String?) = viewModelScope.launch { repo.vincularGrupo(grupo, materiaId) }
+
+    /** Crea una lista de tareas con ese nombre y la vincula a la clase. */
+    fun crearListaYVincular(grupo: String, nombre: String) = viewModelScope.launch {
+        val m = repo.crearMateria(nombre.trim())
+        repo.vincularGrupo(grupo, m.id)
+    }
+
     fun elegir(id: String?) {
         seleccion.value = id
     }
@@ -70,9 +86,9 @@ class HorarioViewModel(private val repo: Repositorio) : ViewModel() {
 
     fun guardarClase(
         horarioId: String, grupo: String?, titulo: String, materiaId: String?, dias: Set<Int>,
-        inicioMin: Int, finMin: Int, aula: String, notas: String, avisoMin: Int?,
+        inicioMin: Int, finMin: Int, aula: String, notas: String, avisoMin: Int?, color: String? = null,
     ) = viewModelScope.launch {
-        repo.guardarClase(horarioId, grupo, titulo, materiaId, dias, inicioMin, finMin, aula, notas, avisoMin)
+        repo.guardarClase(horarioId, grupo, titulo, materiaId, dias, inicioMin, finMin, aula, notas, avisoMin, color)
     }
 
     fun eliminarClase(grupo: String) = viewModelScope.launch { repo.eliminarGrupo(grupo) }

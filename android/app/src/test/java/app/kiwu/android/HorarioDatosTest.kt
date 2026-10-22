@@ -182,4 +182,34 @@ class HorarioDatosTest {
         assertEquals(0, r.horarios)
         assertEquals(0, r.clases)
     }
+
+    @Test
+    fun elColorDeLaClaseSeGuardaYViajaEnLaCopia() = runBlocking {
+        val uni = repo.crearHorario("Universidad", "🎓")
+        val g = repo.guardarClase(uni.id, null, "Física", null, setOf(2, 4), 480, 600, "", "", null, color = "#e53935")
+        assertTrue(db.dao().clasesDeGrupo(g).all { it.color == "#E53935" })
+        val texto = Copia.exportar(db.dao())
+        val contexto = ApplicationProvider.getApplicationContext<Context>()
+        val otra = Room.inMemoryDatabaseBuilder(contexto, KiwuDb::class.java).allowMainThreadQueries().build()
+        try {
+            Copia.importar(otra.dao(), texto)
+            assertTrue(otra.dao().clasesAhora().all { it.color == "#E53935" })
+        } finally {
+            otra.close()
+        }
+    }
+
+    @Test
+    fun unColorInvalidoSeIgnoraYUnaCopiaAntiguaSinColorSeImporta() = runBlocking {
+        val texto = """{"formato":1,"app":"kiwu","horarios":[{"id":"H1","nombre":"Uni"}],
+            "clases":[
+              {"id":"C1","horario":"H1","titulo":"Sin color","diaSemana":2,"inicioMin":480,"finMin":540},
+              {"id":"C2","horario":"H1","titulo":"Color roto","color":"rojo","diaSemana":3,"inicioMin":480,"finMin":540},
+              {"id":"C3","horario":"H1","titulo":"Color bueno","color":"#112233","diaSemana":4,"inicioMin":480,"finMin":540}
+            ]}"""
+        assertEquals(3, Copia.importar(db.dao(), texto).clases)
+        assertNull(db.dao().clase("C1")!!.color)
+        assertNull(db.dao().clase("C2")!!.color)
+        assertEquals("#112233", db.dao().clase("C3")!!.color)
+    }
 }

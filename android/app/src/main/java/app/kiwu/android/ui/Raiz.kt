@@ -37,6 +37,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import app.kiwu.android.KiwuApp
 import app.kiwu.android.data.AjustesUi
+import app.kiwu.android.domain.Elemento
 import app.kiwu.android.ui.editor.rememberOrigenAdjuntos
 import app.kiwu.android.ui.ajustes.AjustesScreen
 import app.kiwu.android.ui.archivos.ArchivosScreen
@@ -160,7 +161,11 @@ private fun Principal(app: KiwuApp, alAbrirTarea: (String) -> Unit, alAbrirPagin
             ) { destino ->
                 when (destino) {
                     "notas" -> NotasScreen(notasVm, alAbrirPagina, abrirMenu)
-                    "horario" -> HorarioScreen(horarioVm, abrirMenu)
+                    "horario" -> HorarioScreen(
+                        horarioVm, abrirMenu, alAbrirTarea,
+                        // «Abrir la lista completa»: cambia a la pestaña Tareas, ya en esa lista.
+                        alAbrirLista = { id -> tareasVm.ir(Elemento.DeMateria(id)); modulo = "tareas" },
+                    )
                     else -> TareasScreen(tareasVm, alAbrirTarea, abrirMenu, archivos = { m -> ArchivosScreen(m) { carpeta -> tareasVm.vincularCarpeta(m.id, carpeta) } })
                 }
             }

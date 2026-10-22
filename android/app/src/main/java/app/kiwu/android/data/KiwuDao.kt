@@ -208,7 +208,7 @@ abstract class KiwuDao {
 
 @Database(
     entities = [Materia::class, Deber::class, Cuaderno::class, Pagina::class, Horario::class, Clase::class],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class KiwuDb : RoomDatabase() {
@@ -227,9 +227,16 @@ abstract class KiwuDb : RoomDatabase() {
             }
         }
 
+        /** v2 → v3: color elegido para cada clase (columna opcional: las clases existentes siguen con el color automático). */
+        val MIGRACION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `clase` ADD COLUMN `color` TEXT")
+            }
+        }
+
         fun obtener(contexto: Context): KiwuDb = instancia ?: synchronized(this) {
             instancia ?: Room.databaseBuilder(contexto.applicationContext, KiwuDb::class.java, "kiwu.db")
-                .addMigrations(MIGRACION_1_2)
+                .addMigrations(MIGRACION_1_2, MIGRACION_2_3)
                 .build().also { instancia = it }
         }
     }

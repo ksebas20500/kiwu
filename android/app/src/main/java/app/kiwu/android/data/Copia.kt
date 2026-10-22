@@ -112,6 +112,7 @@ object Copia {
             put("clases", buildJsonArray {
                 for (c in clases) add(buildJsonObject {
                     put("id", c.id); put("horario", c.horarioId); put("materia", c.materiaId?.let { JsonPrimitive(it) } ?: JsonNull)
+                    put("color", c.color?.let { JsonPrimitive(it) } ?: JsonNull)
                     put("grupo", c.grupo); put("titulo", c.titulo); put("diaSemana", c.diaSemana)
                     put("inicioMin", c.inicioMin); put("finMin", c.finMin); put("aula", c.aula); put("notas", c.notas)
                     put("avisoMin", c.avisoMin?.let { JsonPrimitive(it) } ?: JsonNull)
@@ -192,6 +193,8 @@ object Copia {
                 titulo = c.cadena("titulo") ?: return@mapNotNull null, diaSemana = dia, inicioMin = inicio, finMin = fin,
                 aula = c.cadena("aula") ?: "", notas = c.cadena("notas") ?: "",
                 avisoMin = (c["avisoMin"] as? JsonPrimitive)?.intOrNull,
+                // Campo opcional (versión 0.3): las copias antiguas no lo traen y se quedan con el color automático.
+                color = ReglasHorario.colorValido(c.cadena("color")),
                 creada = desdeIso(c["creada"]) ?: 0L, actualizada = desdeIso(c["actualizada"]) ?: 0L,
             )
         }
