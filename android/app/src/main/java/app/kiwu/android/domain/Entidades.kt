@@ -71,6 +71,15 @@ data class Deber(
     val eliminada: Long? = null,
 )
 
+/**
+ * Id fijo de la lista especial «Eventos»: guarda cosas que pasan (cumpleaños, charlas) y no se completan. Es una lista
+ * como las demás para la base de datos y la copia, pero no se ve entre las listas, no entra en carpetas ni se puede
+ * borrar. Un [Deber] es un evento si vive en ella.
+ */
+const val ID_EVENTOS = "eventos"
+
+val Deber.esEvento: Boolean get() = materiaId == ID_EVENTOS
+
 @Entity(tableName = "cuaderno")
 data class Cuaderno(
     @PrimaryKey val id: String = nuevoId(),

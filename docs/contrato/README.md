@@ -61,3 +61,5 @@ La copia `.kiwu.json` admite una clave opcional nueva, `grupos`, y dos campos op
 
 Reglas: una lista está como mucho en **una** carpeta y las carpetas **no se anidan**. `materias[].grupo` es el `id` de una carpeta de `grupos`: si no existe, la lista se importa suelta. `icono` (de la carpeta) y `emoji` (de la lista, opcional) son texto libre. **No confundir** con `materias[].carpeta`, que es la carpeta de archivos del dispositivo vinculada a la lista y no viaja entre dispositivos. Al importar no se pisa lo que ya está ni se resucita lo eliminado. Borrar una carpeta no borra sus listas.
 
+**Eventos (Android 0.3.2):** no añaden campos. Un evento es un `deber` cuya `materia` tiene el id fijo `eventos` (lista «Eventos»); no se completa. Un cliente que no los conoce lo ve como una tarea más de una lista llamada «Eventos».
+

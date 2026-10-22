@@ -14,6 +14,8 @@ import app.kiwu.android.domain.Reglas
 import app.kiwu.android.domain.ReglasHorario
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import app.kiwu.android.domain.ID_EVENTOS
 
 /**
  * Punto único de acceso a los datos para la interfaz: aplica las reglas de `domain` y guarda con el DAO.
@@ -24,7 +26,8 @@ class Repositorio(
     val reglas: Reglas = Reglas(),
     private val reloj: () -> Long = System::currentTimeMillis,
 ) {
-    val materias: Flow<List<Materia>> = dao.materias()
+    /** Las listas que se ven y se eligen; la lista especial de eventos queda aparte. */
+    val materias: Flow<List<Materia>> = dao.materias().map { l -> l.filter { it.id != ID_EVENTOS } }
     val deberes: Flow<List<Deber>> = dao.deberes()
     val cuadernos: Flow<List<Cuaderno>> = dao.cuadernos()
     val paginas: Flow<List<ResumenPagina>> = dao.paginas()
@@ -127,9 +130,18 @@ class Repositorio(
 
     // --- tareas ---------------------------------------------------------------------------------
 
+    /** Crea una tarea; si [materiaId] es [ID_EVENTOS] es un evento (la lista especial se crea la primera vez). */
     suspend fun crearDeber(titulo: String, materiaId: String, fecha: Long? = null): Deber {
         val t = reloj()
-        val d = Deber(materiaId = materiaId, titulo = titulo.trim(), fechaEntrega = fecha, creada = t, actualizada = t)
+        val evento = materiaId == ID_EVENTOS
+        if (evento && dao.materia(ID_EVENTOS) == null) {
+            dao.guardarMateria(Materia(id = ID_EVENTOS, nombre = "Eventos", emoji = "📅", orden = -1, creada = t, actualizada = t))
+        }
+        // Un evento avisa 1 hora antes por defecto (las tareas, 1 día antes).
+        val d = Deber(
+            materiaId = materiaId, titulo = titulo.trim(), fechaEntrega = fecha, creada = t, actualizada = t,
+            recordatorioHoras = if (evento) 1 else 24,
+        )
         dao.guardarDeber(d)
         return d
     }

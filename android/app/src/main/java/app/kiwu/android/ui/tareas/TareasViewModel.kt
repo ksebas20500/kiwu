@@ -8,6 +8,7 @@ import app.kiwu.android.domain.Columna
 import app.kiwu.android.domain.Deber
 import app.kiwu.android.domain.Elemento
 import app.kiwu.android.domain.GrupoLista
+import app.kiwu.android.domain.ID_EVENTOS
 import app.kiwu.android.domain.MenuListas
 import app.kiwu.android.domain.NodoMenu
 import app.kiwu.android.domain.Materia
@@ -22,6 +23,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
+
+/** La lista especial de eventos tal como la ve la pantalla (en la base de datos se crea al añadir el primero). */
+val ListaEventos = Materia(id = ID_EVENTOS, nombre = "Eventos", emoji = "📅", creada = 0, actualizada = 0)
 
 data class TareasEstado(
     val materias: List<Materia> = emptyList(),
@@ -44,8 +48,9 @@ data class TareasEstado(
     /** Las listas con las que se trabaja ahora: las de la carpeta abierta, o todas. */
     val materiasDelContexto: List<Materia> get() = (elemento as? Elemento.DeGrupo)?.let { e -> materias.filter { it.grupoId == e.id } } ?: materias
     val grupoActual: GrupoLista? get() = (elemento as? Elemento.DeGrupo)?.let { e -> grupos.firstOrNull { it.id == e.id } }
-    val materiaActual: Materia? get() = (elemento as? Elemento.DeMateria)?.let { e -> materias.firstOrNull { it.id == e.id } }
-    val nombres: Map<String, String> get() = materias.associate { it.id to it.nombre }
+    val materiaActual: Materia? get() = (elemento as? Elemento.DeMateria)?.let { e -> if (e.id == ID_EVENTOS) ListaEventos else materias.firstOrNull { it.id == e.id } }
+    val enEventos: Boolean get() = (elemento as? Elemento.DeMateria)?.id == ID_EVENTOS
+    val nombres: Map<String, String> get() = materias.associate { it.id to it.nombre } + (ID_EVENTOS to ListaEventos.nombre)
 }
 
 class TareasViewModel(private val repo: Repositorio, private val ajustes: AjustesStore) : ViewModel() {
@@ -66,7 +71,7 @@ class TareasViewModel(private val repo: Repositorio, private val ajustes: Ajuste
     ) { (materias, grupos, deberes), (elemento, sub), aj, ahora ->
         // Si la lista o la carpeta elegida ya no existe, se vuelve a «Todas las tareas».
         val actual = when {
-            elemento is Elemento.DeMateria && materias.none { it.id == elemento.id } -> Elemento.Todos
+            elemento is Elemento.DeMateria && elemento.id != ID_EVENTOS && materias.none { it.id == elemento.id } -> Elemento.Todos
             elemento is Elemento.DeGrupo && grupos.none { it.id == elemento.id } -> Elemento.Todos
             else -> elemento
         }
@@ -101,14 +106,17 @@ class TareasViewModel(private val repo: Repositorio, private val ajustes: Ajuste
 
     /** En «Hoy» las tareas nuevas vencen hoy a las 18:00, como en las versiones de escritorio. */
     fun crearTarea(titulo: String, materiaId: String, fechaElegida: Long? = null) = viewModelScope.launch {
+        // Un evento sin hora es de todo el día (00:00); una tarea nueva en «Hoy» vence a las 18:00.
+        val hora = if (materiaId == ID_EVENTOS) java.time.LocalTime.MIDNIGHT else java.time.LocalTime.of(18, 0)
         val fecha = if (fechaElegida != null) fechaElegida else if (seleccion.value.first == Elemento.Hoy) {
-            LocalDate.now().atTime(18, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            LocalDate.now().atTime(hora).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
         } else null
         repo.crearDeber(titulo, materiaId, fecha)
     }
 
     fun crearTareaEnDia(titulo: String, materiaId: String, dia: LocalDate, fechaElegida: Long? = null) = viewModelScope.launch {
-        val fecha = fechaElegida ?: dia.atTime(18, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val hora = if (materiaId == ID_EVENTOS) java.time.LocalTime.MIDNIGHT else java.time.LocalTime.of(18, 0)
+        val fecha = fechaElegida ?: dia.atTime(hora).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
         repo.crearDeber(titulo, materiaId, fecha)
     }
 

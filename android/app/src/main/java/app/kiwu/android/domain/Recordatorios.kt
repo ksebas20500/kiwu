@@ -1,5 +1,9 @@
 package app.kiwu.android.domain
 
+import java.time.Instant
+import java.time.LocalTime
+import java.time.ZoneId
+
 /** Recordatorios: qué tareas toca avisar y con qué texto. Las notificaciones viven en el paquete `notify`. */
 object Recordatorios {
     private const val HORA_MS = 3_600_000L
@@ -7,9 +11,20 @@ object Recordatorios {
     /** No se avisa de entregas que vencieron hace más de este tiempo (p. ej. al abrir la app tras días). */
     const val GRACIA_MS = HORA_MS
 
+    /** Un evento de todo el día (00:00) se avisa respecto de las 9:00, no de la medianoche. */
+    private const val HORA_EVENTO_TODO_EL_DIA_MS = 9 * HORA_MS
+
+    /** El instante de referencia de una tarea o evento: su entrega, o las 9:00 si es un evento de todo el día. */
+    fun referencia(d: Deber, zona: ZoneId = ZoneId.systemDefault()): Long? {
+        val entrega = d.fechaEntrega ?: return null
+        if (!d.esEvento) return entrega
+        val hora = Instant.ofEpochMilli(entrega).atZone(zona).toLocalTime()
+        return if (hora == LocalTime.MIDNIGHT) entrega + HORA_EVENTO_TODO_EL_DIA_MS else entrega
+    }
+
     /** Momento en que debe sonar el aviso de una tarea; null si no lleva aviso. */
     fun momentoDeAviso(d: Deber): Long? {
-        val entrega = d.fechaEntrega ?: return null
+        val entrega = referencia(d) ?: return null
         if (d.completado || d.recordatorioHoras <= 0) return null
         return entrega - d.recordatorioHoras * HORA_MS
     }
@@ -20,7 +35,7 @@ object Recordatorios {
      */
     fun momentoDeDisparo(d: Deber, ahora: Long): Long? {
         val aviso = momentoDeAviso(d) ?: return null
-        val entrega = d.fechaEntrega ?: return null
+        val entrega = referencia(d) ?: return null
         if (ahora > entrega + GRACIA_MS) return null
         if (d.recordado != null && d.recordado >= aviso) return null
         return maxOf(aviso, ahora + 2_000)
@@ -30,22 +45,24 @@ object Recordatorios {
     fun pendientesDeAviso(deberes: List<Deber>, ahora: Long): List<Deber> =
         deberes.filter { d ->
             val aviso = momentoDeAviso(d) ?: return@filter false
-            val entrega = d.fechaEntrega ?: return@filter false
+            val entrega = referencia(d) ?: return@filter false
             aviso <= ahora && ahora <= entrega + GRACIA_MS && (d.recordado == null || d.recordado < aviso)
         }.sortedBy { it.fechaEntrega }
 
-    /** «Vence en 5 h», «Vence mañana», «Venció hace 10 min»… */
+    /** «Vence en 5 h», «Vence mañana», «Venció hace 10 min»… (en un evento: «Empieza en 5 h», «Empezó hace 10 min»). */
     fun textoAviso(d: Deber, ahora: Long): String {
-        val entrega = d.fechaEntrega ?: return ""
+        val entrega = referencia(d) ?: return ""
+        val verbo = if (d.esEvento) "Empieza" else "Vence"
         val resto = entrega - ahora
         if (resto < 0) {
             val minutos = (-resto / 60_000).toInt()
+            if (d.esEvento) return if (minutos < 1) "Acaba de empezar" else "Empezó hace $minutos min"
             return if (minutos < 1) "Acaba de vencer" else "Venció hace $minutos min"
         }
         val horas = resto.toDouble() / HORA_MS
-        if (horas < 1) return "Vence en ${maxOf(1, (resto / 60_000).toInt())} min"
-        if (horas < 24) return "Vence en ${horas.toInt()} h"
+        if (horas < 1) return "$verbo en ${maxOf(1, (resto / 60_000).toInt())} min"
+        if (horas < 24) return "$verbo en ${horas.toInt()} h"
         val dias = (horas / 24).toInt()
-        return if (dias == 1) "Vence mañana" else "Vence en $dias días"
+        return if (dias == 1) "$verbo mañana" else "$verbo en $dias días"
     }
 }

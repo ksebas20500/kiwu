@@ -81,6 +81,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kiwu.android.domain.Elemento
 import app.kiwu.android.domain.GrupoLista
+import app.kiwu.android.domain.ID_EVENTOS
+import androidx.compose.material.icons.filled.Event
 import app.kiwu.android.domain.Materia
 import app.kiwu.android.domain.NodoMenu
 import app.kiwu.android.ui.DialogoConfirmar
@@ -230,7 +232,8 @@ private fun PanelLateral(
     alAjustes: () -> Unit,
 ) {
     val compacto = estado.aspecto == "compacto"
-    val mostrarCuenta = estado.contadores && !compacto
+    // Los contadores los manda solo su interruptor en Ajustes; «Compacto» solo hace las filas más bajas.
+    val mostrarCuenta = estado.contadores
     var menuNueva by remember { mutableStateOf(false) }
 
     // Arrastrar y soltar: cada fila que puede recibir una lista apunta aquí dónde está en pantalla y a qué carpeta pertenece.
@@ -261,6 +264,8 @@ private fun PanelLateral(
                     Triple(Elemento.Proximos, "Próximos 7 días", Icons.Filled.DateRange),
                     Triple(Elemento.Calendario, "Calendario", Icons.Filled.CalendarMonth),
                     Triple(Elemento.Todos, "Todas las tareas", Icons.Filled.ViewList),
+                    // Los eventos viven en su propia lista fija, fuera de las carpetas.
+                    Triple(Elemento.DeMateria(ID_EVENTOS), "Eventos", Icons.Filled.Event),
                 )
                 items(fijos) { (e, titulo, icono) -> FilaMenu(titulo, icono, estado.elemento == e, estado.cuentas[e] ?: 0) { alElegir(e) } }
 

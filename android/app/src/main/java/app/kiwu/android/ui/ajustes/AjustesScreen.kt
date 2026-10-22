@@ -6,6 +6,7 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,6 +21,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Colorize
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.ViewList
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.draw.clip
@@ -81,7 +86,7 @@ import java.time.LocalDate
 @Composable
 private fun Seccion(titulo: String, contenido: @Composable () -> Unit) {
     Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(titulo, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+        if (titulo.isNotBlank()) Text(titulo, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
         contenido()
     }
 }
@@ -129,133 +134,152 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit) {
         }
     }
 
+    // La pantalla principal lista las secciones; al tocar una se abre sola. Atrás vuelve a la lista de secciones.
+    var elegida by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    val seccionActual = SeccionAjustes.deId(elegida)
+    androidx.activity.compose.BackHandler(enabled = seccionActual != null) { elegida = null }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Ajustes") },
-                navigationIcon = { IconButton(onClick = alVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } },
+                title = { Text(seccionActual?.titulo ?: "Ajustes") },
+                navigationIcon = { IconButton(onClick = { if (seccionActual != null) elegida = null else alVolver() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
         },
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) { relleno ->
-        Column(Modifier.padding(relleno).fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
-            Seccion("Apariencia") {
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    val opciones = listOf("sistema" to "Sistema", "claro" to "Claro", "oscuro" to "Oscuro")
-                    opciones.forEachIndexed { i, (id, titulo) ->
-                        SegmentedButton(ajustes.tema == id, { cambiar { it.copy(tema = id) } }, SegmentedButtonDefaults.itemShape(i, opciones.size)) { Text(titulo) }
+        androidx.compose.animation.AnimatedContent(
+            targetState = seccionActual, modifier = Modifier.padding(relleno).fillMaxSize(),
+            transitionSpec = {
+                androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(180, 40)) togetherWith
+                    androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120))
+            },
+            label = "seccionAjustes",
+        ) { s ->
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = if (s == null) 0.dp else 20.dp)) {
+                when (s) {
+                    null -> {
+                        val notificaciones = Avisos.tienePermiso(contexto)
+                        FilaAjuste(Icons.Filled.Palette, SeccionAjustes.APARIENCIA.titulo, ResumenAjustes.apariencia(ajustes)) { elegida = SeccionAjustes.APARIENCIA.id }
+                        FilaAjuste(Icons.Filled.ViewList, SeccionAjustes.MENU.titulo, ResumenAjustes.menu(ajustes)) { elegida = SeccionAjustes.MENU.id }
+                        FilaAjuste(Icons.Filled.Notifications, SeccionAjustes.AVISOS.titulo, ResumenAjustes.avisos(ajustes, notificaciones)) { elegida = SeccionAjustes.AVISOS.id }
+                        FilaAjuste(Icons.Filled.Backup, SeccionAjustes.COPIA.titulo, ResumenAjustes.copia()) { elegida = SeccionAjustes.COPIA.id }
+                        FilaAjuste(Icons.Filled.Info, SeccionAjustes.ACERCA.titulo, ResumenAjustes.acerca(BuildConfig.VERSION_NAME)) { elegida = SeccionAjustes.ACERCA.id }
+                        mensaje?.let { Text(it, Modifier.padding(horizontal = 20.dp, vertical = 12.dp), color = MaterialTheme.colorScheme.primary) }
+                    }
+                    SeccionAjustes.APARIENCIA -> {
+                        Seccion("Tema") {
+                            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                                val opciones = listOf("sistema" to "Sistema", "claro" to "Claro", "oscuro" to "Oscuro")
+                                opciones.forEachIndexed { i, (id, titulo) ->
+                                    SegmentedButton(ajustes.tema == id, { cambiar { it.copy(tema = id) } }, SegmentedButtonDefaults.itemShape(i, opciones.size)) { Text(titulo) }
+                                }
+                            }
+                        }
+                        HorizontalDivider()
+                        Seccion("Color de la app") {
+                            SelectorColor(ajustes.acento) { id -> cambiar { it.copy(acento = id) } }
+                        }
+                        HorizontalDivider()
+                        Seccion("Fondo de imagen") {
+                            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = { elegirFondo.launch(arrayOf("image/*")) }) { Text(if (ajustes.fondoUri == null) "Elegir imagen" else "Cambiar imagen") }
+                                if (ajustes.fondoUri != null && FondoArchivos.origen(contexto).exists()) {
+                                    OutlinedButton(onClick = { encuadrando = true }) { Text("Encuadrar") }
+                                }
+                                if (ajustes.fondoUri != null) OutlinedButton(onClick = {
+                                    FondoArchivos.borrar(contexto)
+                                    cambiar { it.copy(fondoUri = null) }
+                                }) { Text("Quitar") }
+                            }
+                            if (ajustes.fondoUri != null) {
+                                // Los deslizadores se mueven con un valor propio (sin esperar al guardado) y el fondo los aplica al instante.
+                                var visibilidad by remember(ajustes.fondoVisibilidad) { mutableStateOf(ajustes.fondoVisibilidad) }
+                                var velo by remember(ajustes.opacidadPaneles) { mutableStateOf(ajustes.opacidadPaneles) }
+                                Text("Visibilidad de la imagen", style = MaterialTheme.typography.labelMedium)
+                                Slider(
+                                    visibilidad, { v -> visibilidad = v; FondoEnVivo.visibilidad = v },
+                                    onValueChangeFinished = { cambiar { it.copy(fondoVisibilidad = visibilidad) }; FondoEnVivo.visibilidad = null },
+                                )
+                                Text("Velo para leer mejor el contenido", style = MaterialTheme.typography.labelMedium)
+                                Slider(
+                                    velo, { v -> velo = v; FondoEnVivo.velo = v },
+                                    onValueChangeFinished = { cambiar { it.copy(opacidadPaneles = velo) }; FondoEnVivo.velo = null },
+                                )
+                            }
+                        }
+                    }
+                    SeccionAjustes.MENU -> {
+                        Seccion("Aspecto de las listas y carpetas") {
+                            SelectorAspectoMenu(ajustes.menuAspecto, ajustes.menuContadores) { id -> cambiar { it.copy(menuAspecto = id) } }
+                        }
+                        HorizontalDivider()
+                        Seccion("Orden") {
+                            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                for ((id, texto) in listOf("manual" to "Manual", "alfabetico" to "Alfabético", "pendientes" to "Por tareas pendientes")) {
+                                    androidx.compose.material3.FilterChip(
+                                        selected = ajustes.menuOrden == id, onClick = { cambiar { it.copy(menuOrden = id) } }, label = { Text(texto) },
+                                    )
+                                }
+                            }
+                        }
+                        HorizontalDivider()
+                        Seccion("") {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Mostrar el número de tareas", style = MaterialTheme.typography.bodyMedium)
+                                androidx.compose.material3.Switch(checked = ajustes.menuContadores, onCheckedChange = { v -> cambiar { it.copy(menuContadores = v) } })
+                            }
+                        }
+                    }
+                    SeccionAjustes.AVISOS -> {
+                        Seccion("") {
+                            val permiso = Avisos.tienePermiso(contexto)
+                            // Segundo aviso: otro recordatorio unos minutos antes de la entrega, por si se borró o se olvidó el primero.
+                            Text("Segundo aviso", style = MaterialTheme.typography.labelMedium)
+                            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                for ((minutos, texto) in listOf(0 to "Sin segundo aviso", 5 to "5 min antes", 10 to "10 min antes", 15 to "15 min antes", 30 to "30 min antes", 60 to "1 h antes")) {
+                                    androidx.compose.material3.FilterChip(
+                                        selected = ajustes.segundoAvisoMin == minutos,
+                                        onClick = { cambiar { it.copy(segundoAvisoMin = minutos) } },
+                                        label = { Text(texto) },
+                                    )
+                                }
+                            }
+                            Text(if (permiso) "Las notificaciones están activadas." else "Las notificaciones están desactivadas: no recibirás avisos.", style = MaterialTheme.typography.bodyMedium)
+                            if (!permiso) {
+                                OutlinedButton(onClick = {
+                                    contexto.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, contexto.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                }) { Text("Abrir ajustes de notificaciones") }
+                            }
+                            if (Build.VERSION.SDK_INT >= 31 && !ProgramadorAvisos(contexto).puedeExactas()) {
+                                Text("Para que los avisos suenen a la hora exacta, permite las alarmas exactas.", style = MaterialTheme.typography.bodyMedium)
+                                OutlinedButton(onClick = {
+                                    contexto.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${contexto.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                }) { Text("Permitir alarmas exactas") }
+                            }
+                        }
+                    }
+                    SeccionAjustes.COPIA -> {
+                        Seccion("") {
+                            Text("Guarda tus listas, tareas y notas en un archivo .kiwu.json. Es el mismo formato que usa Kiwu para Linux.", style = MaterialTheme.typography.bodyMedium)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = { exportar.launch("kiwu-${LocalDate.now()}.kiwu.json") }) { Text("Exportar") }
+                                OutlinedButton(onClick = { importar.launch(arrayOf("application/json", "application/octet-stream", "*/*")) }) { Text("Importar") }
+                            }
+                            mensaje?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+                        }
+                    }
+                    SeccionAjustes.ACERCA -> {
+                        Seccion("") {
+                            Text("Versión ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyMedium)
+                            Text("Tus datos se guardan solo en este dispositivo: sin cuentas, sin servidor, sin publicidad ni analíticas. La app solo usa Internet cuando pegas un enlace en una nota, para descargar su vista previa.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
+                androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 32.dp))
             }
-            HorizontalDivider()
-            Seccion("Color de la app") {
-                SelectorColor(ajustes.acento) { id -> cambiar { it.copy(acento = id) } }
-            }
-            HorizontalDivider()
-            Seccion("Menú de Tareas") {
-                Text("Aspecto de las listas y carpetas", style = MaterialTheme.typography.labelMedium)
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    val aspectos = listOf("plegable" to "Plegable", "compacto" to "Compacto", "color" to "Con color")
-                    aspectos.forEachIndexed { i, (id, texto) ->
-                        SegmentedButton(
-                            selected = ajustes.menuAspecto == id, onClick = { cambiar { it.copy(menuAspecto = id) } },
-                            shape = SegmentedButtonDefaults.itemShape(i, aspectos.size),
-                        ) { Text(texto) }
-                    }
-                }
-                Text(
-                    when (ajustes.menuAspecto) {
-                        "compacto" -> "Filas más bajas y sin contadores: caben más listas en pantalla."
-                        "color" -> "Cada lista lleva su emoji o un punto de color."
-                        else -> "Las carpetas se pliegan y las filas muestran su número de tareas."
-                    },
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text("Orden", style = MaterialTheme.typography.labelMedium)
-                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for ((id, texto) in listOf("manual" to "Manual", "alfabetico" to "Alfabético", "pendientes" to "Por tareas pendientes")) {
-                        androidx.compose.material3.FilterChip(
-                            selected = ajustes.menuOrden == id, onClick = { cambiar { it.copy(menuOrden = id) } }, label = { Text(texto) },
-                        )
-                    }
-                }
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Mostrar el número de tareas", style = MaterialTheme.typography.bodyMedium)
-                    androidx.compose.material3.Switch(checked = ajustes.menuContadores, onCheckedChange = { v -> cambiar { it.copy(menuContadores = v) } })
-                }
-            }
-            HorizontalDivider()
-            Seccion("Fondo de imagen") {
-                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { elegirFondo.launch(arrayOf("image/*")) }) { Text(if (ajustes.fondoUri == null) "Elegir imagen" else "Cambiar imagen") }
-                    if (ajustes.fondoUri != null && FondoArchivos.origen(contexto).exists()) {
-                        OutlinedButton(onClick = { encuadrando = true }) { Text("Encuadrar") }
-                    }
-                    if (ajustes.fondoUri != null) OutlinedButton(onClick = {
-                        FondoArchivos.borrar(contexto)
-                        cambiar { it.copy(fondoUri = null) }
-                    }) { Text("Quitar") }
-                }
-                if (ajustes.fondoUri != null) {
-                    // Los deslizadores se mueven con un valor propio (sin esperar al guardado) y el fondo los aplica al instante.
-                    var visibilidad by remember(ajustes.fondoVisibilidad) { mutableStateOf(ajustes.fondoVisibilidad) }
-                    var velo by remember(ajustes.opacidadPaneles) { mutableStateOf(ajustes.opacidadPaneles) }
-                    Text("Visibilidad de la imagen", style = MaterialTheme.typography.labelMedium)
-                    Slider(
-                        visibilidad, { v -> visibilidad = v; FondoEnVivo.visibilidad = v },
-                        onValueChangeFinished = { cambiar { it.copy(fondoVisibilidad = visibilidad) }; FondoEnVivo.visibilidad = null },
-                    )
-                    Text("Velo para leer mejor el contenido", style = MaterialTheme.typography.labelMedium)
-                    Slider(
-                        velo, { v -> velo = v; FondoEnVivo.velo = v },
-                        onValueChangeFinished = { cambiar { it.copy(opacidadPaneles = velo) }; FondoEnVivo.velo = null },
-                    )
-                }
-            }
-            HorizontalDivider()
-            Seccion("Recordatorios") {
-                val permiso = Avisos.tienePermiso(contexto)
-                // Segundo aviso: otro recordatorio unos minutos antes de la entrega, por si se borró o se olvidó el primero.
-                Text("Segundo aviso", style = MaterialTheme.typography.labelMedium)
-                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for ((minutos, texto) in listOf(0 to "Sin segundo aviso", 5 to "5 min antes", 10 to "10 min antes", 15 to "15 min antes", 30 to "30 min antes", 60 to "1 h antes")) {
-                        androidx.compose.material3.FilterChip(
-                            selected = ajustes.segundoAvisoMin == minutos,
-                            onClick = { cambiar { it.copy(segundoAvisoMin = minutos) } },
-                            label = { Text(texto) },
-                        )
-                    }
-                }
-                Text(if (permiso) "Las notificaciones están activadas." else "Las notificaciones están desactivadas: no recibirás avisos.", style = MaterialTheme.typography.bodyMedium)
-                if (!permiso) {
-                    OutlinedButton(onClick = {
-                        contexto.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, contexto.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    }) { Text("Abrir ajustes de notificaciones") }
-                }
-                if (Build.VERSION.SDK_INT >= 31 && !ProgramadorAvisos(contexto).puedeExactas()) {
-                    Text("Para que los avisos suenen a la hora exacta, permite las alarmas exactas.", style = MaterialTheme.typography.bodyMedium)
-                    OutlinedButton(onClick = {
-                        contexto.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${contexto.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    }) { Text("Permitir alarmas exactas") }
-                }
-            }
-            HorizontalDivider()
-            Seccion("Copia de seguridad") {
-                Text("Guarda tus listas, tareas y notas en un archivo .kiwu.json. Es el mismo formato que usa Kiwu para Linux.", style = MaterialTheme.typography.bodyMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { exportar.launch("kiwu-${LocalDate.now()}.kiwu.json") }) { Text("Exportar") }
-                    OutlinedButton(onClick = { importar.launch(arrayOf("application/json", "application/octet-stream", "*/*")) }) { Text("Importar") }
-                }
-                mensaje?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-            }
-            HorizontalDivider()
-            Seccion("Acerca de Kiwu") {
-                Text("Versión ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyMedium)
-                Text("Tus datos se guardan solo en este dispositivo: sin cuentas, sin servidor, sin publicidad ni analíticas. La app solo usa Internet cuando pegas un enlace en una nota, para descargar su vista previa.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 32.dp))
         }
     }
     if (encuadrando) {

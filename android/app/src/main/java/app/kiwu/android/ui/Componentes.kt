@@ -118,22 +118,53 @@ fun SelectorFechaHora(inicial: Long?, alCerrar: () -> Unit, alElegir: (Long) -> 
         DatePickerDialog(
             onDismissRequest = alCerrar,
             confirmButton = {
-                TextButton(onClick = {
-                    estado.selectedDateMillis?.let { dia = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() }
-                }) { Text("Siguiente") }
+                // La hora es opcional: «Aceptar» deja solo el día (todo el día) y «Añadir hora» pasa al segundo cuadro.
+                androidx.compose.foundation.layout.Row {
+                    TextButton(onClick = {
+                        estado.selectedDateMillis?.let { dia = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() }
+                    }) { Text("Añadir hora") }
+                    TextButton(onClick = {
+                        estado.selectedDateMillis?.let {
+                            val d = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()
+                            alElegir(d.atStartOfDay(zona).toInstant().toEpochMilli())
+                            alCerrar()
+                        }
+                    }) { Text("Aceptar") }
+                }
             },
             dismissButton = { TextButton(onClick = alCerrar) { Text("Cancelar") } },
         ) { DatePicker(state = estado) }
     } else {
         var h by remember { mutableStateOf(base.hour) }
         var m by remember { mutableStateOf(base.minute) }
+        // Las 00:00 significan «todo el día»: la hora no se muestra ni se avisa a una hora concreta.
+        var todoElDia by remember { mutableStateOf(inicial != null && base.hour == 0 && base.minute == 0) }
         AlertDialog(
             onDismissRequest = alCerrar,
             title = { Text("Hora de entrega") },
-            text = { RuedaHora(h, m) { nh, nm -> h = nh; m = nm } },
+            text = {
+                Column {
+                    androidx.compose.foundation.layout.Row(
+                        Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text("Todo el día")
+                        androidx.compose.material3.Switch(checked = todoElDia, onCheckedChange = { todoElDia = it })
+                    }
+                    if (todoElDia) {
+                        Text(
+                            "Sin hora concreta.", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 24.dp),
+                        )
+                    } else {
+                        RuedaHora(h, m) { nh, nm -> h = nh; m = nm }
+                    }
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
-                    val elegido = LocalDateTime.of(dia!!, LocalTime.of(h, m)).atZone(zona).toInstant().toEpochMilli()
+                    val hora = if (todoElDia) LocalTime.MIDNIGHT else LocalTime.of(h, m)
+                    val elegido = LocalDateTime.of(dia!!, hora).atZone(zona).toInstant().toEpochMilli()
                     alElegir(elegido)
                     alCerrar()
                 }) { Text("Aceptar") }

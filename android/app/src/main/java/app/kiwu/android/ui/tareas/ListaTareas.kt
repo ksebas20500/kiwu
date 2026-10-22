@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
@@ -38,13 +39,13 @@ fun ListaTareas(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String) -> 
 
     Column(Modifier.fillMaxSize()) {
         when {
-            estado.cargado && estado.materiasDelContexto.isEmpty() -> EstadoVacio(
+            estado.cargado && estado.materiasDelContexto.isEmpty() && !estado.enEventos -> EstadoVacio(
                 Icons.Filled.CheckCircle, if (enCarpeta) "Esta carpeta está vacía" else "Crea una lista para empezar", Modifier.weight(1f),
             ) {
                 Button(onClick = alCrearLista, modifier = Modifier.padding(top = 16.dp)) { Text(if (enCarpeta) "Crear una lista aquí" else "Crear lista") }
             }
             estado.pendientes.isEmpty() && estado.completados.isEmpty() ->
-                EstadoVacio(Icons.Filled.CheckCircle, "Sin tareas", Modifier.weight(1f))
+                EstadoVacio(if (estado.enEventos) Icons.Filled.Event else Icons.Filled.CheckCircle, if (estado.enEventos) "Sin eventos" else "Sin tareas", Modifier.weight(1f))
             else -> LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(bottom = 12.dp)) {
                 items(estado.pendientes, key = { it.id }) { d ->
                     FilaTarea(
@@ -81,7 +82,11 @@ fun ListaTareas(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String) -> 
             }
         }
         if (puedeCrear) {
-            CampoNuevaTarea(estado.materiasDelContexto, estado.materiaActual, alCrear = { t, m, f -> vm.crearTarea(t, m, f) })
+            CampoNuevaTarea(
+                // Fuera de una carpeta el destino también puede ser «Eventos».
+                estado.materiasDelContexto + if (enCarpeta) emptyList() else listOf(ListaEventos), estado.materiaActual, alCrear = { t, m, f -> vm.crearTarea(t, m, f) },
+                marcador = if (estado.enEventos) "Añadir evento" else "Añadir tarea",
+            )
         }
     }
 }

@@ -47,6 +47,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.kiwu.android.domain.Columna
 import app.kiwu.android.domain.Deber
+import app.kiwu.android.domain.esEvento
+import androidx.compose.foundation.layout.size
 import app.kiwu.android.domain.Materia
 import app.kiwu.android.domain.Reglas
 import app.kiwu.android.ui.Chip
@@ -76,15 +78,16 @@ fun MenuTarea(
     columnaActual: Columna,
     alMover: (Columna) -> Unit,
     alEliminar: () -> Unit,
+    esEvento: Boolean = false,
 ) {
     DropdownMenu(expanded = abierto, onDismissRequest = alCerrar) {
-        for (c in Columna.entries) {
+        if (!esEvento) for (c in Columna.entries) {
             if (c != columnaActual) {
                 DropdownMenuItem(text = { Text("Mover a «${c.titulo}»") }, onClick = { alCerrar(); alMover(c) })
             }
         }
         DropdownMenuItem(
-            text = { Text("Eliminar tarea", color = MaterialTheme.colorScheme.error) },
+            text = { Text(if (esEvento) "Eliminar evento" else "Eliminar tarea", color = MaterialTheme.colorScheme.error) },
             onClick = { alCerrar(); alEliminar() },
         )
     }
@@ -108,7 +111,14 @@ fun FilaTarea(
         Modifier.fillMaxWidth().clickable(onClick = alAbrir).padding(start = 4.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Checkbox(checked = d.completado, onCheckedChange = alMarcar)
+        if (d.esEvento) {
+            // Un evento no se completa: en lugar del círculo lleva el icono de calendario.
+            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.Event, "Evento", tint = MaterialTheme.colorScheme.primary)
+            }
+        } else {
+            Checkbox(checked = d.completado, onCheckedChange = alMarcar)
+        }
         Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
             Text(
                 d.titulo,
@@ -133,7 +143,7 @@ fun FilaTarea(
         }
         Box {
             IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Opciones de la tarea") }
-            MenuTarea(menu, { menu = false }, columna, alMover, alEliminar)
+            MenuTarea(menu, { menu = false }, columna, alMover, alEliminar, esEvento = d.esEvento)
         }
     }
 }

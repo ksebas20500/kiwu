@@ -44,10 +44,19 @@ class Reglas(private val zona: ZoneId = ZoneId.systemDefault()) {
         else -> Columna.POR_HACER
     }
 
+    /** Un evento nunca «vence»: solo pasa. */
     fun estaVencido(d: Deber, ahora: Long): Boolean =
-        !d.completado && d.fechaEntrega != null && d.fechaEntrega < ahora
+        !d.esEvento && !d.completado && d.fechaEntrega != null && d.fechaEntrega < ahora
 
-    fun enAlcance(d: Deber, item: Elemento, ahora: Long): Boolean = when (item) {
+    fun enAlcance(d: Deber, item: Elemento, ahora: Long): Boolean = when {
+        // Los eventos pasados dejan de verse en «Hoy» y «Todas»; solo se ven en su lista y en el calendario.
+        d.esEvento && item == Elemento.Hoy -> d.fechaEntrega != null && d.fechaEntrega in inicioDelDia(ahora)..finDelDia(ahora)
+        d.esEvento && item == Elemento.Todos -> d.fechaEntrega == null || d.fechaEntrega >= inicioDelDia(ahora)
+        d.esEvento && item == Elemento.Completadas -> false
+        else -> enAlcanceTarea(d, item, ahora)
+    }
+
+    private fun enAlcanceTarea(d: Deber, item: Elemento, ahora: Long): Boolean = when (item) {
         Elemento.Todos, Elemento.Calendario -> true
         Elemento.Completadas -> d.completado
         is Elemento.DeMateria -> d.materiaId == item.id
@@ -77,7 +86,7 @@ class Reglas(private val zona: ZoneId = ZoneId.systemDefault()) {
     }
 
     fun conteo(deberes: List<Deber>, item: Elemento, ahora: Long): Int =
-        if (item == Elemento.Calendario || item == Elemento.Completadas) 0 else pendientes(deberes, item, ahora).size
+        if (item == Elemento.Calendario || item == Elemento.Completadas) 0 else pendientes(deberes, item, ahora).count { !it.esEvento }
 
     fun delDia(deberes: List<Deber>, dia: LocalDate): List<Deber> {
         val desde = inicio(dia)

@@ -85,7 +85,7 @@ fun TareasScreen(
     val estado by vm.estado.collectAsStateWithLifecycle()
     // El tablero solo tiene sentido en pantallas anchas: en el teléfono siempre se ve la lista.
     val anchaParaTablero = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600
-    val verTablero = anchaParaTablero && estado.vista == "tablero"
+    val verTablero = anchaParaTablero && estado.vista == "tablero" && !estado.enEventos
     var dialogoNuevaLista by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -94,7 +94,7 @@ fun TareasScreen(
                 title = { Text(tituloDe(estado.elemento, estado.materiaActual, estado.grupoActual)) },
                 navigationIcon = { IconButton(onClick = alAbrirMenu) { Icon(Icons.Filled.Menu, "Abrir menú") } },
                 actions = {
-                    if (estado.elemento != Elemento.Calendario && anchaParaTablero) {
+                    if (estado.elemento != Elemento.Calendario && anchaParaTablero && !estado.enEventos) {
                         val tablero = verTablero
                         IconButton(onClick = { vm.cambiarVista(if (tablero) "lista" else "tablero") }) {
                             Icon(
@@ -112,7 +112,7 @@ fun TareasScreen(
     ) { relleno ->
         Column(Modifier.padding(relleno).consumeWindowInsets(relleno).fillMaxSize()) {
             val materia = estado.materiaActual
-            if (materia != null) {
+            if (materia != null && !estado.enEventos) {
                 TabRow(
                     selectedTabIndex = if (estado.subvista == "archivos") 1 else 0,
                     containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
