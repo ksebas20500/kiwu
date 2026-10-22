@@ -5,12 +5,14 @@ import app.kiwu.android.domain.Columna
 import app.kiwu.android.domain.Cuaderno
 import app.kiwu.android.domain.Deber
 import app.kiwu.android.domain.Documento
+import app.kiwu.android.domain.GrupoLista
 import app.kiwu.android.domain.Horario
 import app.kiwu.android.domain.nuevoId
 import app.kiwu.android.domain.Materia
 import app.kiwu.android.domain.Pagina
 import app.kiwu.android.domain.Reglas
 import app.kiwu.android.domain.ReglasHorario
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -28,6 +30,7 @@ class Repositorio(
     val paginas: Flow<List<ResumenPagina>> = dao.paginas()
     val horarios: Flow<List<Horario>> = dao.horarios()
     val clases: Flow<List<Clase>> = dao.clases()
+    val grupos: Flow<List<GrupoLista>> = dao.grupos()
 
     fun ahora(): Long = reloj()
 
@@ -51,6 +54,65 @@ class Repositorio(
     }
 
     suspend fun materia(id: String): Materia? = dao.materia(id)
+
+    /** Emoji (null = el icono de siempre) y color (`#RRGGBB`, null = automático) de una lista. */
+    suspend fun editarAspectoMateria(id: String, emoji: String?, color: String?) {
+        val m = dao.materia(id) ?: return
+        dao.guardarMateria(m.copy(emoji = emoji?.trim()?.takeIf { it.isNotEmpty() }, color = ReglasHorario.colorValido(color), actualizada = reloj()))
+    }
+
+    /** Mete una lista en una carpeta o la deja suelta (con null). Si la carpeta no existe, queda suelta. */
+    suspend fun moverMateriaAGrupo(materiaId: String, grupoId: String?) {
+        val m = dao.materia(materiaId) ?: return
+        val destino = grupoId?.takeIf { dao.grupo(it) != null }
+        if (m.grupoId == destino) return
+        dao.guardarMateria(m.copy(grupoId = destino, actualizada = reloj()))
+    }
+
+    /** Sube (-1) o baja (+1) una lista un puesto entre las de su misma carpeta (o entre las sueltas). */
+    suspend fun moverOrdenMateria(id: String, delta: Int) {
+        val m = dao.materia(id) ?: return
+        val hermanas = dao.materias().first().filter { it.grupoId == m.grupoId }.sortedWith(compareBy<Materia> { it.orden }.thenBy { it.nombre.lowercase() })
+        val i = hermanas.indexOfFirst { it.id == id }
+        val j = i + delta
+        if (i < 0 || j !in hermanas.indices) return
+        val nuevas = hermanas.toMutableList().apply { add(j, removeAt(i)) }
+        val t = reloj()
+        dao.guardarMaterias(nuevas.mapIndexed { n, x -> x.copy(orden = n, actualizada = t) })
+    }
+
+    // --- carpetas de listas -----------------------------------------------------------------------
+
+    suspend fun crearGrupo(nombre: String, icono: String = "📁", color: String? = null): GrupoLista {
+        val t = reloj()
+        val g = GrupoLista(nombre = nombre.trim(), icono = icono, color = ReglasHorario.colorValido(color), orden = dao.siguienteOrdenGrupo(), creada = t, actualizada = t)
+        dao.guardarGrupo(g)
+        return g
+    }
+
+    suspend fun editarGrupo(id: String, nombre: String, icono: String, color: String?) {
+        val g = dao.grupo(id) ?: return
+        dao.guardarGrupo(g.copy(nombre = nombre.trim().ifEmpty { g.nombre }, icono = icono.trim().ifEmpty { g.icono }, color = ReglasHorario.colorValido(color), actualizada = reloj()))
+    }
+
+    suspend fun plegarGrupo(id: String, plegado: Boolean) {
+        val g = dao.grupo(id) ?: return
+        if (g.plegado != plegado) dao.guardarGrupo(g.copy(plegado = plegado, actualizada = reloj()))
+    }
+
+    /** Sube (-1) o baja (+1) una carpeta un puesto. */
+    suspend fun moverOrdenGrupo(id: String, delta: Int) {
+        val todas = dao.gruposAhora()
+        val i = todas.indexOfFirst { it.id == id }
+        val j = i + delta
+        if (i < 0 || j !in todas.indices) return
+        val nuevas = todas.toMutableList().apply { add(j, removeAt(i)) }
+        val t = reloj()
+        dao.guardarGrupos(nuevas.mapIndexed { n, x -> x.copy(orden = n, actualizada = t) })
+    }
+
+    /** Elimina la carpeta; sus listas (y las tareas de ellas) se conservan como listas sueltas. */
+    suspend fun eliminarGrupoListas(id: String) = dao.eliminarGrupoListas(id, reloj())
 
     suspend fun eliminarMateria(id: String) = dao.eliminarMateria(id, reloj())
 

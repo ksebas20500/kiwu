@@ -20,6 +20,30 @@ data class Materia(
     val orden: Int = 0,
     /** Carpeta vinculada: dirección `content://` de un árbol del selector de archivos. Solo vale en este dispositivo. */
     val carpeta: String? = null,
+    /** Carpeta de listas (grupo) en la que está en el menú de Tareas; null = lista suelta. */
+    @ColumnInfo(name = "grupo_id") val grupoId: String? = null,
+    /** Color de la lista como `#RRGGBB` (null = automático) y emoji propio (null = el icono de lista). */
+    val color: String? = null,
+    val emoji: String? = null,
+    val creada: Long,
+    val actualizada: Long,
+    val eliminada: Long? = null,
+)
+
+/**
+ * Carpeta de listas del menú de Tareas (un solo nivel: las carpetas no se anidan). En el código se llama «grupo» para no
+ * confundirla con [Materia.carpeta], que es la carpeta de archivos del teléfono vinculada a una lista.
+ */
+@Entity(tableName = "grupo_lista")
+data class GrupoLista(
+    @PrimaryKey val id: String = nuevoId(),
+    val nombre: String,
+    val icono: String = "📁",
+    /** `#RRGGBB` o null (color automático). */
+    val color: String? = null,
+    val orden: Int = 0,
+    /** Si la carpeta está plegada en el menú. */
+    val plegado: Boolean = false,
     val creada: Long,
     val actualizada: Long,
     val eliminada: Long? = null,

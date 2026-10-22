@@ -154,6 +154,39 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit) {
                 SelectorColor(ajustes.acento) { id -> cambiar { it.copy(acento = id) } }
             }
             HorizontalDivider()
+            Seccion("Menú de Tareas") {
+                Text("Aspecto de las listas y carpetas", style = MaterialTheme.typography.labelMedium)
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    val aspectos = listOf("plegable" to "Plegable", "compacto" to "Compacto", "color" to "Con color")
+                    aspectos.forEachIndexed { i, (id, texto) ->
+                        SegmentedButton(
+                            selected = ajustes.menuAspecto == id, onClick = { cambiar { it.copy(menuAspecto = id) } },
+                            shape = SegmentedButtonDefaults.itemShape(i, aspectos.size),
+                        ) { Text(texto) }
+                    }
+                }
+                Text(
+                    when (ajustes.menuAspecto) {
+                        "compacto" -> "Filas más bajas y sin contadores: caben más listas en pantalla."
+                        "color" -> "Cada lista lleva su emoji o un punto de color."
+                        else -> "Las carpetas se pliegan y las filas muestran su número de tareas."
+                    },
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text("Orden", style = MaterialTheme.typography.labelMedium)
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for ((id, texto) in listOf("manual" to "Manual", "alfabetico" to "Alfabético", "pendientes" to "Por tareas pendientes")) {
+                        androidx.compose.material3.FilterChip(
+                            selected = ajustes.menuOrden == id, onClick = { cambiar { it.copy(menuOrden = id) } }, label = { Text(texto) },
+                        )
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Mostrar el número de tareas", style = MaterialTheme.typography.bodyMedium)
+                    androidx.compose.material3.Switch(checked = ajustes.menuContadores, onCheckedChange = { v -> cambiar { it.copy(menuContadores = v) } })
+                }
+            }
+            HorizontalDivider()
             Seccion("Fondo de imagen") {
                 androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { elegirFondo.launch(arrayOf("image/*")) }) { Text(if (ajustes.fondoUri == null) "Elegir imagen" else "Cambiar imagen") }

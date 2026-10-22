@@ -12,6 +12,9 @@ sealed interface Elemento {
     data object Todos : Elemento
     data object Completadas : Elemento
     data class DeMateria(val id: String) : Elemento
+
+    /** Todas las tareas de las listas de una carpeta. */
+    data class DeGrupo(val id: String) : Elemento
 }
 
 enum class Columna(val valor: Int, val titulo: String) {
@@ -48,6 +51,8 @@ class Reglas(private val zona: ZoneId = ZoneId.systemDefault()) {
         Elemento.Todos, Elemento.Calendario -> true
         Elemento.Completadas -> d.completado
         is Elemento.DeMateria -> d.materiaId == item.id
+        // Las tareas de una carpeta se filtran antes (por las listas que tiene); aquí valen todas las recibidas.
+        is Elemento.DeGrupo -> true
         Elemento.Hoy -> d.fechaEntrega != null && d.fechaEntrega <= finDelDia(ahora)
         Elemento.Proximos -> {
             val limite = inicio(fecha(ahora).plusDays(7)) - 1

@@ -67,7 +67,7 @@ object ColoresClase {
 /** Selector de color de una clase: «Automático», sólidos, claros, pasteles y «Otro color». */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun SelectorColorClase(actual: String?, alElegir: (String?) -> Unit, alOtro: () -> Unit) {
+internal fun SelectorColorClase(actual: String?, alElegir: (String?) -> Unit, alOtro: () -> Unit, textoAutomatico: String = "Automático (según la materia)") {
     val activo = ReglasHorario.colorValido(actual)
     @Composable
     fun Grupo(titulo: String, opciones: List<ColoresClase.Opcion>) {
@@ -84,7 +84,7 @@ internal fun SelectorColorClase(actual: String?, alElegir: (String?) -> Unit, al
                     .clickable { alElegir(null) },
                 contentAlignment = Alignment.Center,
             ) { Text("A", style = MaterialTheme.typography.labelLarge) }
-            Text("Automático (según la materia)", Modifier.align(Alignment.CenterVertically), style = MaterialTheme.typography.bodyMedium)
+            Text(textoAutomatico, Modifier.align(Alignment.CenterVertically), style = MaterialTheme.typography.bodyMedium)
         }
         Grupo("Sólidos", ColoresClase.solidos)
         Grupo("Claros", ColoresClase.claros)

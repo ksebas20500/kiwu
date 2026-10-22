@@ -1,6 +1,7 @@
 package app.kiwu.android.data
 
 import app.kiwu.android.domain.Clase
+import app.kiwu.android.domain.GrupoLista
 import app.kiwu.android.domain.Cuaderno
 import app.kiwu.android.domain.Deber
 import app.kiwu.android.domain.Documento
@@ -28,7 +29,7 @@ class ErrorCopia(mensaje: String) : Exception(mensaje)
 
 data class ResumenImportacion(
     val materias: Int, val deberes: Int, val cuadernos: Int, val paginas: Int,
-    val horarios: Int = 0, val clases: Int = 0,
+    val horarios: Int = 0, val clases: Int = 0, val grupos: Int = 0,
 )
 
 /**
@@ -71,6 +72,7 @@ object Copia {
         val paginas = dao.paginasAhora()
         val horarios = dao.horarios().first()
         val clases = dao.clasesAhora()
+        val grupos = dao.gruposAhora()
         val raiz = buildJsonObject {
             put("formato", FORMATO)
             put("app", "kiwu")
@@ -78,7 +80,18 @@ object Copia {
             put("materias", buildJsonArray {
                 for (m in materias) add(buildJsonObject {
                     put("id", m.id); put("nombre", m.nombre); put("orden", m.orden); put("carpeta", JsonNull)
+                    // Campos opcionales (Android 0.3): carpeta de listas, color y emoji.
+                    put("grupo", m.grupoId?.let { JsonPrimitive(it) } ?: JsonNull)
+                    put("color", m.color?.let { JsonPrimitive(it) } ?: JsonNull)
+                    put("emoji", m.emoji?.let { JsonPrimitive(it) } ?: JsonNull)
                     put("creada", iso(m.creada)); put("actualizada", iso(m.actualizada))
+                })
+            })
+            put("grupos", buildJsonArray {
+                for (g in grupos) add(buildJsonObject {
+                    put("id", g.id); put("nombre", g.nombre); put("icono", g.icono); put("orden", g.orden)
+                    put("color", g.color?.let { JsonPrimitive(it) } ?: JsonNull); put("plegado", g.plegado)
+                    put("creada", iso(g.creada)); put("actualizada", iso(g.actualizada))
                 })
             })
             put("deberes", buildJsonArray {
@@ -134,11 +147,24 @@ object Copia {
 
         fun lista(clave: String): List<JsonObject> = (datos[clave] as? JsonArray)?.mapNotNull { it as? JsonObject } ?: emptyList()
 
+        val grupos = lista("grupos").mapNotNull { g ->
+            val id = g.cadena("id") ?: return@mapNotNull null
+            val nombre = g.cadena("nombre") ?: return@mapNotNull null
+            GrupoLista(
+                id = id, nombre = nombre, icono = g.cadena("icono") ?: "📁", color = ReglasHorario.colorValido(g.cadena("color")),
+                orden = g.entero("orden", 0), plegado = g.logico("plegado"),
+                creada = desdeIso(g["creada"]) ?: 0L, actualizada = desdeIso(g["actualizada"]) ?: 0L,
+            )
+        }
+        val idsGrupo = grupos.map { it.id }.toSet() + dao.idsGrupos()
         val materias = lista("materias").mapNotNull { m ->
             val id = m.cadena("id") ?: return@mapNotNull null
             val nombre = m.cadena("nombre") ?: return@mapNotNull null
             Materia(
                 id = id, nombre = nombre, orden = m.entero("orden", 0),
+                // Campos opcionales: las copias antiguas no los traen (lista suelta y aspecto automático).
+                grupoId = m.cadena("grupo")?.takeIf { it in idsGrupo }, color = ReglasHorario.colorValido(m.cadena("color")),
+                emoji = m.cadena("emoji")?.takeIf { it.isNotBlank() },
                 creada = desdeIso(m["creada"]) ?: 0L, actualizada = desdeIso(m["actualizada"]) ?: 0L,
             )
         }
@@ -201,6 +227,8 @@ object Copia {
 
         // Room devuelve -1 por cada fila ignorada (ya existía, viva o eliminada)
         return ResumenImportacion(
+            // Las carpetas primero: así las listas importadas ya encuentran la suya.
+            grupos = dao.insertarGrupos(grupos).count { it != -1L },
             materias = dao.insertarMaterias(materias).count { it != -1L },
             deberes = dao.insertarDeberes(deberes).count { it != -1L },
             cuadernos = dao.insertarCuadernos(cuadernos).count { it != -1L },
