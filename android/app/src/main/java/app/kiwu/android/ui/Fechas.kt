@@ -34,6 +34,9 @@ object Fechas {
 
     fun completa(ms: Long, zona: ZoneId = ZoneId.systemDefault()): String = completa.format(local(ms, zona))
 
+    /** Solo el día: «mié 21 oct 2026». */
+    fun dia(ms: Long, zona: ZoneId = ZoneId.systemDefault()): String = diaMesAnio.format(local(ms, zona))
+
     fun mes(mes: LocalDate): String = mesAnio.format(mes).replaceFirstChar { it.uppercase(es) }
 
     fun hora(ms: Long, zona: ZoneId = ZoneId.systemDefault()): String = hora.format(local(ms, zona))

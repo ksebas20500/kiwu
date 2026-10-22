@@ -143,6 +143,23 @@ fun SelectorFechaHora(inicial: Long?, alCerrar: () -> Unit, alElegir: (Long) -> 
     }
 }
 
+/** Elige solo el día (calendario), sin pedir la hora. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SelectorDia(inicial: LocalDate, alCerrar: () -> Unit, alElegir: (LocalDate) -> Unit) {
+    val estado = rememberDatePickerState(initialSelectedDateMillis = inicial.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
+    DatePickerDialog(
+        onDismissRequest = alCerrar,
+        confirmButton = {
+            TextButton(onClick = {
+                estado.selectedDateMillis?.let { alElegir(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()) }
+                alCerrar()
+            }) { Text("Aceptar") }
+        },
+        dismissButton = { TextButton(onClick = alCerrar) { Text("Cancelar") } },
+    ) { DatePicker(state = estado) }
+}
+
 /**
  * Elige una hora con dos ruedas que se desplazan (como la alarma del reloj). La hora llega en 0..24 (24:00 = medianoche
  * al final del día) y se muestra como 00:00; las ruedas solo conocen 00–23.
