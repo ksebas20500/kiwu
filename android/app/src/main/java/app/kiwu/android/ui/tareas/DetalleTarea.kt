@@ -14,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.AssistChip
@@ -111,7 +112,7 @@ class DetalleTareaViewModel(private val repo: Repositorio, private val alcanceAp
 
 private val AvisosDisponibles = listOf(0 to "Sin aviso", 1 to "1 hora antes", 2 to "2 horas antes", 6 to "6 horas antes", 12 to "12 horas antes", 24 to "1 día antes", 48 to "2 días antes", 168 to "1 semana antes")
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVolver: () -> Unit) {
     val d by vm.deber.collectAsStateWithLifecycle()
@@ -120,6 +121,8 @@ fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVo
     var menuLista by remember { mutableStateOf(false) }
     var menuAviso by remember { mutableStateOf(false) }
     var menuFecha by remember { mutableStateOf(false) }
+    var menuHora by remember { mutableStateOf(false) }
+    var seleccionarHora by remember { mutableStateOf(false) }
     val zona = ZoneId.systemDefault()
 
     val actual = d
@@ -177,29 +180,50 @@ fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVo
                 ),
             )
 
-            Row(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Día, hora y aviso en chips separados (se pasan a la línea siguiente si no caben).
+            androidx.compose.foundation.layout.FlowRow(
+                Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                fun conDia(dia: LocalDate) {
+                    val base = actual.fechaEntrega?.let { java.time.Instant.ofEpochMilli(it).atZone(zona).toLocalTime() } ?: java.time.LocalTime.of(18, 0)
+                    vm.ponerFecha(dia.atTime(base).atZone(zona).toInstant().toEpochMilli())
+                }
+                fun conHora(h: Int, m: Int) {
+                    val dia = actual.fechaEntrega?.let { java.time.Instant.ofEpochMilli(it).atZone(zona).toLocalDate() } ?: LocalDate.now(zona)
+                    vm.ponerFecha(dia.atTime(h, m).atZone(zona).toInstant().toEpochMilli())
+                }
                 Box {
                     AssistChip(
                         onClick = { menuFecha = true },
-                        label = { Text(actual.fechaEntrega?.let { Fechas.completa(it, zona) } ?: "Fecha de entrega") },
+                        label = { Text(actual.fechaEntrega?.let { Fechas.dia(it, zona) } ?: "Fecha de entrega") },
                         leadingIcon = { Icon(Icons.Filled.CalendarMonth, null) },
                     )
                     DropdownMenu(expanded = menuFecha, onDismissRequest = { menuFecha = false }) {
-                        fun atajo(dias: Long) {
-                            val base = actual.fechaEntrega?.let { java.time.Instant.ofEpochMilli(it).atZone(zona).toLocalTime() } ?: java.time.LocalTime.of(18, 0)
-                            vm.ponerFecha(LocalDate.now(zona).plusDays(dias).atTime(base).atZone(zona).toInstant().toEpochMilli())
-                            menuFecha = false
-                        }
-                        DropdownMenuItem(text = { Text("Hoy") }, onClick = { atajo(0) })
-                        DropdownMenuItem(text = { Text("Mañana") }, onClick = { atajo(1) })
-                        DropdownMenuItem(text = { Text("En una semana") }, onClick = { atajo(7) })
-                        DropdownMenuItem(text = { Text("Elegir día y hora…") }, onClick = { menuFecha = false; seleccionarFecha = true })
+                        DropdownMenuItem(text = { Text("Hoy") }, onClick = { menuFecha = false; conDia(LocalDate.now(zona)) })
+                        DropdownMenuItem(text = { Text("Mañana") }, onClick = { menuFecha = false; conDia(LocalDate.now(zona).plusDays(1)) })
+                        DropdownMenuItem(text = { Text("En una semana") }, onClick = { menuFecha = false; conDia(LocalDate.now(zona).plusDays(7)) })
+                        DropdownMenuItem(text = { Text("Elegir día…") }, onClick = { menuFecha = false; seleccionarFecha = true })
                         if (actual.fechaEntrega != null) {
                             DropdownMenuItem(text = { Text("Quitar fecha") }, onClick = { menuFecha = false; vm.ponerFecha(null) })
                         }
                     }
                 }
                 if (actual.fechaEntrega != null) {
+                    val horaActual = java.time.Instant.ofEpochMilli(actual.fechaEntrega!!).atZone(zona).toLocalTime()
+                    // Las 00:00 significan «todo el día» (la lista de tareas tampoco muestra hora en ese caso).
+                    val todoElDia = horaActual.hour == 0 && horaActual.minute == 0
+                    Box {
+                        AssistChip(
+                            onClick = { menuHora = true },
+                            label = { Text(if (todoElDia) "Todo el día" else Fechas.hora(actual.fechaEntrega!!, zona)) },
+                            leadingIcon = { Icon(Icons.Filled.Schedule, null) },
+                        )
+                        DropdownMenu(expanded = menuHora, onDismissRequest = { menuHora = false }) {
+                            DropdownMenuItem(text = { Text("Elegir hora…") }, onClick = { menuHora = false; seleccionarHora = true })
+                            DropdownMenuItem(text = { Text("Todo el día (sin hora)") }, onClick = { menuHora = false; conHora(0, 0) })
+                        }
+                    }
                     Box {
                         AssistChip(
                             onClick = { menuAviso = true },
@@ -243,6 +267,17 @@ fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVo
     }
 
     if (seleccionarFecha) {
-        SelectorFechaHora(actual.fechaEntrega, alCerrar = { seleccionarFecha = false }) { vm.ponerFecha(it) }
+        val inicial = actual.fechaEntrega?.let { java.time.Instant.ofEpochMilli(it).atZone(zona).toLocalDate() } ?: LocalDate.now(zona)
+        app.kiwu.android.ui.SelectorDia(inicial, alCerrar = { seleccionarFecha = false }) { dia ->
+            val base = actual.fechaEntrega?.let { java.time.Instant.ofEpochMilli(it).atZone(zona).toLocalTime() } ?: java.time.LocalTime.of(18, 0)
+            vm.ponerFecha(dia.atTime(base).atZone(zona).toInstant().toEpochMilli())
+        }
+    }
+    if (seleccionarHora) {
+        val h = actual.fechaEntrega?.let { java.time.Instant.ofEpochMilli(it).atZone(zona).toLocalTime() } ?: java.time.LocalTime.of(18, 0)
+        app.kiwu.android.ui.SelectorHora(h.hour, h.minute, alCerrar = { seleccionarHora = false }) { hh, mm ->
+            val dia = actual.fechaEntrega?.let { java.time.Instant.ofEpochMilli(it).atZone(zona).toLocalDate() } ?: LocalDate.now(zona)
+            vm.ponerFecha(dia.atTime(hh, mm).atZone(zona).toInstant().toEpochMilli())
+        }
     }
 }

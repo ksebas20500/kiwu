@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -214,7 +215,7 @@ private fun BloqueTextoUi(ed: EstadoEditor, b: BloqueEd, numero: Int?) {
                     val pista = when {
                         b.kind == TiposBloque.TITULO -> "Título 1"
                         b.kind == TiposBloque.SUBTITULO -> "Título 2"
-                        b.kind == TiposBloque.PARRAFO && enfocado -> "Escribe «/» para insertar un bloque"
+                        b.kind == TiposBloque.PARRAFO && (enfocado || ed.bloques.lastOrNull()?.id == b.id) -> "Escribe aquí o usa / para insertar bloques"
                         b.kind == TiposBloque.CITA -> "Cita"
                         b.kind == TiposBloque.DESTACADO -> "Destacado"
                         else -> ""
@@ -293,10 +294,14 @@ private fun atajos(ed: EstadoEditor, b: BloqueEd, evento: androidx.compose.ui.in
     return false
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun MenuSlash(ed: EstadoEditor, b: BloqueEd, opciones: List<String>) {
+    // Al aparecer (o al filtrar) se desplaza hasta verse entero: así no queda tapado por el teclado.
+    val visible = androidx.compose.foundation.relocation.BringIntoViewRequester()
+    LaunchedEffect(opciones.size) { androidx.compose.runtime.withFrameNanos { }; runCatching { visible.bringIntoView() } }
     Surface(
-        Modifier.fillMaxWidth().padding(vertical = 4.dp), shape = RoundedCornerShape(12.dp),
+        Modifier.fillMaxWidth().padding(vertical = 4.dp).bringIntoViewRequester(visible), shape = RoundedCornerShape(12.dp),
         tonalElevation = 3.dp, shadowElevation = 4.dp,
     ) {
         Column(Modifier.padding(vertical = 4.dp)) {

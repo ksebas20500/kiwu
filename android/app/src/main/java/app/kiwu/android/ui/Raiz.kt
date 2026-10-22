@@ -82,20 +82,29 @@ fun Raiz(app: KiwuApp, abrirTarea: String? = null, inicial: AjustesUi = AjustesU
                         key = "tarea-$id",
                         factory = viewModelFactory { initializer { DetalleTareaViewModel(app.repo, app.alcance, id) } },
                     )
-                    DetalleTareaScreen(vm, adjuntos, alVolver = { nav.popBackStack() })
+                    DetalleTareaScreen(vm, adjuntos, alVolver = { nav.volver() })
                 }
-                composable("ajustes") { AjustesScreen(app, alVolver = { nav.popBackStack() }) }
+                composable("ajustes") { AjustesScreen(app, alVolver = { nav.volver() }) }
                 composable("pagina/{id}") { entrada ->
                     val id = entrada.arguments?.getString("id") ?: return@composable
                     val vm: PaginaViewModel = viewModel(
                         key = "pagina-$id",
                         factory = viewModelFactory { initializer { PaginaViewModel(app.repo, app.alcance, id) } },
                     )
-                    PaginaScreen(vm, adjuntos, alVolver = { nav.popBackStack() })
+                    PaginaScreen(vm, adjuntos, alVolver = { nav.volver() })
                 }
             }
         }
     }
+}
+
+/**
+ * Vuelve a la pantalla anterior **una sola vez**. Mientras una pantalla se cierra (animación de salida) sigue a la vista, y un
+ * segundo toque sobre su flecha (que está justo donde luego está el botón del menú) la volvería a cerrar: se quedaba la
+ * navegación sin ninguna pantalla y solo se veía el fondo. Solo se vuelve si la pantalla está activa del todo.
+ */
+private fun androidx.navigation.NavController.volver() {
+    if (currentBackStackEntry?.lifecycle?.currentState == androidx.lifecycle.Lifecycle.State.RESUMED && previousBackStackEntry != null) popBackStack()
 }
 
 @Composable

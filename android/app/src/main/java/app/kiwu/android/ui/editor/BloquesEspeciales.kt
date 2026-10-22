@@ -184,7 +184,8 @@ internal fun BloqueCodigoUi(ed: EstadoEditor, b: BloqueEd) {
                 }
                 MenuBloque(ed, b)
             }
-            Box(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
+            // Las líneas largas saltan a la siguiente (sin barra deslizante horizontal).
+            Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                 BasicTextField(
                     value = b.contenido.campo,
                     onValueChange = { ed.alEscribir(b, it) },
@@ -192,7 +193,7 @@ internal fun BloqueCodigoUi(ed: EstadoEditor, b: BloqueEd) {
                     cursorBrush = SolidColor(colorDe(null, oscuro)),
                     visualTransformation = transformacion,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false, imeAction = ImeAction.Default),
-                    modifier = Modifier.focusRequester(foco).onFocusChanged {
+                    modifier = Modifier.fillMaxWidth().focusRequester(foco).onFocusChanged {
                         if (it.isFocused) ed.enfocado = b.id else if (ed.enfocado == b.id) ed.enfocado = null
                     },
                 )
