@@ -35,4 +35,34 @@ class MigracionTest {
             assertEquals(1, it.getInt(0))
         }
     }
+
+    /** La versión 2 (con horarios) pasa a la 3 sin tocar ningún dato: las clases ganan un color vacío (= automático). */
+    @Test
+    fun deLaVersion2ALa3ConservaLasClasesYAnadeElColorVacio() {
+        ayudante.createDatabase("migracion2", 2).apply {
+            execSQL("INSERT INTO materia (id, nombre, icono, orden, carpeta, creada, actualizada, eliminada) VALUES ('M1', 'Uni', 'book', 0, NULL, 1, 1, NULL)")
+            execSQL("INSERT INTO horario (id, nombre, icono, orden, creada, actualizada, eliminada) VALUES ('H1', 'Uni', '🎓', 0, 1, 1, NULL)")
+            execSQL("INSERT INTO clase (id, horario_id, materia_id, grupo, titulo, dia_semana, inicio_min, fin_min, aula, notas, aviso_min, creada, actualizada, eliminada) VALUES ('C1', 'H1', 'M1', 'G', 'Cálculo', 1, 480, 600, 'A-1', 'nota', 10, 1, 1, NULL)")
+            close()
+        }
+        val db = ayudante.runMigrationsAndValidate("migracion2", 3, true, KiwuDb.MIGRACION_2_3)
+        db.query("SELECT titulo, materia_id, aula, notas, aviso_min, color FROM clase").use {
+            assertEquals(1, it.count)
+            it.moveToFirst()
+            assertEquals("Cálculo", it.getString(0))
+            assertEquals("M1", it.getString(1))
+            assertEquals("A-1", it.getString(2))
+            assertEquals("nota", it.getString(3))
+            assertEquals(10, it.getInt(4))
+            assertEquals(true, it.isNull(5))
+        }
+        db.execSQL("UPDATE clase SET color = '#E53935' WHERE id = 'C1'")
+    }
+
+    /** Desde la versión 1 se llega a la 3 pasando por las dos migraciones. */
+    @Test
+    fun deLaVersion1ALa3EnUnSoloPaso() {
+        ayudante.createDatabase("migracion13", 1).apply { close() }
+        ayudante.runMigrationsAndValidate("migracion13", 3, true, KiwuDb.MIGRACION_1_2, KiwuDb.MIGRACION_2_3)
+    }
 }

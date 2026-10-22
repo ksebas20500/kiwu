@@ -202,6 +202,7 @@ class Repositorio(
         aula: String,
         notas: String,
         avisoMin: Int?,
+        color: String? = null,
     ): String {
         require(dias.isNotEmpty() && dias.all { it in 1..7 }) { "Elige al menos un día de la semana" }
         require(ReglasHorario.valida(inicioMin, finMin)) { "La hora de fin debe ser posterior a la de inicio" }
@@ -212,13 +213,19 @@ class Repositorio(
             val previa = actuales[dia]
             (previa ?: Clase(horarioId = horarioId, grupo = g, titulo = titulo, diaSemana = dia, inicioMin = inicioMin, finMin = finMin, creada = t, actualizada = t)).copy(
                 horarioId = horarioId, materiaId = materiaId, titulo = titulo.trim(), inicioMin = inicioMin, finMin = finMin,
-                aula = aula.trim(), notas = notas.trim(), avisoMin = avisoMin, actualizada = t,
+                aula = aula.trim(), notas = notas.trim(), avisoMin = avisoMin, color = ReglasHorario.colorValido(color), actualizada = t,
             )
         }
         dao.guardarClases(filas)
         val quitadas = actuales.filterKeys { it !in dias }.values.map { it.id }
         if (quitadas.isNotEmpty()) dao.eliminarClases(quitadas, t)
         return g
+    }
+
+    /** Vincula (o desvincula, con null) a una lista de tareas todas las filas de una clase. */
+    suspend fun vincularGrupo(grupo: String, materiaId: String?) {
+        val t = reloj()
+        dao.guardarClases(dao.clasesDeGrupo(grupo).map { it.copy(materiaId = materiaId, actualizada = t) })
     }
 
     suspend fun eliminarGrupo(grupo: String) = dao.eliminarGrupo(grupo, reloj())

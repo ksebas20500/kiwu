@@ -296,7 +296,7 @@ private fun Muestra(color: Color?, descripcion: String, elegida: Boolean, icono:
 }
 
 @Composable
-private fun DialogoColor(inicial: Color, alCerrar: () -> Unit, alElegir: (Color) -> Unit) {
+internal fun DialogoColor(inicial: Color, alCerrar: () -> Unit, alElegir: (Color) -> Unit) {
     val (t0, s0) = remember(inicial) { tonoYSaturacion(inicial) }
     var tono by remember { mutableStateOf(t0) }
     var saturacion by remember { mutableStateOf(s0.coerceIn(0.3f, 1f)) }

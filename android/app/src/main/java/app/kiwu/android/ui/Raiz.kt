@@ -169,7 +169,11 @@ private fun Principal(app: KiwuApp, alAbrirTarea: (String) -> Unit, alAbrirPagin
             ) { destino ->
                 when (destino) {
                     "notas" -> NotasScreen(notasVm, alAbrirPagina, abrirMenu)
-                    "horario" -> HorarioScreen(horarioVm, abrirMenu)
+                    "horario" -> HorarioScreen(
+                        horarioVm, abrirMenu, alAbrirTarea,
+                        // «Abrir la lista completa»: cambia a la pestaña Tareas, ya en esa lista.
+                        alAbrirLista = { id -> tareasVm.ir(Elemento.DeMateria(id)); modulo = "tareas" },
+                    )
                     else -> TareasScreen(tareasVm, alAbrirTarea, abrirMenu, archivos = { m -> ArchivosScreen(m) { carpeta -> tareasVm.vincularCarpeta(m.id, carpeta) } })
                 }
             }
