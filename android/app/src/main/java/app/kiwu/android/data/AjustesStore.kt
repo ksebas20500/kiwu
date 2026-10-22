@@ -25,6 +25,8 @@ data class AjustesUi(
     val fondoVisibilidad: Float = 0.5f,
     /** 0..1: velo que cubre la imagen para que el contenido se lea. */
     val opacidadPaneles: Float = 0.45f,
+    /** Segundo aviso: minutos antes de la entrega (0 = sin segundo aviso). Vale para todas las tareas con fecha. */
+    val segundoAvisoMin: Int = 0,
 )
 
 class AjustesStore(private val contexto: Context) {
@@ -35,6 +37,7 @@ class AjustesStore(private val contexto: Context) {
         val fondo = stringPreferencesKey("fondo_uri")
         val visibilidad = floatPreferencesKey("fondo_visibilidad")
         val opacidad = floatPreferencesKey("opacidad_paneles")
+        val segundoAviso = androidx.datastore.preferences.core.intPreferencesKey("segundo_aviso_min")
     }
 
     private fun leer(p: Preferences) = AjustesUi(
@@ -44,6 +47,7 @@ class AjustesStore(private val contexto: Context) {
         fondoUri = p[Claves.fondo],
         fondoVisibilidad = (p[Claves.visibilidad] ?: 0.5f).coerceIn(0f, 1f),
         opacidadPaneles = (p[Claves.opacidad] ?: 0.45f).coerceIn(0f, 1f),
+        segundoAvisoMin = (p[Claves.segundoAviso] ?: 0).coerceAtLeast(0),
     )
 
     val flujo: Flow<AjustesUi> = contexto.almacen.data.map(::leer)
@@ -57,6 +61,7 @@ class AjustesStore(private val contexto: Context) {
             if (nuevo.fondoUri == null) p.remove(Claves.fondo) else p[Claves.fondo] = nuevo.fondoUri
             p[Claves.visibilidad] = nuevo.fondoVisibilidad
             p[Claves.opacidad] = nuevo.opacidadPaneles
+            p[Claves.segundoAviso] = nuevo.segundoAvisoMin
         }
     }
 }
