@@ -58,17 +58,19 @@ fun EncuadreFondo(alAceptar: (Bitmap) -> Unit, alCancelar: () -> Unit) {
 
     val imagen = foto
     // Escala mínima: la que cubre justo toda la pantalla (sin bandas).
-    val minima = if (imagen == null || visor.width == 0) 1f else max(visor.width.toFloat() / imagen.width, visor.height.toFloat() / imagen.height)
+    val minima = if (imagen == null || visor.width == 0) 1f else max(visor.width.toFloat() / imagen.width, visor.height.toFloat() / imagen.height).takeIf { it.isFinite() && it > 0f } ?: 1f
 
+    // El límite inferior nunca puede pasar de 0: con el redondeo de decimales, `visor - foto * escala` puede salir un pelo
+    // positivo y un rango vacío haría fallar la app.
     fun limitar(e: Float, o: Offset): Offset {
         val im = imagen ?: return o
-        val x = o.x.coerceIn(visor.width - im.width * e, 0f)
-        val y = o.y.coerceIn(visor.height - im.height * e, 0f)
+        val x = o.x.coerceIn(minOf(0f, visor.width - im.width * e), 0f)
+        val y = o.y.coerceIn(minOf(0f, visor.height - im.height * e), 0f)
         return Offset(x, y)
     }
-    // Al cargar, la foto empieza centrada y cubriendo la pantalla.
+    // Al cargar (y si cambia el tamaño de la ventana: girar la tablet, ventana flotante…) la foto empieza centrada y cubriendo.
     LaunchedEffect(imagen, visor) {
-        if (imagen != null && visor.width > 0 && !iniciado) {
+        if (imagen != null && visor.width > 0) {
             escala = minima
             desplazamiento = limitar(minima, Offset((visor.width - imagen.width * minima) / 2f, (visor.height - imagen.height * minima) / 2f))
             iniciado = true
@@ -81,7 +83,7 @@ fun EncuadreFondo(alAceptar: (Bitmap) -> Unit, alCancelar: () -> Unit) {
             androidx.compose.foundation.Canvas(
                 Modifier.fillMaxSize().pointerInput(imagen, visor) {
                     detectTransformGestures { centro, pan, zoom, _ ->
-                        val nueva = (escala * zoom).coerceIn(minima, minima * 6f)
+                        val nueva = (escala * zoom).takeIf { it.isFinite() }?.coerceIn(minima, minima * 6f) ?: escala
                         // El punto bajo los dedos se queda donde está al ampliar.
                         val o = Offset(
                             centro.x - (centro.x - desplazamiento.x) * (nueva / escala) + pan.x,
@@ -113,12 +115,19 @@ fun EncuadreFondo(alAceptar: (Bitmap) -> Unit, alCancelar: () -> Unit) {
                 enabled = imagen != null && iniciado,
                 onClick = {
                     val im = imagen ?: return@Button
-                    // Se dibuja la parte visible en una imagen del tamaño de la pantalla.
-                    val k = pantalla.widthPixels.toFloat() / visor.width
-                    val salida = Bitmap.createBitmap(pantalla.widthPixels, pantalla.heightPixels, Bitmap.Config.ARGB_8888)
-                    val m = Matrix().apply { postScale(escala * k, escala * k); postTranslate(desplazamiento.x * k, desplazamiento.y * k) }
-                    Canvas(salida).drawBitmap(im, m, Paint(Paint.FILTER_BITMAP_FLAG))
-                    alAceptar(salida)
+                    // Se dibuja la parte visible en una imagen del tamaño de la pantalla (como mucho 4096 px de lado, que es
+                    // lo que cualquier tarjeta gráfica acepta). Si falla (poca memoria…) se vuelve atrás en vez de cerrar la app.
+                    val reduccion = minOf(1f, 4096f / max(pantalla.widthPixels, pantalla.heightPixels))
+                    val ancho = (pantalla.widthPixels * reduccion).toInt().coerceAtLeast(1)
+                    val alto = (pantalla.heightPixels * reduccion).toInt().coerceAtLeast(1)
+                    val salida = try {
+                        val k = ancho.toFloat() / visor.width
+                        Bitmap.createBitmap(ancho, alto, Bitmap.Config.ARGB_8888).also {
+                            val m = Matrix().apply { postScale(escala * k, escala * k); postTranslate(desplazamiento.x * k, desplazamiento.y * k) }
+                            Canvas(it).drawBitmap(im, m, Paint(Paint.FILTER_BITMAP_FLAG))
+                        }
+                    } catch (e: Exception) { null } catch (e: OutOfMemoryError) { null }
+                    if (salida != null) alAceptar(salida) else alCancelar()
                 },
             ) { Text("Listo") }
         }

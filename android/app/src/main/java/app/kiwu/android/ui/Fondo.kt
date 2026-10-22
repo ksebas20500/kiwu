@@ -129,11 +129,14 @@ fun FondoKiwu(ajustes: AjustesUi, contenido: @Composable () -> Unit) {
     val contexto = LocalContext.current
     val color = MaterialTheme.colorScheme.background
     val pantalla = contexto.resources.displayMetrics
-    val clave = ajustes.fondoUri?.let { "$it|${pantalla.widthPixels}x${pantalla.heightPixels}" }
+    val reduccion = minOf(1f, 4096f / max(pantalla.widthPixels, pantalla.heightPixels))
+    val anchoFondo = (pantalla.widthPixels * reduccion).toInt().coerceAtLeast(1)
+    val altoFondo = (pantalla.heightPixels * reduccion).toInt().coerceAtLeast(1)
+    val clave = ajustes.fondoUri?.let { "$it|${anchoFondo}x$altoFondo" }
     var imagen by remember(clave) { mutableStateOf(clave?.let(CacheFondo::obtener)) }
     LaunchedEffect(clave) {
         if (clave == null || imagen != null) return@LaunchedEffect
-        val cargada = withContext(Dispatchers.IO) { cargarFondo(contexto, Uri.parse(ajustes.fondoUri), pantalla.widthPixels, pantalla.heightPixels) }
+        val cargada = withContext(Dispatchers.IO) { cargarFondo(contexto, Uri.parse(ajustes.fondoUri), anchoFondo, altoFondo) }
         if (cargada != null) { CacheFondo.poner(clave, cargada); imagen = cargada }
     }
     val aparicion by animateFloatAsState(if (imagen != null) 1f else 0f, tween(350), label = "fondo")
