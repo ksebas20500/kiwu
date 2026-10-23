@@ -2,18 +2,19 @@
 
 App nativa de Android (Kotlin, Jetpack Compose, Room). Mismas funciones que la de escritorio, sin widgets. Para ver qué hace Kiwu, consulta el [README principal](../README.md); la ruta de desarrollo está en [docs/android-plan.md](../docs/android-plan.md).
 
-Versión actual: **0.2.1** (en desarrollo) · Android 8.0 (API 26) o superior.
+Versión actual: **0.3.2** (en desarrollo) · Android 8.0 (API 26) o superior.
 
 ## Qué incluye
 
 | Módulo | Qué ofrece |
 | --- | --- |
-| **Tareas** | Listas por materia, fecha y hora, vistas Hoy / Próximos 7 días / Todas / Completadas, en **lista o tablero** (Por hacer · En curso · Hecho) |
+| **Tareas** | Listas por materia agrupables en **carpetas** (se crean dentro, se arrastran con pulsación larga y llevan emoji opcional), fecha con **hora opcional**, vistas Hoy / Próximos 7 días / Todas / Completadas, en **lista o tablero** (Por hacer · En curso · Hecho) |
+| **Eventos** | Lista fija «Eventos» para cosas que pasan y no se completan (cumpleaños, charlas): salen en el calendario, Hoy y Próximos, sin círculo y sin contar como pendientes |
 | **Calendario** | Mes completo con las entregas en colores pastel y creación rápida en el día elegido |
 | **Notas** | Cuadernos, páginas con emoji, favoritas, búsqueda y editor por bloques con menú `/`, formato en línea, código con colores, enlaces con vista previa (web, YouTube, Vimeo), imágenes y archivos adjuntos |
 | **Archivos** | Carpeta del dispositivo vinculada a cada lista, con explorador integrado |
 | **Recordatorios** | Notificaciones con las acciones *Completar* y *Posponer 1 h*; se reprograman al reiniciar el teléfono |
-| **Ajustes** | Tema claro/oscuro/sistema, fondo de imagen con velo, copia de seguridad `.kiwu.json` (el mismo formato que Linux) |
+| **Ajustes** | Ordenados por secciones (Apariencia, Menú de Tareas, Avisos, Copia de seguridad, Acerca de): tema claro/oscuro/sistema, color, fondo de imagen con velo, aspecto y orden del menú, segundo aviso y copia de seguridad `.kiwu.json` (el mismo formato que Linux) |
 
 No incluye widgets ni atajos de teclado editables (no aplican en el móvil).
 
