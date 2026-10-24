@@ -6,6 +6,7 @@ import app.kiwu.android.domain.Cuaderno
 import app.kiwu.android.domain.Deber
 import app.kiwu.android.domain.Documento
 import app.kiwu.android.domain.GrupoLista
+import app.kiwu.android.domain.Guia
 import app.kiwu.android.domain.Horario
 import app.kiwu.android.domain.nuevoId
 import app.kiwu.android.domain.Materia
@@ -35,7 +36,23 @@ class Repositorio(
     val clases: Flow<List<Clase>> = dao.clases()
     val grupos: Flow<List<GrupoLista>> = dao.grupos()
 
+    /** Cuándo se completó cada tarea (también las borradas; sin eventos): de aquí sale la racha. */
+    val fechasCompletado: Flow<List<Long>> = dao.fechasCompletado()
+
     fun ahora(): Long = reloj()
+
+    suspend fun fechasCompletadoAhora(): List<Long> = dao.fechasCompletadoAhora()
+
+    suspend fun hayDatos(): Boolean = dao.hayDatos()
+
+    /** Crea la lista de ejemplo de la guía de inicio con sus tareas. Si ya existe (aunque se borrara), no hace nada. */
+    suspend fun crearListaDeEjemplo(): Boolean {
+        val t = reloj()
+        val m = Materia(id = Guia.ID_LISTA, nombre = Guia.NOMBRE_LISTA, emoji = Guia.EMOJI_LISTA, orden = dao.siguienteOrdenMateria(), creada = t, actualizada = t)
+        if (dao.insertarMaterias(listOf(m)).first() == -1L) return false // ya existía (borrada): no se resucita
+        dao.insertarDeberes(Guia.tareas.mapIndexed { i, titulo -> Deber(materiaId = m.id, titulo = titulo, creada = t + i, actualizada = t + i) })
+        return true
+    }
 
     // --- listas (materias) ----------------------------------------------------------------------
 
@@ -221,6 +238,17 @@ class Repositorio(
         val p = Pagina(cuadernoId = cuadernoId, creada = t, actualizada = t)
         dao.guardarPagina(p)
         return p
+    }
+
+    /**
+     * Crea una nota desde el widget: en el cuaderno indicado si existe, si no en el primero y, si todavía no hay
+     * ninguno, en uno nuevo llamado «Notas rápidas» (el mismo que usa la pantalla de Notas).
+     */
+    suspend fun crearPaginaRapida(cuadernoId: String?): Pagina {
+        val cuaderno = cuadernoId?.takeIf { it.isNotBlank() }?.let { dao.cuaderno(it) }
+            ?: dao.cuadernos().first().firstOrNull()
+            ?: crearCuaderno("Notas rápidas", "📝")
+        return crearPagina(cuaderno.id)
     }
 
     suspend fun pagina(id: String): Pagina? = dao.pagina(id)

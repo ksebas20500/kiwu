@@ -47,12 +47,17 @@ object ResumenAjustes {
         listOfNotNull(tema(a.tema), "color " + acento(a.acento), if (a.fondoUri != null) "con fondo" else null).joinToString(" · ")
 
     fun menu(a: AjustesUi): String =
-        listOfNotNull(aspecto(a.menuAspecto), orden(a.menuOrden), if (!a.menuContadores) "sin contadores" else null).joinToString(" · ")
+        listOfNotNull(
+            aspecto(a.menuAspecto), orden(a.menuOrden), if (!a.menuContadores) "sin contadores" else null, if (!a.rachaVisible) "sin racha" else null,
+        ).joinToString(" · ")
 
     fun avisos(a: AjustesUi, notificacionesActivas: Boolean): String = when {
         !notificacionesActivas -> "Notificaciones desactivadas"
-        a.segundoAvisoMin > 0 -> "Activados · segundo aviso ${minutos(a.segundoAvisoMin)} antes"
-        else -> "Activados"
+        else -> listOfNotNull(
+            "Activados",
+            if (a.segundoAvisoMin > 0) "segundo aviso ${minutos(a.segundoAvisoMin)} antes" else null,
+            if (!a.rachaAviso) "sin aviso de racha" else null,
+        ).joinToString(" · ")
     }
 
     fun copia(): String = "Exportar e importar (.kiwu.json)"

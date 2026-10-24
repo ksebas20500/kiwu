@@ -128,6 +128,20 @@ abstract class KiwuDao {
     @Query("UPDATE deber SET recordado = :cuando WHERE id = :id AND eliminada IS NULL")
     abstract suspend fun marcarAvisado(id: String, cuando: Long)
 
+    /**
+     * Cuándo se completó cada tarea, para la racha. A propósito **incluye las eliminadas** (borrar una tarea hecha no rompe
+     * la racha) y deja fuera los eventos, que no se completan.
+     */
+    @Query("SELECT fecha_completado FROM deber WHERE completado = 1 AND fecha_completado IS NOT NULL AND materia_id != 'eventos'")
+    abstract fun fechasCompletado(): Flow<List<Long>>
+
+    @Query("SELECT fecha_completado FROM deber WHERE completado = 1 AND fecha_completado IS NOT NULL AND materia_id != 'eventos'")
+    abstract suspend fun fechasCompletadoAhora(): List<Long>
+
+    /** Si ya hay algo guardado (listas, cuadernos u horarios, aunque estén borrados): entonces no es una instalación nueva. */
+    @Query("SELECT EXISTS(SELECT 1 FROM materia) OR EXISTS(SELECT 1 FROM cuaderno) OR EXISTS(SELECT 1 FROM horario)")
+    abstract suspend fun hayDatos(): Boolean
+
     // --- cuadernos y páginas --------------------------------------------------------------------
 
     @Query("SELECT * FROM cuaderno WHERE eliminada IS NULL ORDER BY orden, nombre COLLATE NOCASE")

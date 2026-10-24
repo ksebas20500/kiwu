@@ -28,6 +28,35 @@
         <receiver android:name=".notify.AlarmaReceiver" android:exported="false" />
         <receiver android:name=".notify.AccionReceiver" android:exported="false" />
         <receiver android:name=".notify.ClaseReceiver" android:exported="false" />
+        <receiver android:name=".notify.RachaReceiver" android:exported="false" />
+        <receiver android:name=".widgets.DeberesWidgetReceiver" android:exported="false" android:label="@string/widget_deberes">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_deberes" />
+        </receiver>
+        <receiver android:name=".widgets.HorarioWidgetReceiver" android:exported="false" android:label="@string/widget_horario">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_horario" />
+        </receiver>
+        <receiver android:name=".widgets.NotasWidgetReceiver" android:exported="false" android:label="@string/widget_notas">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_notas" />
+        </receiver>
+        <receiver android:name=".widgets.WidgetAlarmaReceiver" android:exported="false" />
+        <activity
+            android:name=".widgets.ConfiguracionWidgetsActivity"
+            android:exported="true"
+            android:label="@string/widget_configuracion"
+            android:theme="@style/Theme.Kiwu">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
         <receiver android:name=".notify.ArranqueReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

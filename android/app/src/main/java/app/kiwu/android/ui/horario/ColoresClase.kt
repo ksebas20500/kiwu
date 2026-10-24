@@ -48,7 +48,8 @@ object ColoresClase {
 
     fun hex(c: Color): String = "#%06X".format(c.toArgb() and 0xFFFFFF)
 
-    private fun deHex(hex: String): Color = Color(android.graphics.Color.parseColor(hex))
+    /** `#RRGGBB` → color. Se hace sin `android.graphics` para poder usarlo también en las pruebas JVM (widgets). */
+    private fun deHex(hex: String): Color = Color(0xFF000000L or hex.removePrefix("#").toLong(16))
 
     /** Texto legible sobre ese fondo: casi negro del mismo tono si el fondo es claro, blanco si es oscuro. */
     fun contraste(fondo: Color): Color = if (fondo.luminance() > 0.45f) lerp(fondo, Color.Black, 0.72f) else Color.White

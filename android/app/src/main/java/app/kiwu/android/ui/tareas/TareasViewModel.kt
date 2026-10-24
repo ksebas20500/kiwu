@@ -12,6 +12,8 @@ import app.kiwu.android.domain.ID_EVENTOS
 import app.kiwu.android.domain.MenuListas
 import app.kiwu.android.domain.NodoMenu
 import app.kiwu.android.domain.Materia
+import app.kiwu.android.domain.Racha
+import app.kiwu.android.domain.Rachas
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -44,6 +46,8 @@ data class TareasEstado(
     /** Ajustes del menú: aspecto (plegable | compacto | color) y si se ven los contadores. */
     val aspecto: String = "plegable",
     val contadores: Boolean = true,
+    /** La racha de días seguidos completando tareas; null si se ocultó en Ajustes. */
+    val racha: Racha? = null,
 ) {
     /** Las listas con las que se trabaja ahora: las de la carpeta abierta, o todas. */
     val materiasDelContexto: List<Materia> get() = (elemento as? Elemento.DeGrupo)?.let { e -> materias.filter { it.grupoId == e.id } } ?: materias
@@ -67,8 +71,8 @@ class TareasViewModel(private val repo: Repositorio, private val ajustes: Ajuste
     private val datos = combine(repo.materias, repo.grupos, repo.deberes) { materias, grupos, deberes -> Triple(materias, grupos, deberes) }
 
     val estado: StateFlow<TareasEstado> = combine(
-        datos, seleccion, ajustes.flujo, reloj,
-    ) { (materias, grupos, deberes), (elemento, sub), aj, ahora ->
+        datos, seleccion, ajustes.flujo, reloj, repo.fechasCompletado,
+    ) { (materias, grupos, deberes), (elemento, sub), aj, ahora, fechasHechas ->
         // Si la lista o la carpeta elegida ya no existe, se vuelve a «Todas las tareas».
         val actual = when {
             elemento is Elemento.DeMateria && elemento.id != ID_EVENTOS && materias.none { it.id == elemento.id } -> Elemento.Todos
@@ -91,6 +95,7 @@ class TareasViewModel(private val repo: Repositorio, private val ajustes: Ajuste
             grupos = grupos,
             menu = MenuListas.construir(materias, grupos, materias.associate { it.id to (cuentas[Elemento.DeMateria(it.id)] ?: 0) }, aj.menuOrden),
             aspecto = aj.menuAspecto, contadores = aj.menuContadores,
+            racha = if (aj.rachaVisible) Rachas.calcular(fechasHechas, ahora) else null,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TareasEstado())
 

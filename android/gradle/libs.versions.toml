@@ -11,6 +11,7 @@ serialization = "1.7.3"
 datastore = "1.1.1"
 coroutines = "1.9.0"
 coreKtx = "1.15.0"
+glance = "1.2.0"
 junit = "4.13.2"
 robolectric = "4.14.1"
 androidxTest = "1.6.1"
@@ -39,6 +40,7 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 androidx-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "splash" }
 androidx-documentfile = { module = "androidx.documentfile:documentfile", version = "1.0.1" }
 datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "glance" }
 junit = { module = "junit:junit", version.ref = "junit" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTest" }

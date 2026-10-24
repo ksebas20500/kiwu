@@ -1,8 +1,8 @@
 # Kiwu para Android
 
-App nativa de Android (Kotlin, Jetpack Compose, Room). Mismas funciones que la de escritorio, sin widgets. Para ver qué hace Kiwu, consulta el [README principal](../README.md); la ruta de desarrollo está en [docs/android-plan.md](../docs/android-plan.md).
+App nativa de Android (Kotlin, Jetpack Compose, Room). Mismas funciones que la de escritorio, con widgets de pantalla de inicio. Para ver qué hace Kiwu, consulta el [README principal](../README.md); la ruta de desarrollo está en [docs/android-plan.md](../docs/android-plan.md).
 
-Versión actual: **0.3.2** (en desarrollo) · Android 8.0 (API 26) o superior.
+Versión actual: **0.4.1** (en desarrollo) · Android 8.0 (API 26) o superior.
 
 ## Qué incluye
 
@@ -13,10 +13,13 @@ Versión actual: **0.3.2** (en desarrollo) · Android 8.0 (API 26) o superior.
 | **Calendario** | Mes completo con las entregas en colores pastel y creación rápida en el día elegido |
 | **Notas** | Cuadernos, páginas con emoji, favoritas, búsqueda y editor por bloques con menú `/`, formato en línea, código con colores, enlaces con vista previa (web, YouTube, Vimeo), imágenes y archivos adjuntos |
 | **Archivos** | Carpeta del dispositivo vinculada a cada lista, con explorador integrado |
+| **Racha** | Días seguidos completando al menos una tarea, arriba del menú de Tareas, con la mejor racha y las últimas 8 semanas; aviso opcional a las 20:00 si hoy aún falta |
+| **Guía de inicio** | Al abrir la app por primera vez: unas pantallas de bienvenida y la lista de ejemplo «Empieza aquí»; se puede repetir desde Ajustes → Acerca de |
 | **Recordatorios** | Notificaciones con las acciones *Completar* y *Posponer 1 h*; se reprograman al reiniciar el teléfono |
 | **Ajustes** | Ordenados por secciones (Apariencia, Menú de Tareas, Avisos, Copia de seguridad, Acerca de): tema claro/oscuro/sistema, color, fondo de imagen con velo, aspecto y orden del menú, segundo aviso y copia de seguridad `.kiwu.json` (el mismo formato que Linux) |
+| **Widgets** | Tres widgets de pantalla de inicio: **Deberes** (pendientes por fecha, con casilla para completar sin abrir la app), **Horario** («Ahora / Siguiente» y clases de hoy con sus tareas urgentes) y **Nota rápida** (crea una nota y muestra las recientes). Se configuran al añadirlos: todas, una lista/carpeta, un horario o un cuaderno |
 
-No incluye widgets ni atajos de teclado editables (no aplican en el móvil).
+No incluye atajos de teclado editables (no aplican en el móvil).
 
 ## Compilar y ejecutar
 
@@ -41,12 +44,23 @@ android/app/src/main/java/app/kiwu/android/
   data/      Room (borrado lógico), repositorio, ajustes y copia de seguridad
   notify/    Alarmas, notificaciones y reprogramación
   ui/        Pantallas de Compose: tareas, calendario, notas, editor, archivos y ajustes
-android/app/src/test/   Pruebas: dominio, contrato compartido, editor y Room (Robolectric)
+  widgets/   Widgets de inicio (Glance): deberes, horario, nota rápida y su configuración
+android/app/src/test/   Pruebas: dominio, contrato compartido, editor, Room (Robolectric) y widgets
 ```
 
 ## Horarios
 
 Tercera pestaña de la barra inferior. Se pueden crear varios horarios (Universidad, Trabajo, Ocio…) con clases o actividades que se repiten cada semana, en varios días a la vez, con aula, notas y aviso opcional. En el teléfono se ve un día cada vez (o la semana entera con el botón de la barra); en pantallas anchas, la semana. Ver [docs/plan-horario.md](../docs/plan-horario.md).
+
+## Widgets
+
+Se añaden desde el lanzador (mantén pulsado el fondo → Widgets → Kiwu) y se configuran al ponerlos:
+
+- **Deberes:** tareas pendientes ordenadas por fecha (las vencidas primero), con su lista y una casilla que las completa sin abrir la app. Se puede mostrar todo, solo hoy, los próximos 7 días, una lista o una carpeta.
+- **Horario:** la clase de ahora o la siguiente (con día, hora, aula y color) y las clases de hoy con un punto de urgencia si esa materia tiene tareas. Todos los horarios o solo uno.
+- **Nota rápida:** botón «+ Nueva» para crear una nota en el cuaderno elegido y las notas más recientes. Todos los cuadernos o solo uno.
+
+Siguen el tema y el color de la app, se refrescan solos cuando cambian los datos y, además, cada 30 minutos y con una alarma al próximo cambio de clase o a medianoche. Ver [docs/plan-widgets-android.md](../docs/plan-widgets-android.md).
 
 ## Datos y compatibilidad
 

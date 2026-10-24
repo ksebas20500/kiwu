@@ -14,8 +14,8 @@ android {
         applicationId = "app.kiwu.android"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.3.2"
+        versionCode = 6
+        versionName = "0.4.1"
     }
 
     buildTypes {
@@ -81,6 +81,7 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.splashscreen)
+    implementation(libs.glance.appwidget)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
