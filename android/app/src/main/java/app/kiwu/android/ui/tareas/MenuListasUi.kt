@@ -152,7 +152,7 @@ private sealed interface Dialogo {
 
 /** Menú lateral de Tareas. Se dibuja sobre toda la pantalla (también sobre la barra inferior). */
 @Composable
-fun MenuTareas(vm: TareasViewModel, cerrarYLuego: (() -> Unit) -> Unit, alAjustes: () -> Unit) {
+fun MenuTareas(vm: TareasViewModel, cerrarYLuego: (() -> Unit) -> Unit, alAjustes: () -> Unit, alRacha: () -> Unit = {}) {
     val estado by vm.estado.collectAsStateWithLifecycle()
     var dialogo by remember { mutableStateOf<Dialogo?>(null) }
     var eliminarLista by remember { mutableStateOf<Materia?>(null) }
@@ -172,6 +172,7 @@ fun MenuTareas(vm: TareasViewModel, cerrarYLuego: (() -> Unit) -> Unit, alAjuste
         alEditarCarpeta = { dialogo = Dialogo.EditarCarpeta(it) },
         alEliminarCarpeta = { eliminarCarpeta = it }, alMoverOrdenCarpeta = { g, d -> vm.moverOrdenGrupo(g.id, d) },
         alAjustes = { cerrarYLuego(alAjustes) },
+        alRacha = { cerrarYLuego(alRacha) },
     )
 
     when (val d = dialogo) {
@@ -230,6 +231,7 @@ private fun PanelLateral(
     alEliminarCarpeta: (GrupoLista) -> Unit,
     alMoverOrdenCarpeta: (GrupoLista, Int) -> Unit,
     alAjustes: () -> Unit,
+    alRacha: () -> Unit,
 ) {
     val compacto = estado.aspecto == "compacto"
     // Los contadores los manda solo su interruptor en Ajustes; «Compacto» solo hace las filas más bajas.
@@ -259,6 +261,7 @@ private fun PanelLateral(
         Box(Modifier.fillMaxSize().onGloballyPositioned { raiz = it.positionInRoot() }) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = 20.dp, bottom = 16.dp)) {
                 item { CabeceraMenu("Kiwu", "Tareas y listas") }
+                estado.racha?.let { r -> item { FilaRacha(r, alRacha) } }
                 val fijos = listOf(
                     Triple(Elemento.Hoy, "Hoy", Icons.Filled.Today),
                     Triple(Elemento.Proximos, "Próximos 7 días", Icons.Filled.DateRange),

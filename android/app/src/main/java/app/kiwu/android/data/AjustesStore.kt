@@ -33,6 +33,14 @@ data class AjustesUi(
     val menuOrden: String = "manual",
     /** Si el menú muestra el número de tareas pendientes. */
     val menuContadores: Boolean = true,
+    /** Si el menú de Tareas muestra la racha. */
+    val rachaVisible: Boolean = true,
+    /** Aviso «No pierdas tu racha» a las 20:00 si hoy aún no se ha completado nada. */
+    val rachaAviso: Boolean = true,
+    /** Si ya se vio (o se saltó) la guía de inicio. */
+    val guiaVista: Boolean = false,
+    /** Último día (ISO) en que se celebró la racha: la celebración sale una vez al día. */
+    val rachaCelebrada: String? = null,
 )
 
 class AjustesStore(private val contexto: Context) {
@@ -47,6 +55,10 @@ class AjustesStore(private val contexto: Context) {
         val menuAspecto = stringPreferencesKey("menu_aspecto")
         val menuOrden = stringPreferencesKey("menu_orden")
         val menuContadores = androidx.datastore.preferences.core.booleanPreferencesKey("menu_contadores")
+        val rachaVisible = androidx.datastore.preferences.core.booleanPreferencesKey("racha_visible")
+        val rachaAviso = androidx.datastore.preferences.core.booleanPreferencesKey("racha_aviso")
+        val guiaVista = androidx.datastore.preferences.core.booleanPreferencesKey("guia_vista")
+        val rachaCelebrada = stringPreferencesKey("racha_celebrada")
     }
 
     private fun leer(p: Preferences) = AjustesUi(
@@ -60,6 +72,10 @@ class AjustesStore(private val contexto: Context) {
         menuAspecto = (p[Claves.menuAspecto] ?: "plegable").takeIf { it in setOf("plegable", "compacto", "color") } ?: "plegable",
         menuOrden = (p[Claves.menuOrden] ?: "manual").takeIf { it in setOf("manual", "alfabetico", "pendientes") } ?: "manual",
         menuContadores = p[Claves.menuContadores] ?: true,
+        rachaVisible = p[Claves.rachaVisible] ?: true,
+        rachaAviso = p[Claves.rachaAviso] ?: true,
+        guiaVista = p[Claves.guiaVista] ?: false,
+        rachaCelebrada = p[Claves.rachaCelebrada],
     )
 
     val flujo: Flow<AjustesUi> = contexto.almacen.data.map(::leer)
@@ -77,6 +93,10 @@ class AjustesStore(private val contexto: Context) {
             p[Claves.menuAspecto] = nuevo.menuAspecto
             p[Claves.menuOrden] = nuevo.menuOrden
             p[Claves.menuContadores] = nuevo.menuContadores
+            p[Claves.rachaVisible] = nuevo.rachaVisible
+            p[Claves.rachaAviso] = nuevo.rachaAviso
+            p[Claves.guiaVista] = nuevo.guiaVista
+            if (nuevo.rachaCelebrada == null) p.remove(Claves.rachaCelebrada) else p[Claves.rachaCelebrada] = nuevo.rachaCelebrada
         }
     }
 }

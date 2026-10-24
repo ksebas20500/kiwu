@@ -35,6 +35,16 @@ class ResumenAjustesTest {
     }
 
     @Test
+    fun laRachaSoloSeMencionaCuandoEstaApagada() {
+        assertEquals("Plegable · orden manual · sin racha", ResumenAjustes.menu(AjustesUi(rachaVisible = false)))
+        assertEquals("Activados · sin aviso de racha", ResumenAjustes.avisos(AjustesUi(rachaAviso = false), true))
+        assertEquals(
+            "Activados · segundo aviso 5 min antes · sin aviso de racha",
+            ResumenAjustes.avisos(AjustesUi(segundoAvisoMin = 5, rachaAviso = false), true),
+        )
+    }
+
+    @Test
     fun lasSeccionesSeRecuperanPorSuId() {
         for (s in SeccionAjustes.entries) assertEquals(s, SeccionAjustes.deId(s.id))
         assertNull(SeccionAjustes.deId(null))

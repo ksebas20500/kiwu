@@ -97,7 +97,7 @@ private fun Seccion(titulo: String, contenido: @Composable () -> Unit) {
 /** Ajustes: apariencia, fondo, avisos del sistema y copia de seguridad. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit) {
+fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit, alVerGuia: () -> Unit = {}) {
     val contexto = LocalContext.current
     val alcance = rememberCoroutineScope()
     val ajustes by app.ajustes.flujo.collectAsStateWithLifecycle(AjustesUi())
@@ -236,6 +236,10 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit) {
                                 Text("Mostrar el número de tareas", style = MaterialTheme.typography.bodyMedium)
                                 androidx.compose.material3.Switch(checked = ajustes.menuContadores, onCheckedChange = { v -> cambiar { it.copy(menuContadores = v) } })
                             }
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Mostrar la racha 🔥", style = MaterialTheme.typography.bodyMedium)
+                                androidx.compose.material3.Switch(checked = ajustes.rachaVisible, onCheckedChange = { v -> cambiar { it.copy(rachaVisible = v) } })
+                            }
                         }
                     }
                     SeccionAjustes.AVISOS -> {
@@ -251,6 +255,13 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit) {
                                         label = { Text(texto) },
                                     )
                                 }
+                            }
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("Aviso de la racha", style = MaterialTheme.typography.bodyMedium)
+                                    Text("A las 20:00, si hoy aún no has completado ninguna tarea", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                androidx.compose.material3.Switch(checked = ajustes.rachaAviso, onCheckedChange = { v -> cambiar { it.copy(rachaAviso = v) } })
                             }
                             Text(if (permiso) "Las notificaciones están activadas." else "Las notificaciones están desactivadas: no recibirás avisos.", style = MaterialTheme.typography.bodyMedium)
                             if (!permiso) {
@@ -300,6 +311,7 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit) {
                     SeccionAjustes.ACERCA -> {
                         Seccion("") {
                             Text("Versión ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyMedium)
+                            OutlinedButton(onClick = alVerGuia) { Text("Ver la guía de nuevo") }
                             OutlinedButton(onClick = {
                                 mensaje = "Buscando…"
                                 app.actualizaciones.comprobar(forzar = true) { e ->

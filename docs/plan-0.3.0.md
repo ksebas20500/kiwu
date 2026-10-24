@@ -1,4 +1,6 @@
-# Plan de Kiwu para Android 0.3.0 (carpetas) y 0.4.0 (widgets)
+# Plan de Kiwu para Android 0.3.0 (carpetas) y widgets
+
+> **Cambio (24 oct 2026):** los widgets salen en la **0.4.1**, junto con la racha y la guía de inicio ([plan-0.4.1.md](plan-0.4.1.md)); lo que se hizo al final está en [plan-widgets-android.md](plan-widgets-android.md). Donde abajo dice «0.4.0», léase 0.4.1.
 
 Estado: **decidido, en marcha con la 0.3.0** (octubre de 2026). Parte de la 0.2.1 y de lo ya hecho en `main` (hoja de tareas de la clase, puntos en el horario y color por clase).
 

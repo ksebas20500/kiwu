@@ -1,10 +1,10 @@
 # Kiwu para Android: ruta de planeamiento
 
-Estado: **versión 0.1.0 funcional, con las fases A–I cerradas salvo lo marcado como pendiente** · Carpeta: [`android/`](../android) (dentro del mismo repositorio, como `macos/` y `linux/`).
+Estado: **versión 0.4.1 funcional, con las fases A–J cerradas salvo lo marcado como pendiente** · Carpeta: [`android/`](../android) (dentro del mismo repositorio, como `macos/` y `linux/`).
 
 **Por qué en este repositorio y no en otra carpeta:** comparte con macOS y Linux las fixtures de [`docs/contrato/`](contrato/README.md) (la prueba de que los tres leen igual las notas), el CI y la documentación. Cada plataforma sigue siendo independiente: su propio código, pruebas y compilación.
 
-## 1. Alcance: paridad con escritorio, sin widgets
+## 1. Alcance: paridad con escritorio, con widgets
 
 | Módulo de escritorio | En Android |
 | --- | --- |
@@ -23,7 +23,7 @@ Estado: **versión 0.1.0 funcional, con las fases A–I cerradas salvo lo marcad
 | Ajustes: tema, fondo de imagen translúcido | Igual |
 | Ajustes: **atajos de teclado editables** | No aplica en móvil (se omite) |
 | Copia de seguridad `.kiwu.json` (importar / exportar) | Igual, mismo formato que Linux |
-| Widgets | **Fuera de alcance** (decisión del proyecto) |
+| Widgets | **Deberes**, **Horario** y **Nota rápida** en la pantalla de inicio (ver [plan-widgets-android.md](plan-widgets-android.md)); el *Calendario de deberes* queda para más adelante |
 
 Fuera de alcance de esta ruta: cuenta y sincronización (plan en [plan-desarrollo.md](plan-desarrollo.md) §4), pero el modelo de datos ya nace preparado (UUID, borrado lógico, marcas de tiempo).
 
@@ -38,6 +38,7 @@ Fuera de alcance de esta ruta: cuenta y sincronización (plan en [plan-desarroll
 | Recordatorios | `AlarmManager` exacto + `BroadcastReceiver`; se reprograman al arrancar el teléfono | Los avisos deben salir a la hora |
 | Ajustes | DataStore (Preferences) | |
 | Carpetas y adjuntos | Storage Access Framework con permisos persistentes | Sin permisos amplios de almacenamiento |
+| Widgets | Jetpack Glance 1.2, leyendo Room en el mismo proceso | El resto de la app ya es Compose; no hace falta instantánea JSON como en macOS |
 | Mínimo / destino | minSdk 26 (Android 8), compile/target 35 | Cubre >95 % de los teléfonos |
 | Idioma | Español (cadenas en `strings.xml`, listas para traducir a inglés) | Evita repetir el problema de las cadenas dentro del código |
 | Identificador | `app.kiwu.android` provisional | **Hay que fijarlo antes de publicar**: no se puede cambiar en Play (ver plan §5) |
@@ -53,6 +54,7 @@ android/
     data/      Room: entidades, DAO, base de datos, repositorio, copia .kiwu.json
     notify/    Recordatorios y notificaciones
     ui/        Compose: tareas, calendario, notas, editor, ajustes
+    widgets/   Widgets de inicio (Glance): deberes, horario, nota rápida y su configuración
   app/src/test/   Pruebas JVM (lógica, contrato, copia de seguridad)
   gradle/         Catálogo de versiones
 docs/contrato/    Fixtures compartidas con macOS y Linux
@@ -116,21 +118,30 @@ Cada fase termina con: compila, pruebas verdes y casillas marcadas aquí.
 - [x] APK de depuración (firmado con la clave de depuración; la firma de publicación queda para Play)
 - [ ] Lista previa a Play: identificador definitivo, política de privacidad, ficha (depende de las decisiones de marca; ver plan §5)
 
+### Fase J: Widgets
+- [x] Dependencia de Glance, receptores, metadatos y pantalla de configuración común
+- [x] Widget de **deberes**: pendientes por fecha, completar sin abrir la app, abrir tarea y filtros (todas, hoy, próximos, lista, carpeta)
+- [x] Widget de **horario**: «Ahora / Siguiente» con día, clases de hoy y puntos de urgencia; uno o todos los horarios
+- [x] Widget de **nota rápida**: crear nota en el cuaderno elegido y abrir las recientes
+- [x] Refresco automático (datos, cada 30 minutos, alarma al próximo cambio de clase o medianoche) y tema de la app
+- [x] `DatosWidgetsTest` y prueba de los tres widgets en el emulador (añadir, configurar, completar, abrir y crear nota)
+
 ## 5. Cómo se verificó
 
 Hay un emulador (Android 15, con aceleración WHPX) en este equipo, así que se probó la app real además de las pruebas automáticas.
 
 | Verificado | Cómo |
 | --- | --- |
-| 69 pruebas automáticas (dominio, contrato con macOS y Linux, copia `.kiwu.json`, Room, editor, resaltado) | `./gradlew testDebugUnitTest` |
+| 177 pruebas automáticas (dominio, contrato con macOS y Linux, copia `.kiwu.json`, Room, editor, resaltado, widgets) | `./gradlew testDebugUnitTest` |
 | Lint, compilación de depuración y de release con R8 | `./gradlew lintDebug assembleRelease` |
 | Crear listas y tareas, menú lateral, tablero, calendario, tema oscuro, Ajustes | A mano en el emulador |
 | Editor: escribir, Intro que parte el bloque, menú `/`, bloque de código, barra de formato, guardado | A mano en el emulador |
 | Notas: cuaderno automático, página, listado | A mano en el emulador |
 | Recordatorio: permiso, notificación, acción *Completar* | A mano en el emulador |
+| Widgets: añadir los tres, configurar y reconfigurar, completar una tarea desde el widget, abrir tarea/nota/Horario, crear una nota y tema claro/oscuro | A mano en el emulador |
 | La versión minificada (R8) crea listas y tareas y guarda notas sin fallos | Variante `minificado` en el emulador |
 
-**Sin probar todavía:** imágenes y archivos adjuntos, vista previa de enlaces y vídeo (red), explorador de carpetas con una carpeta real, fondo de imagen, *Posponer*, reprogramación tras reiniciar, TalkBack, y el CI en GitHub.
+**Sin probar todavía:** imágenes y archivos adjuntos, vista previa de enlaces y vídeo (red), explorador de carpetas con una carpeta real, fondo de imagen, *Posponer*, reprogramación tras reiniciar, la alarma de los widgets tras reiniciar el teléfono, TalkBack, y el CI en GitHub.
 
 ## 6. Registro de avance
 
@@ -143,3 +154,5 @@ Hay un emulador (Android 15, con aceleración WHPX) en este equipo, así que se 
 **2026-10-13 (tarde).** Primera prueba en un teléfono real y ronda de correcciones: ver [android-ruta-correccion.md](android-ruta-correccion.md). Se añadieron el arrastre en el tablero, el color de la app a elección, el arranque sin parpadeo y la protección del editor al mantener «borrar». Quedan verificadas en un teléfono la carpeta vinculada y el fondo de imagen.
 
 **2026-10-13 (noche).** Horarios de clases (ver [plan-horario.md](plan-horario.md)): tercera pestaña «Horario» con varios horarios (Universidad, Trabajo, Ocio…), vista por día y por semana, formulario de clases en varios días, aviso de choques, «Ahora / Siguiente» y avisos opcionales antes de cada clase. La base de datos pasa a la versión 2 con migración probada. Comprobado en un emulador; los avisos y la vista de semana en tabletas faltan por probar en dispositivo.
+
+**2026-10-24.** Versión 0.4.1 (ver [versiones/android-0.4.1.md](versiones/android-0.4.1.md)). **Racha y guía de inicio** ([plan-0.4.1.md](plan-0.4.1.md)): días seguidos completando al menos una tarea, con pantalla propia, celebración, aviso a las 20:00 y la insignia en Tareas y Notas; pantallas de bienvenida y la lista «Empieza aquí» al primer arranque. Añadidos `RachaTest` y `GuiaTest`. **Widgets** ([plan-widgets-android.md](plan-widgets-android.md)): **Deberes**, **Horario** y **Nota rápida** con Jetpack Glance. Leen Room en el mismo proceso, se configuran al añadirlos (todas / hoy / próximos / lista / carpeta / horario / cuaderno), completan tareas sin abrir la app y refrescan sus datos, cada 30 minutos y con una alarma al próximo cambio de clase o a medianoche. Añadido `DatosWidgetsTest` (14 pruebas). Los tres widgets se probaron en el emulador; falta probar la reprogramación de la alarma tras reiniciar el teléfono real.

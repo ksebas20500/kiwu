@@ -38,6 +38,12 @@ import androidx.navigation.compose.rememberNavController
 import app.kiwu.android.KiwuApp
 import app.kiwu.android.data.AjustesUi
 import app.kiwu.android.domain.Elemento
+import app.kiwu.android.domain.Guia
+import app.kiwu.android.domain.Rachas
+import app.kiwu.android.ui.tareas.CelebracionRacha
+import app.kiwu.android.ui.tareas.InsigniaRacha
+import app.kiwu.android.ui.tareas.RachaScreen
+import app.kiwu.android.ui.guia.GuiaScreen
 import app.kiwu.android.ui.editor.rememberOrigenAdjuntos
 import app.kiwu.android.ui.ajustes.AjustesScreen
 import app.kiwu.android.ui.archivos.ArchivosScreen
@@ -55,9 +61,21 @@ import app.kiwu.android.ui.tareas.DetalleTareaViewModel
 import app.kiwu.android.ui.tareas.TareasScreen
 import app.kiwu.android.ui.tareas.TareasViewModel
 
-/** Pantalla raíz: tema, navegación entre Tareas/Notas y las pantallas de detalle. */
+/**
+ * Pantalla raíz: tema, navegación entre Tareas/Notas y las pantallas de detalle. Con [guia] (primera vez, app vacía) se
+ * empieza por la guía de inicio.
+ */
 @Composable
-fun Raiz(app: KiwuApp, abrirTarea: String? = null, inicial: AjustesUi = AjustesUi()) {
+fun Raiz(
+    app: KiwuApp,
+    abrirTarea: String? = null,
+    abrirPagina: String? = null,
+    nuevaNota: String? = null,
+    seccion: String? = null,
+    inicial: AjustesUi = AjustesUi(),
+    guia: Boolean = false,
+    alAtender: () -> Unit = {},
+) {
     val ajustes by app.ajustes.flujo.collectAsStateWithLifecycle(inicial)
     val oscuro = when (ajustes.tema) {
         "claro" -> false
@@ -70,11 +88,45 @@ fun Raiz(app: KiwuApp, abrirTarea: String? = null, inicial: AjustesUi = AjustesU
         FondoDeVentana()
         FondoKiwu(ajustes) {
             val nav = rememberNavController()
-            LaunchedEffect(abrirTarea) { if (abrirTarea != null) nav.navigate("tarea/$abrirTarea") }
+            LaunchedEffect(abrirTarea) {
+                if (abrirTarea != null) { nav.navigate("tarea/$abrirTarea"); alAtender() }
+            }
+            LaunchedEffect(abrirPagina) {
+                if (abrirPagina != null) { nav.navigate("pagina/$abrirPagina"); alAtender() }
+            }
+            // Nota rápida desde el widget: se crea la página y se abre directamente en el editor.
+            LaunchedEffect(nuevaNota) {
+                if (nuevaNota != null) {
+                    val pagina = app.repo.crearPaginaRapida(nuevaNota)
+                    nav.navigate("pagina/${pagina.id}")
+                    alAtender()
+                }
+            }
             val adjuntos = rememberOrigenAdjuntos()
-            NavHost(nav, startDestination = "principal") {
+            val alcance = androidx.compose.runtime.rememberCoroutineScope()
+            // Lista que se abre al entrar en Tareas (la de ejemplo, al terminar la guía).
+            var abrirLista by rememberSaveable { mutableStateOf<String?>(null) }
+            NavHost(nav, startDestination = if (guia) "guia" else "principal") {
+                composable("guia") {
+                    var terminando by androidx.compose.runtime.remember { mutableStateOf(false) }
+                    GuiaScreen(alTerminar = {
+                        if (!terminando) alcance.launch {
+                            terminando = true
+                            if (app.repo.crearListaDeEjemplo()) abrirLista = Guia.ID_LISTA
+                            app.ajustes.cambiar { it.copy(guiaVista = true) }
+                            nav.navigate("principal") { popUpTo("guia") { inclusive = true } }
+                        }
+                    })
+                }
+                // Repaso desde Ajustes: solo las pantallas, sin crear la lista de ejemplo.
+                composable("repaso") { GuiaScreen(alTerminar = { nav.volver() }) }
                 composable("principal") {
-                    Principal(app, alAbrirTarea = { nav.navigate("tarea/$it") }, alAbrirPagina = { nav.navigate("pagina/$it") }, alAjustes = { nav.navigate("ajustes") })
+                    Principal(
+                        app, alAbrirTarea = { nav.navigate("tarea/$it") }, alAbrirPagina = { nav.navigate("pagina/$it") }, alAjustes = { nav.navigate("ajustes") },
+                        alRacha = { nav.navigate("racha") },
+                        abrirLista = abrirLista, alAbrirLista = { abrirLista = null },
+                        seccionInicial = seccion, alAtenderSeccion = alAtender,
+                    )
                 }
                 composable("tarea/{id}") { entrada ->
                     val id = entrada.arguments?.getString("id") ?: return@composable
@@ -84,7 +136,7 @@ fun Raiz(app: KiwuApp, abrirTarea: String? = null, inicial: AjustesUi = AjustesU
                     )
                     DetalleTareaScreen(vm, adjuntos, alVolver = { nav.volver() })
                 }
-                composable("ajustes") { AjustesScreen(app, alVolver = { nav.volver() }) }
+                composable("ajustes") { AjustesScreen(app, alVolver = { nav.volver() }, alVerGuia = { nav.navigate("repaso") }) }
                 composable("pagina/{id}") { entrada ->
                     val id = entrada.arguments?.getString("id") ?: return@composable
                     val vm: PaginaViewModel = viewModel(
@@ -93,9 +145,36 @@ fun Raiz(app: KiwuApp, abrirTarea: String? = null, inicial: AjustesUi = AjustesU
                     )
                     PaginaScreen(vm, adjuntos, alVolver = { nav.volver() })
                 }
+                composable("racha") { RachaScreen(app, alVolver = { nav.volver() }) }
             }
+            CelebrarRacha(app, ajustes)
             AvisoActualizacion(app)
         }
+    }
+}
+
+/**
+ * Al completar la primera tarea del día salta la celebración de la racha, por encima de cualquier pantalla. Sale una vez al
+ * día (se guarda el día celebrado) y solo si la racha está visible.
+ */
+@Composable
+private fun CelebrarRacha(app: KiwuApp, ajustes: AjustesUi) {
+    val fechas by app.repo.fechasCompletado.collectAsStateWithLifecycle(null)
+    var celebrando by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(fechas, ajustes.rachaCelebrada, ajustes.rachaVisible) {
+        val f = fechas ?: return@LaunchedEffect
+        if (!ajustes.rachaVisible || celebrando) return@LaunchedEffect
+        val hoy = java.time.LocalDate.now()
+        if (Rachas.debeCelebrar(Rachas.calcular(f, System.currentTimeMillis()), ajustes.rachaCelebrada, hoy)) {
+            kotlinx.coroutines.delay(450) // que primero se vea la casilla marcada
+            app.ajustes.cambiar { it.copy(rachaCelebrada = hoy.toString()) }
+            celebrando = true
+        }
+    }
+    val f = fechas
+    if (celebrando && f != null) {
+        val racha = androidx.compose.runtime.remember(f) { Rachas.calcular(f, System.currentTimeMillis()) }
+        CelebracionRacha(racha, alCerrar = { celebrando = false })
     }
 }
 
@@ -109,11 +188,23 @@ private fun androidx.navigation.NavController.volver() {
 }
 
 @Composable
-private fun Principal(app: KiwuApp, alAbrirTarea: (String) -> Unit, alAbrirPagina: (String) -> Unit, alAjustes: () -> Unit) {
+private fun Principal(
+    app: KiwuApp, alAbrirTarea: (String) -> Unit, alAbrirPagina: (String) -> Unit, alAjustes: () -> Unit,
+    alRacha: () -> Unit = {},
+    abrirLista: String? = null, alAbrirLista: () -> Unit = {},
+    seccionInicial: String? = null, alAtenderSeccion: () -> Unit = {},
+) {
     var modulo by rememberSaveable { mutableStateOf("tareas") }
     // Facturación de Google Play: se conecta pasado el arranque para no retrasarlo.
     LaunchedEffect(Unit) { app.compras.iniciar() }
+    // Abrir desde el widget de horario (o de notas): se cambia de pestaña una sola vez.
+    LaunchedEffect(seccionInicial) {
+        if (seccionInicial != null) { modulo = seccionInicial; alAtenderSeccion() }
+    }
     val tareasVm: TareasViewModel = viewModel(factory = viewModelFactory { initializer { TareasViewModel(app.repo, app.ajustes) } })
+    LaunchedEffect(abrirLista) {
+        if (abrirLista != null) { tareasVm.ir(Elemento.DeMateria(abrirLista)); modulo = "tareas"; alAbrirLista() }
+    }
     val notasVm: NotasViewModel = viewModel(factory = viewModelFactory { initializer { NotasViewModel(app.repo) } })
     val horarioVm: HorarioViewModel = viewModel(factory = viewModelFactory { initializer { HorarioViewModel(app.repo) } })
     val drawer = androidx.compose.material3.rememberDrawerState(androidx.compose.material3.DrawerValue.Closed)
@@ -129,7 +220,7 @@ private fun Principal(app: KiwuApp, alAbrirTarea: (String) -> Unit, alAbrirPagin
         drawerState = drawer,
         drawerContent = {
             when (modulo) {
-                "tareas" -> MenuTareas(tareasVm, cerrarYLuego, alAjustes)
+                "tareas" -> MenuTareas(tareasVm, cerrarYLuego, alAjustes, alRacha)
                 "notas" -> MenuNotas(notasVm, cerrarYLuego, alAjustes)
                 else -> MenuHorario(horarioVm, cerrarYLuego, alAjustes)
             }
@@ -169,13 +260,16 @@ private fun Principal(app: KiwuApp, alAbrirTarea: (String) -> Unit, alAbrirPagin
                 label = "modulo",
             ) { destino ->
                 when (destino) {
-                    "notas" -> NotasScreen(notasVm, alAbrirPagina, abrirMenu)
+                    "notas" -> NotasScreen(notasVm, alAbrirPagina, abrirMenu, insigniaRacha = { InsigniaRacha(app, alRacha) })
                     "horario" -> HorarioScreen(
                         horarioVm, abrirMenu, alAbrirTarea,
                         // «Abrir la lista completa»: cambia a la pestaña Tareas, ya en esa lista.
                         alAbrirLista = { id -> tareasVm.ir(Elemento.DeMateria(id)); modulo = "tareas" },
                     )
-                    else -> TareasScreen(tareasVm, alAbrirTarea, abrirMenu, archivos = { m -> ArchivosScreen(m) { carpeta -> tareasVm.vincularCarpeta(m.id, carpeta) } })
+                    else -> TareasScreen(
+                        tareasVm, alAbrirTarea, abrirMenu, archivos = { m -> ArchivosScreen(m) { carpeta -> tareasVm.vincularCarpeta(m.id, carpeta) } },
+                        insigniaRacha = { InsigniaRacha(app, alRacha) },
+                    )
                 }
             }
         }

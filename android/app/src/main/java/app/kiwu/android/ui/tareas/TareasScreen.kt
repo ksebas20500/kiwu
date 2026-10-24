@@ -81,6 +81,7 @@ fun TareasScreen(
     alAbrirTarea: (String) -> Unit,
     alAbrirMenu: () -> Unit,
     archivos: @Composable (Materia) -> Unit,
+    insigniaRacha: @Composable () -> Unit = {},
 ) {
     val estado by vm.estado.collectAsStateWithLifecycle()
     // El tablero solo tiene sentido en pantallas anchas: en el teléfono siempre se ve la lista.
@@ -94,6 +95,7 @@ fun TareasScreen(
                 title = { Text(tituloDe(estado.elemento, estado.materiaActual, estado.grupoActual)) },
                 navigationIcon = { IconButton(onClick = alAbrirMenu) { Icon(Icons.Filled.Menu, "Abrir menú") } },
                 actions = {
+                    insigniaRacha()
                     if (estado.elemento != Elemento.Calendario && anchaParaTablero && !estado.enEventos) {
                         val tablero = verTablero
                         IconButton(onClick = { vm.cambiarVista(if (tablero) "lista" else "tablero") }) {

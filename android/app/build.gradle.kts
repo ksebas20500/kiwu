@@ -28,8 +28,8 @@ android {
         applicationId = "app.kiwu.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 9
-        versionName = "0.3.2"
+        versionCode = 10
+        versionName = "0.4.1"
     }
 
     signingConfigs {
@@ -123,6 +123,7 @@ dependencies {
     implementation(libs.ump)
     implementation(libs.billing)
     implementation(libs.play.app.update)
+    implementation(libs.glance.appwidget)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

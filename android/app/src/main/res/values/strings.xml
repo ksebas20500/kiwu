@@ -1,4 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Kiwu</string>
+
+    <string name="widget_deberes">Deberes</string>
+    <string name="widget_deberes_descripcion">Tus tareas pendientes, con su lista y fecha. Toca el círculo para completarlas.</string>
+
+    <string name="widget_horario">Horario</string>
+    <string name="widget_horario_descripcion">La clase de ahora y la siguiente, y las clases de hoy con sus tareas pendientes.</string>
+
+    <string name="widget_notas">Nota rápida</string>
+    <string name="widget_notas_descripcion">Crea una nota con un toque y mira las más recientes de un cuaderno.</string>
+
+    <string name="widget_configuracion">Configurar widget de Kiwu</string>
 </resources>
