@@ -4,7 +4,7 @@ title: Política de privacidad de Kiwu
 
 # Política de privacidad de Kiwu
 
-Última actualización: 20 de octubre de 2026
+Última actualización: 24 de octubre de 2026
 
 Kiwu es una aplicación gratuita de tareas, notas y horario para estudiantes, creada por Kevin Sebastián Medina Nava (Ksebas Labs). Esta política explica qué datos usa la aplicación para Android y cómo.
 
@@ -32,7 +32,8 @@ El pago lo gestiona **Google Play**. Kiwu no recibe ni guarda tus datos de pago.
 
 Kiwu usa Internet únicamente para:
 
-- mostrar los anuncios (Google AdMob) y gestionar la compra (Google Play), y
+- mostrar los anuncios (Google AdMob) y gestionar la compra (Google Play),
+- consultar a Google Play si hay una versión nueva de la app y descargarla cuando aceptas, y
 - descargar la vista previa de un enlace cuando lo pegas en una nota.
 
 ## Permisos

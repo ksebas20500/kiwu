@@ -94,6 +94,7 @@ fun Raiz(app: KiwuApp, abrirTarea: String? = null, inicial: AjustesUi = AjustesU
                     PaginaScreen(vm, adjuntos, alVolver = { nav.volver() })
                 }
             }
+            AvisoActualizacion(app)
         }
     }
 }

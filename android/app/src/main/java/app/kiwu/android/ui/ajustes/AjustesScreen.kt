@@ -33,6 +33,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.Alignment
+import app.kiwu.android.EstadoActualizacion
+import app.kiwu.android.ui.abrirEnPlay
 import app.kiwu.android.ui.Acentos
 import app.kiwu.android.ui.FondoArchivos
 import app.kiwu.android.ui.FondoEnVivo
@@ -298,7 +300,19 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit) {
                     SeccionAjustes.ACERCA -> {
                         Seccion("") {
                             Text("Versión ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyMedium)
-                            Text("Tus datos se guardan solo en este dispositivo: sin cuentas ni servidor propio. La app usa Internet para descargar la vista previa de los enlaces que pegas en una nota y para mostrar el banner de anuncios (Google AdMob), que puede usar el identificador de publicidad del teléfono según tu consentimiento.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            OutlinedButton(onClick = {
+                                mensaje = "Buscando…"
+                                app.actualizaciones.comprobar(forzar = true) { e ->
+                                    mensaje = when (e) {
+                                        is EstadoActualizacion.Disponible, EstadoActualizacion.Lista -> null
+                                        EstadoActualizacion.Descargando -> "La versión nueva se está descargando"
+                                        EstadoActualizacion.Nada -> "Ya tienes la última versión"
+                                        // Google no respondió (por ejemplo, sin conexión): se abre la ficha de Play.
+                                        null -> { abrirEnPlay(contexto); null }
+                                    }
+                                }
+                            }) { Text("Buscar actualizaciones") }
+                            Text("Tus datos se guardan solo en este dispositivo: sin cuentas ni servidor propio. La app usa Internet para descargar la vista previa de los enlaces que pegas en una nota, para mostrar el banner de anuncios (Google AdMob), que puede usar el identificador de publicidad del teléfono según tu consentimiento, y para consultar a Google Play si hay una versión nueva.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }

@@ -79,6 +79,14 @@ Consejos: usa datos de ejemplo bonitos y realistas (sin nombres ni datos persona
 - **Compras dentro de la app:** sí, 1 producto: `quitar_anuncios` (pago único).
 - **Permisos sensibles:** alarmas exactas (`SCHEDULE_EXACT_ALARM`) para recordatorios de tareas y clases; Play pedirá justificarlo.
 
+## Aviso de versión nueva (actualización dentro de la app)
+
+Desde la 0.4.1 de Play, Kiwu pregunta a Google Play al abrirse o al volver a ella (`Actualizaciones.kt`, `ui/AvisoActualizacion.kt`, librería `app-update-ktx`). Si hay una versión nueva sale «Hay una versión nueva de Kiwu» → **Actualizar** (se descarga mientras se usa la app y luego sale «Reiniciar») o **Más tarde** (no vuelve a preguntar por esa versión en un día). En Ajustes → Acerca de, «Buscar actualizaciones» pregunta en el momento, y si Google no responde abre la ficha de Play.
+
+- Solo funciona con la app instalada **desde Play** (también en las pistas de prueba cerrada e interna); con un APK instalado a mano no sale nada.
+- Para que Play la ofrezca, la versión nueva tiene que estar publicada en la pista del tester y con `versionCode` mayor. Puede tardar unas horas en aparecer; si un tester no la ve, que abra la ficha de Kiwu en Play una vez (eso refresca la caché de Play).
+- **Probarlo:** subir dos versiones a «Compartir apps internamente» (Play Console → Probar y publicar → Compartir apps internamente), instalar la de `versionCode` menor desde su enlace y luego abrir el enlace de la mayor sin pulsar «Actualizar»: al abrir Kiwu debe salir el aviso. Hay que activar antes «Compartir apps internamente» en Play Store → Ajustes → Información (tocar 7 veces «Versión de Play Store»).
+
 ## Política de privacidad en GitHub Pages
 
 1. En el repositorio, Settings → Pages → «Deploy from a branch», rama `main`, carpeta `/docs`.
