@@ -76,7 +76,6 @@ object Rachas {
     }
 
     /** «1 día», «5 días». */
-    fun texto(dias: Int): String = if (dias == 1) "1 día" else "$dias días"
 
     /** Las semanas de la cuadrícula (lunes a domingo), de la más antigua a la actual. */
     fun semanas(hoy: LocalDate, cuantas: Int = 8): List<List<LocalDate>> {

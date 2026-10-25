@@ -24,12 +24,17 @@ import kotlinx.serialization.json.put
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
+import app.kiwu.android.domain.Falta
+import java.time.LocalDate
 
-class ErrorCopia(mensaje: String) : Exception(mensaje)
+/** Por qué no se pudo importar una copia; la pantalla lo cuenta en el idioma de la app. */
+enum class MotivoErrorCopia { Ilegible, NoEsKiwu, MasNueva }
+
+class ErrorCopia(val motivo: MotivoErrorCopia, mensaje: String, val detalle: String? = null) : Exception(mensaje)
 
 data class ResumenImportacion(
     val materias: Int, val deberes: Int, val cuadernos: Int, val paginas: Int,
-    val horarios: Int = 0, val clases: Int = 0, val grupos: Int = 0,
+    val horarios: Int = 0, val clases: Int = 0, val grupos: Int = 0, val faltas: Int = 0,
 )
 
 /**
@@ -73,6 +78,8 @@ object Copia {
         val horarios = dao.horarios().first()
         val clases = dao.clasesAhora()
         val grupos = dao.gruposAhora()
+        val gruposVivos = clases.map { it.grupo }.toSet()
+        val faltas = dao.faltasAhora().filter { it.grupo in gruposVivos }
         val raiz = buildJsonObject {
             put("formato", FORMATO)
             put("app", "kiwu")
@@ -128,7 +135,16 @@ object Copia {
                     put("grupo", c.grupo); put("titulo", c.titulo); put("diaSemana", c.diaSemana)
                     put("inicioMin", c.inicioMin); put("finMin", c.finMin); put("aula", c.aula); put("notas", c.notas)
                     put("avisoMin", c.avisoMin?.let { JsonPrimitive(it) } ?: JsonNull)
+                    put("maxFaltas", c.maxFaltas?.let { JsonPrimitive(it) } ?: JsonNull)
                     put("creada", iso(c.creada)); put("actualizada", iso(c.actualizada))
+                })
+            })
+            // Solo Android (por ahora): macOS y Linux ignoran esta sección.
+            put("faltas", buildJsonArray {
+                for (f in faltas) add(buildJsonObject {
+                    put("id", f.id); put("grupo", f.grupo); put("horario", f.horarioId)
+                    put("dia", LocalDate.ofEpochDay(f.dia).toString()); put("justificada", f.justificada)
+                    put("creada", iso(f.creada))
                 })
             })
         }
@@ -139,10 +155,10 @@ object Copia {
         val datos = try {
             Json.parseToJsonElement(texto) as? JsonObject
         } catch (e: Exception) {
-            throw ErrorCopia("No se pudo leer la copia: ${e.message}")
+            throw ErrorCopia(MotivoErrorCopia.Ilegible, "No se pudo leer la copia: ${e.message}", e.message)
         }
-        if (datos == null || datos.cadena("app") != "kiwu") throw ErrorCopia("El archivo no es una copia de seguridad de Kiwu")
-        if (datos.entero("formato", 0) > FORMATO) throw ErrorCopia("La copia es de una versión más nueva de Kiwu")
+        if (datos == null || datos.cadena("app") != "kiwu") throw ErrorCopia(MotivoErrorCopia.NoEsKiwu, "El archivo no es una copia de seguridad de Kiwu")
+        if (datos.entero("formato", 0) > FORMATO) throw ErrorCopia(MotivoErrorCopia.MasNueva, "La copia es de una versión más nueva de Kiwu")
 
         fun lista(clave: String): List<JsonObject> = (datos[clave] as? JsonArray)?.mapNotNull { it as? JsonObject } ?: emptyList()
 
@@ -220,7 +236,20 @@ object Copia {
                 avisoMin = (c["avisoMin"] as? JsonPrimitive)?.intOrNull,
                 // Campo opcional (versión 0.3): las copias antiguas no lo traen y se quedan con el color automático.
                 color = ReglasHorario.colorValido(c.cadena("color")),
+                // Campo opcional (versión 0.4.3): sin él, la materia no tiene límite de faltas.
+                maxFaltas = (c["maxFaltas"] as? JsonPrimitive)?.intOrNull?.takeIf { it > 0 },
                 creada = desdeIso(c["creada"]) ?: 0L, actualizada = desdeIso(c["actualizada"]) ?: 0L,
+            )
+        }
+
+        // Sección opcional (versión 0.4.3). Una falta de una materia que no existe se descarta.
+        val gruposClase = clases.map { it.grupo }.toSet() + dao.gruposDeClases()
+        val faltas = lista("faltas").mapNotNull { f ->
+            val grupo = f.cadena("grupo")?.takeIf { it in gruposClase } ?: return@mapNotNull null
+            val dia = f.cadena("dia")?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return@mapNotNull null
+            Falta(
+                id = f.cadena("id") ?: return@mapNotNull null, grupo = grupo, horarioId = f.cadena("horario") ?: return@mapNotNull null,
+                dia = dia.toEpochDay(), justificada = f.logico("justificada"), creada = desdeIso(f["creada"]) ?: 0L,
             )
         }
 
@@ -234,6 +263,7 @@ object Copia {
             paginas = dao.insertarPaginas(paginas).count { it != -1L },
             horarios = dao.insertarHorarios(horarios).count { it != -1L },
             clases = dao.insertarClases(clases).count { it != -1L },
+            faltas = dao.insertarFaltas(faltas).count { it != -1L },
         )
     }
 }

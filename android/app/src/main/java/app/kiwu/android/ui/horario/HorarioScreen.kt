@@ -99,6 +99,12 @@ import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.max
 import kotlin.math.min
+import app.kiwu.android.domain.ReglasFaltas
+import app.kiwu.android.domain.ContadorFaltas
+import app.kiwu.android.ui.diaEnFrase
+import app.kiwu.android.ui.Fechas
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
 val EmojisHorario = listOf("🎓", "💼", "🌴", "🏋️", "🎮", "🎵", "🧘", "🏠", "🚌", "🍽️", "📚", "🎨", "⚽", "🧪", "💻", "❤️", "🛒", "✈️", "🐶", "⭐")
 
@@ -127,28 +133,30 @@ fun HorarioScreen(vm: HorarioViewModel, alAbrirMenu: () -> Unit, alAbrirTarea: (
     var editarHorario by remember { mutableStateOf<Horario?>(null) }
     var eliminarHorario by remember { mutableStateOf<Horario?>(null) }
     var menuHorario by remember { mutableStateOf(false) }
+    var vaciarFaltas by remember { mutableStateOf<Horario?>(null) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(estado.horarioActual?.let { "${it.icono} ${it.nombre}" } ?: "Horario") },
-                navigationIcon = { IconButton(onClick = alAbrirMenu) { Icon(Icons.Filled.Menu, "Abrir menú") } },
+                title = { Text(estado.horarioActual?.let { "${it.icono} ${it.nombre}" } ?: stringResource(R.string.horario)) },
+                navigationIcon = { IconButton(onClick = alAbrirMenu) { Icon(Icons.Filled.Menu, stringResource(R.string.abrir_menu)) } },
                 actions = {
                     if (estado.horarios.isNotEmpty()) {
                         IconButton(onClick = { vistaElegida = if (vista == "semana") "dia" else "semana" }) {
                             Icon(
                                 if (vista == "semana") Icons.Filled.ViewDay else Icons.Filled.ViewWeek,
-                                if (vista == "semana") "Ver por día" else "Ver la semana",
+                                stringResource(if (vista == "semana") R.string.ver_por_dia else R.string.ver_semana),
                             )
                         }
                     }
                     estado.horarioActual?.let { h ->
                         Box {
-                            IconButton(onClick = { menuHorario = true }) { Icon(Icons.Filled.MoreVert, "Opciones del horario") }
+                            IconButton(onClick = { menuHorario = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.horario_opciones)) }
                             DropdownMenu(expanded = menuHorario, onDismissRequest = { menuHorario = false }) {
-                                DropdownMenuItem(text = { Text("Editar horario") }, onClick = { menuHorario = false; editarHorario = h })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.horario_editar)) }, onClick = { menuHorario = false; editarHorario = h })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.horario_vaciar_faltas)) }, onClick = { menuHorario = false; vaciarFaltas = h })
                                 DropdownMenuItem(
-                                    text = { Text("Eliminar horario", color = MaterialTheme.colorScheme.error) },
+                                    text = { Text(stringResource(R.string.horario_eliminar), color = MaterialTheme.colorScheme.error) },
                                     onClick = { menuHorario = false; eliminarHorario = h },
                                 )
                             }
@@ -160,7 +168,7 @@ fun HorarioScreen(vm: HorarioViewModel, alAbrirMenu: () -> Unit, alAbrirTarea: (
         },
         floatingActionButton = {
             if (estado.horarios.isNotEmpty()) {
-                FloatingActionButton(onClick = { edicion = Edicion(null, diaSel) }) { Icon(Icons.Filled.Add, "Añadir clase") }
+                FloatingActionButton(onClick = { edicion = Edicion(null, diaSel) }) { Icon(Icons.Filled.Add, stringResource(R.string.horario_anadir_clase)) }
             }
         },
         containerColor = Color.Transparent,
@@ -173,13 +181,14 @@ fun HorarioScreen(vm: HorarioViewModel, alAbrirMenu: () -> Unit, alAbrirTarea: (
                 return@Column
             }
             LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                item { FilterChip(estado.seleccion == null, { vm.elegir(null) }, { Text("Todos") }) }
+                item { FilterChip(estado.seleccion == null, { vm.elegir(null) }, { Text(stringResource(R.string.horario_todos)) }) }
                 items(estado.horarios, key = { it.id }) { h ->
                     FilterChip(estado.seleccion == h.id, { vm.elegir(h.id) }, { Text("${h.icono} ${h.nombre}") })
                 }
-                item { TextButton(onClick = { nuevoHorario = true }) { Text("+ Horario") } }
+                item { TextButton(onClick = { nuevoHorario = true }) { Text(stringResource(R.string.horario_mas)) } }
             }
             TarjetaAhora(estado)
+            AvisoFaltas(estado.enRiesgo) { hojaId = it.id }
             // Al pasar de día a semana el contenido entra desde la derecha; al volver, desde la izquierda.
             androidx.compose.animation.AnimatedContent(
                 targetState = vista,
@@ -218,13 +227,23 @@ fun HorarioScreen(vm: HorarioViewModel, alAbrirMenu: () -> Unit, alAbrirTarea: (
             crearTarea = { titulo, materiaId, fecha -> vm.crearTarea(titulo, materiaId, fecha) },
             vincular = { vm.vincular(claseHoja.grupo, it) },
             crearYVincular = { vm.crearListaYVincular(claseHoja.grupo, it) },
+            marcarFalta = { vm.marcarFalta(claseHoja, it) },
+            quitarFalta = { vm.quitarFalta(it) },
+            justificarFalta = { id, si -> vm.justificarFalta(id, si) },
+            ponerMaximoFaltas = { vm.ponerMaximoFaltas(claseHoja.grupo, it) },
         )
     }
     if (nuevoHorario) DialogoHorario(null, alCerrar = { nuevoHorario = false }) { nombre, icono -> vm.crearHorario(nombre, icono) }
     editarHorario?.let { h -> DialogoHorario(h, alCerrar = { editarHorario = null }) { nombre, icono -> vm.editarHorario(h.id, nombre, icono) } }
+    vaciarFaltas?.let { h ->
+        DialogoConfirmar(
+            stringResource(R.string.horario_vaciar_titulo, h.nombre), stringResource(R.string.horario_vaciar_texto),
+            stringResource(R.string.horario_vaciar_boton), alCerrar = { vaciarFaltas = null },
+        ) { vm.vaciarFaltas(h.id) }
+    }
     eliminarHorario?.let { h ->
         DialogoConfirmar(
-            "¿Eliminar ${h.nombre}?", "Se eliminarán también todas sus clases.", "Eliminar horario y sus clases",
+            stringResource(R.string.horario_eliminar_titulo, h.nombre), stringResource(R.string.horario_eliminar_texto), stringResource(R.string.horario_eliminar_boton),
             alCerrar = { eliminarHorario = null },
         ) { vm.eliminarHorario(h.id) }
     }
@@ -232,18 +251,21 @@ fun HorarioScreen(vm: HorarioViewModel, alAbrirMenu: () -> Unit, alAbrirTarea: (
 
 @Composable
 private fun SinHorarios(vm: HorarioViewModel, alOtro: () -> Unit) {
-    EstadoVacio(Icons.Filled.Schedule, "Crea tu primer horario") {
+    val universidad = stringResource(R.string.horario_universidad)
+    val trabajo = stringResource(R.string.horario_trabajo)
+    val ocio = stringResource(R.string.horario_ocio)
+    EstadoVacio(Icons.Filled.Schedule, stringResource(R.string.horario_vacio_titulo)) {
         Text(
-            "Puedes tener varios: uno para la universidad, otro para el trabajo, otro para tu tiempo libre…",
+            stringResource(R.string.horario_vacio_texto),
             Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f), fontSize = 14.sp,
         )
         Row(Modifier.padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilledTonalButton(onClick = { vm.crearHorario("Universidad", "🎓") }) { Text("🎓 Universidad") }
-            FilledTonalButton(onClick = { vm.crearHorario("Trabajo", "💼") }) { Text("💼 Trabajo") }
+            FilledTonalButton(onClick = { vm.crearHorario(universidad, "🎓") }) { Text("🎓 $universidad") }
+            FilledTonalButton(onClick = { vm.crearHorario(trabajo, "💼") }) { Text("💼 $trabajo") }
         }
         Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilledTonalButton(onClick = { vm.crearHorario("Ocio", "🌴") }) { Text("🌴 Ocio") }
-            OutlinedButton(onClick = alOtro) { Text("Otro…") }
+            FilledTonalButton(onClick = { vm.crearHorario(ocio, "🌴") }) { Text("🌴 $ocio") }
+            OutlinedButton(onClick = alOtro) { Text(stringResource(R.string.horario_otro)) }
         }
     }
 }
@@ -256,14 +278,16 @@ private fun TarjetaAhora(estado: HorarioEstado) {
     if (clases.isEmpty()) return
     val encurso = ReglasHorario.enCurso(clases, dia, minuto)
     val siguiente = ReglasHorario.siguiente(clases, dia, minuto)
-    val texto = buildString {
-        if (encurso != null) append("Ahora: ${encurso.titulo} · hasta ${ReglasHorario.hora(encurso.finMin)}")
-        if (siguiente != null) {
-            val (c, dias) = siguiente
-            if (isNotEmpty()) append("\n")
-            append("Siguiente: ${c.titulo} · ${ReglasHorario.cuando(dias, c.diaSemana)} ${ReglasHorario.hora(c.inicioMin)}")
+    val ahora = encurso?.let { stringResource(R.string.horario_ahora_hasta, it.titulo, ReglasHorario.hora(it.finMin)) }
+    val luego = siguiente?.let { (c, dias) ->
+        val cuando = when (dias) {
+            0 -> stringResource(R.string.horario_hoy)
+            1 -> stringResource(R.string.horario_manana)
+            else -> Fechas.diaEnFrase(c.diaSemana)
         }
+        stringResource(R.string.horario_siguiente, c.titulo, cuando, ReglasHorario.hora(c.inicioMin))
     }
+    val texto = listOfNotNull(ahora, luego).joinToString("\n")
     if (texto.isEmpty()) return
     Surface(
         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), shape = RoundedCornerShape(14.dp),
@@ -282,7 +306,7 @@ private fun VistaDia(estado: HorarioEstado, hoy: Int, diaSel: Int, deberes: List
                 selected = d == diaSel, onClick = { alElegirDia(d) },
                 text = {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(ReglasHorario.diasLetra[d - 1], fontWeight = if (d == hoy) FontWeight.ExtraBold else FontWeight.Normal)
+                        Text(Fechas.letraDia(d), fontWeight = if (d == hoy) FontWeight.ExtraBold else FontWeight.Normal)
                         if (d == hoy) Text("•", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary)
                     }
                 },
@@ -292,18 +316,19 @@ private fun VistaDia(estado: HorarioEstado, hoy: Int, diaSel: Int, deberes: List
     val delDia = remember(estado.clases, diaSel) { ReglasHorario.deDia(estado.clases, diaSel) }
     val (dia, minuto) = estado.diaYMinuto()
     Text(
-        ReglasHorario.nombreDia(diaSel), style = MaterialTheme.typography.titleSmall,
+        Fechas.nombreDia(diaSel), style = MaterialTheme.typography.titleSmall,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
     )
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (delDia.isEmpty()) {
-            item { Text("Sin clases este día", Modifier.padding(4.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            item { Text(stringResource(R.string.horario_sin_clases_dia), Modifier.padding(4.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
         items(delDia, key = { it.id }) { c ->
             TarjetaClase(
                 c, nombreHorario = if (estado.seleccion == null && estado.horarios.size > 1) estado.nombres[c.horarioId] else null,
                 enCurso = c.diaSemana == dia && minuto >= c.inicioMin && minuto < c.finMin, alClic = { alAbrir(c) }, alLargo = { alEditar(c) },
                 puntos = TareasDeClase.puntos(deberes, c.materiaId, estado.ahora),
+                faltas = estado.contadores[c.grupo]?.takeIf { ReglasFaltas.seMuestra(it) },
             )
         }
     }
@@ -311,7 +336,7 @@ private fun VistaDia(estado: HorarioEstado, hoy: Int, diaSel: Int, deberes: List
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TarjetaClase(c: Clase, nombreHorario: String?, enCurso: Boolean, alClic: () -> Unit, alLargo: () -> Unit, puntos: List<PuntoTarea>) {
+private fun TarjetaClase(c: Clase, nombreHorario: String?, enCurso: Boolean, alClic: () -> Unit, alLargo: () -> Unit, puntos: List<PuntoTarea>, faltas: ContadorFaltas? = null) {
     val color = colorDe(c)
     Surface(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).combinedClickable(onClick = alClic, onLongClick = alLargo),
@@ -326,9 +351,10 @@ private fun TarjetaClase(c: Clase, nombreHorario: String?, enCurso: Boolean, alC
                 Text(c.titulo, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 val detalle = listOfNotNull(c.aula.takeIf { it.isNotBlank() }, nombreHorario).joinToString(" · ")
                 if (detalle.isNotEmpty()) Text(detalle, fontSize = 13.sp, color = color.texto.copy(alpha = 0.8f))
+                faltas?.let { InsigniaFaltas(it, color.texto, Modifier.padding(top = 4.dp)) }
             }
             if (puntos.isNotEmpty()) PuntosTareas(puntos, color.texto)
-            if (enCurso) Text("Ahora", Modifier.padding(start = 8.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            if (enCurso) Text(stringResource(R.string.horario_ahora), Modifier.padding(start = 8.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
         }
     }
 }
@@ -365,7 +391,7 @@ private fun VistaSemana(estado: HorarioEstado, hoy: Int, deberes: List<Deber>, a
     Row(Modifier.fillMaxWidth().padding(start = 40.dp, end = 4.dp)) {
         for (d in 1..7) {
             Text(
-                ReglasHorario.diasCortos[d - 1], Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                Fechas.diaCorto(d), Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 fontSize = 12.sp, fontWeight = if (d == hoy) FontWeight.ExtraBold else FontWeight.Normal,
                 color = if (d == hoy) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -410,6 +436,13 @@ private fun VistaSemana(estado: HorarioEstado, hoy: Int, deberes: List<Deber>, a
                                 contentAlignment = Alignment.Center,
                             ) { Text("${puntos.size}", fontSize = 8.sp, lineHeight = 8.sp, fontWeight = FontWeight.Bold, color = Color.White) }
                         }
+                        // Faltas que quedan (o las que lleva, sin máximo), abajo a la izquierda con el color del estado.
+                        estado.contadores[c.grupo]?.takeIf { ReglasFaltas.seMuestra(it) }?.let { f ->
+                            val fondo = colorFaltas(f.estado, color.texto.copy(alpha = 0.55f))
+                            Box(Modifier.align(Alignment.BottomStart).background(fondo, RoundedCornerShape(4.dp)).padding(horizontal = 3.dp)) {
+                                Text("${f.quedan ?: f.cuentan}", fontSize = 8.sp, lineHeight = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        }
                     }
                 }
             }
@@ -426,19 +459,19 @@ internal fun DialogoHorario(horario: Horario?, alCerrar: () -> Unit, alConfirmar
     var icono by remember { mutableStateOf(horario?.icono ?: "🎓") }
     AlertDialog(
         onDismissRequest = alCerrar,
-        title = { Text(if (horario == null) "Nuevo horario" else "Editar horario") },
+        title = { Text(stringResource(if (horario == null) R.string.horario_nuevo else R.string.horario_editar)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
-                    nombre, { nombre = it }, label = { Text("Nombre (Universidad, Trabajo, Ocio…)") }, singleLine = true,
+                    nombre, { nombre = it }, label = { Text(stringResource(R.string.horario_nombre)) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 )
-                Text("Icono", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.horario_icono), style = MaterialTheme.typography.labelMedium)
                 SelectorEmoji(icono, EmojisHorario) { icono = it }
             }
         },
-        confirmButton = { TextButton(onClick = { alConfirmar(nombre.trim(), icono); alCerrar() }, enabled = nombre.isNotBlank()) { Text("Guardar") } },
-        dismissButton = { TextButton(onClick = alCerrar) { Text("Cancelar") } },
+        confirmButton = { TextButton(onClick = { alConfirmar(nombre.trim(), icono); alCerrar() }, enabled = nombre.isNotBlank()) { Text(stringResource(R.string.guardar)) } },
+        dismissButton = { TextButton(onClick = alCerrar) { Text(stringResource(R.string.cancelar)) } },
     )
 }
 
@@ -458,6 +491,7 @@ private fun FormularioClase(vm: HorarioViewModel, estado: HorarioEstado, edicion
     var notas by remember { mutableStateOf(base?.notas ?: "") }
     var aviso by remember { mutableStateOf(base?.avisoMin) }
     var color by remember { mutableStateOf(ReglasHorario.colorValido(base?.color)) }
+    var maxFaltas by remember { mutableStateOf(ReglasFaltas.maximo(previas)?.toString() ?: "") }
     var otroColor by remember { mutableStateOf(false) }
     var elegirHora by remember { mutableStateOf<String?>(null) }
     var confirmarEliminar by remember { mutableStateOf(false) }
@@ -472,15 +506,15 @@ private fun FormularioClase(vm: HorarioViewModel, estado: HorarioEstado, edicion
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
             Column(Modifier.fillMaxSize()) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = alCerrar) { Icon(Icons.Filled.Close, "Cerrar") }
-                    Text(if (edicion.grupo == null) "Nueva clase" else "Editar clase", Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                    IconButton(onClick = alCerrar) { Icon(Icons.Filled.Close, stringResource(R.string.cerrar)) }
+                    Text(stringResource(if (edicion.grupo == null) R.string.clase_nueva else R.string.clase_editar), Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
                     TextButton(
                         enabled = puedeGuardar,
                         onClick = {
-                            vm.guardarClase(horarioId, edicion.grupo, titulo.trim(), materiaId, dias, inicio, fin, aula, notas, aviso, color)
+                            vm.guardarClase(horarioId, edicion.grupo, titulo.trim(), materiaId, dias, inicio, fin, aula, notas, aviso, color, maxFaltas.toIntOrNull())
                             alCerrar()
                         },
-                    ) { Text("Guardar") }
+                    ) { Text(stringResource(R.string.guardar)) }
                 }
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     OutlinedTextField(
@@ -491,11 +525,11 @@ private fun FormularioClase(vm: HorarioViewModel, estado: HorarioEstado, edicion
                             if (coincide != null) materiaId = coincide.id
                             else if (materiaId != null) materiaId = null
                         },
-                        label = { Text("Materia o actividad") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                        label = { Text(stringResource(R.string.clase_materia)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
                     )
                     if (estado.materias.isNotEmpty()) {
-                        Text("O elige una de tus listas de tareas", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.clase_elige_lista), style = MaterialTheme.typography.labelMedium)
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             for (m in estado.materias.take(12)) {
                                 FilterChip(materiaId == m.id, { titulo = m.nombre; materiaId = m.id }, { Text(m.nombre, maxLines = 1) })
@@ -503,55 +537,61 @@ private fun FormularioClase(vm: HorarioViewModel, estado: HorarioEstado, edicion
                         }
                     }
                     if (estado.horarios.size > 1) {
-                        Text("Horario", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.horario), style = MaterialTheme.typography.labelMedium)
                         Box {
                             val actual = estado.horarios.firstOrNull { it.id == horarioId }
-                            OutlinedButton(onClick = { menuHorario = true }) { Text(actual?.let { "${it.icono} ${it.nombre}" } ?: "Elegir horario") }
+                            OutlinedButton(onClick = { menuHorario = true }) { Text(actual?.let { "${it.icono} ${it.nombre}" } ?: stringResource(R.string.clase_elegir_horario)) }
                             DropdownMenu(expanded = menuHorario, onDismissRequest = { menuHorario = false }) {
                                 for (h in estado.horarios) DropdownMenuItem(text = { Text("${h.icono} ${h.nombre}") }, onClick = { horarioId = h.id; menuHorario = false })
                             }
                         }
                     }
-                    Text("Días", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.clase_dias), style = MaterialTheme.typography.labelMedium)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         for (d in 1..7) {
-                            FilterChip(d in dias, { dias = if (d in dias) dias - d else dias + d }, { Text(ReglasHorario.diasCortos[d - 1]) })
+                            FilterChip(d in dias, { dias = if (d in dias) dias - d else dias + d }, { Text(Fechas.diaCorto(d)) })
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedButton(onClick = { elegirHora = "inicio" }, Modifier.weight(1f)) { Text("Inicio  ${ReglasHorario.hora(inicio)}") }
                         OutlinedButton(onClick = { elegirHora = "fin" }, Modifier.weight(1f)) { Text("Fin  ${ReglasHorario.hora(fin)}") }
                     }
-                    if (!horaValida) Text("La hora de fin debe ser posterior a la de inicio", color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+                    if (!horaValida) Text(stringResource(R.string.clase_hora_invalida), color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
                     if (choques.isNotEmpty()) {
                         Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer) {
                             Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                                Text("Coincide con otra clase", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text(stringResource(R.string.clase_coincide), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                                 for (c in choques.take(4)) {
                                     val dondeEs = estado.nombres[c.horarioId]?.let { " ($it)" } ?: ""
-                                    Text("${c.titulo} · ${ReglasHorario.diasCortos[c.diaSemana - 1]} ${ReglasHorario.rango(c)}$dondeEs", fontSize = 13.sp)
+                                    Text("${c.titulo} · ${Fechas.diaCorto(c.diaSemana)} ${ReglasHorario.rango(c)}$dondeEs", fontSize = 13.sp)
                                 }
-                                if (choques.size > 4) Text("y ${choques.size - 4} más", fontSize = 13.sp)
+                                if (choques.size > 4) Text(stringResource(R.string.clase_y_mas, choques.size - 4), fontSize = 13.sp)
                             }
                         }
                     }
-                    OutlinedTextField(aula, { aula = it }, label = { Text("Aula o lugar (opcional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    Text("Color de la clase", style = MaterialTheme.typography.labelMedium)
+                    OutlinedTextField(aula, { aula = it }, label = { Text(stringResource(R.string.clase_aula)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    Text(stringResource(R.string.clase_color), style = MaterialTheme.typography.labelMedium)
                     SelectorColorClase(color, alElegir = { color = it }, alOtro = { otroColor = true })
-                    Text("Aviso", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.clase_aviso), style = MaterialTheme.typography.labelMedium)
                     Box {
-                        OutlinedButton(onClick = { menuAviso = true }) { Text(aviso?.let { textoAviso(it) } ?: "Sin aviso") }
+                        OutlinedButton(onClick = { menuAviso = true }) { Text(aviso?.let { textoAviso(it) } ?: stringResource(R.string.clase_sin_aviso)) }
                         DropdownMenu(expanded = menuAviso, onDismissRequest = { menuAviso = false }) {
-                            DropdownMenuItem(text = { Text("Sin aviso") }, onClick = { aviso = null; menuAviso = false })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.clase_sin_aviso)) }, onClick = { aviso = null; menuAviso = false })
                             for (m in ReglasHorario.avisos) DropdownMenuItem(text = { Text(textoAviso(m)) }, onClick = { aviso = m; menuAviso = false })
                         }
                     }
                     OutlinedTextField(
-                        notas, { notas = it }, label = { Text("Notas (opcional)") }, minLines = 2, modifier = Modifier.fillMaxWidth(),
+                        maxFaltas, { t -> maxFaltas = t.filter { it.isDigit() }.take(3) }, label = { Text(stringResource(R.string.clase_max_faltas)) },
+                        supportingText = { Text(stringResource(R.string.clase_max_faltas_ayuda)) },
+                        singleLine = true, modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    )
+                    OutlinedTextField(
+                        notas, { notas = it }, label = { Text(stringResource(R.string.clase_notas)) }, minLines = 2, modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     )
                     if (edicion.grupo != null) {
-                        TextButton(onClick = { confirmarEliminar = true }) { Text("Eliminar clase", color = MaterialTheme.colorScheme.error) }
+                        TextButton(onClick = { confirmarEliminar = true }) { Text(stringResource(R.string.clase_eliminar), color = MaterialTheme.colorScheme.error) }
                     }
                 }
             }
@@ -566,21 +606,23 @@ private fun FormularioClase(vm: HorarioViewModel, estado: HorarioEstado, edicion
         )
     }
     when (elegirHora) {
-        "inicio" -> SelectorHora(inicio / 60, inicio % 60, alCerrar = { elegirHora = null }, titulo = "Hora de inicio", paso = 5) { h, m ->
+        "inicio" -> SelectorHora(inicio / 60, inicio % 60, alCerrar = { elegirHora = null }, titulo = stringResource(R.string.clase_hora_inicio), paso = 5) { h, m ->
             inicio = h * 60 + m
             if (fin <= inicio) fin = min(inicio + 60, ReglasHorario.MINUTOS_DIA)
         }
-        "fin" -> SelectorHora(fin / 60 % 24, fin % 60, alCerrar = { elegirHora = null }, titulo = "Hora de fin", paso = 5) { h, m -> fin = if (h == 0 && m == 0) ReglasHorario.MINUTOS_DIA else h * 60 + m }
+        "fin" -> SelectorHora(fin / 60 % 24, fin % 60, alCerrar = { elegirHora = null }, titulo = stringResource(R.string.clase_hora_fin), paso = 5) { h, m -> fin = if (h == 0 && m == 0) ReglasHorario.MINUTOS_DIA else h * 60 + m }
     }
     if (confirmarEliminar && edicion.grupo != null) {
         DialogoConfirmar(
-            "¿Eliminar esta clase?", "Se eliminará en todos los días en que se repite.", "Eliminar",
+            stringResource(R.string.clase_eliminar_titulo), stringResource(R.string.clase_eliminar_texto), stringResource(R.string.eliminar),
             alCerrar = { confirmarEliminar = false },
         ) { vm.eliminarClase(edicion.grupo); alCerrar() }
     }
 }
 
-private fun textoAviso(min: Int): String = if (min >= 60) "${min / 60} h antes" else "$min min antes"
+@Composable
+private fun textoAviso(min: Int): String =
+    if (min >= 60) stringResource(R.string.clase_aviso_horas, min / 60) else stringResource(R.string.clase_aviso_min, min)
 
 /** Menú lateral de Horario: los horarios (con su menú), crear uno nuevo y ajustes. */
 @Composable
@@ -591,10 +633,10 @@ fun MenuHorario(vm: HorarioViewModel, cerrarYLuego: (() -> Unit) -> Unit, alAjus
     var eliminar by remember { mutableStateOf<Horario?>(null) }
     androidx.compose.material3.ModalDrawerSheet(drawerShape = RoundedCornerShape(topEnd = 28.dp, bottomEnd = 28.dp)) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = 20.dp, bottom = 16.dp)) {
-            item { app.kiwu.android.ui.tareas.CabeceraMenu("Horario", "Clases y actividades") }
+            item { app.kiwu.android.ui.tareas.CabeceraMenu(stringResource(R.string.horario), stringResource(R.string.horario_menu_sub)) }
             item {
                 androidx.compose.material3.NavigationDrawerItem(
-                    label = { Text("Todos los horarios") }, icon = { Icon(Icons.Filled.Schedule, null) }, selected = estado.seleccion == null,
+                    label = { Text(stringResource(R.string.horario_todos_los)) }, icon = { Icon(Icons.Filled.Schedule, null) }, selected = estado.seleccion == null,
                     onClick = { cerrarYLuego { vm.elegir(null) } },
                     modifier = Modifier.padding(androidx.compose.material3.NavigationDrawerItemDefaults.ItemPadding),
                 )
@@ -604,8 +646,8 @@ fun MenuHorario(vm: HorarioViewModel, cerrarYLuego: (() -> Unit) -> Unit, alAjus
                     Modifier.fillMaxWidth().padding(start = 28.dp, end = 12.dp, top = 14.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Mis horarios", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    IconButton(onClick = { nuevo = true }) { Icon(Icons.Filled.Add, "Nuevo horario") }
+                    Text(stringResource(R.string.horario_mis), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    IconButton(onClick = { nuevo = true }) { Icon(Icons.Filled.Add, stringResource(R.string.horario_nuevo)) }
                 }
             }
             items(estado.horarios, key = { it.id }) { h ->
@@ -616,10 +658,10 @@ fun MenuHorario(vm: HorarioViewModel, cerrarYLuego: (() -> Unit) -> Unit, alAjus
                     onClick = { cerrarYLuego { vm.elegir(h.id) } },
                     badge = {
                         Box {
-                            IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Opciones de ${h.nombre}") }
+                            IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.opciones_de, h.nombre)) }
                             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                                DropdownMenuItem(text = { Text("Editar horario") }, onClick = { menu = false; editar = h })
-                                DropdownMenuItem(text = { Text("Eliminar horario", color = MaterialTheme.colorScheme.error) }, onClick = { menu = false; eliminar = h })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.horario_editar)) }, onClick = { menu = false; editar = h })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.horario_eliminar), color = MaterialTheme.colorScheme.error) }, onClick = { menu = false; eliminar = h })
                             }
                         }
                     },
@@ -629,7 +671,7 @@ fun MenuHorario(vm: HorarioViewModel, cerrarYLuego: (() -> Unit) -> Unit, alAjus
             item { androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 8.dp, horizontal = 28.dp)) }
             item {
                 androidx.compose.material3.NavigationDrawerItem(
-                    label = { Text("Ajustes") }, icon = { Icon(Icons.Filled.Settings, null) }, selected = false,
+                    label = { Text(stringResource(R.string.ajustes)) }, icon = { Icon(Icons.Filled.Settings, null) }, selected = false,
                     onClick = { cerrarYLuego(alAjustes) },
                     modifier = Modifier.padding(androidx.compose.material3.NavigationDrawerItemDefaults.ItemPadding),
                 )
@@ -640,7 +682,7 @@ fun MenuHorario(vm: HorarioViewModel, cerrarYLuego: (() -> Unit) -> Unit, alAjus
     editar?.let { h -> DialogoHorario(h, alCerrar = { editar = null }) { nombre, icono -> vm.editarHorario(h.id, nombre, icono) } }
     eliminar?.let { h ->
         DialogoConfirmar(
-            "¿Eliminar ${h.nombre}?", "Se eliminarán también todas sus clases.", "Eliminar horario y sus clases",
+            stringResource(R.string.horario_eliminar_titulo, h.nombre), stringResource(R.string.horario_eliminar_texto), stringResource(R.string.horario_eliminar_boton),
             alCerrar = { eliminar = null },
         ) { vm.eliminarHorario(h.id) }
     }

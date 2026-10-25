@@ -28,6 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.kiwu.android.domain.Elemento
 import app.kiwu.android.ui.EstadoVacio
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
 /** Vista de lista: pendientes, y una sección plegable con las completadas. */
 @Composable
@@ -40,12 +42,12 @@ fun ListaTareas(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String) -> 
     Column(Modifier.fillMaxSize()) {
         when {
             estado.cargado && estado.materiasDelContexto.isEmpty() && !estado.enEventos -> EstadoVacio(
-                Icons.Filled.CheckCircle, if (enCarpeta) "Esta carpeta está vacía" else "Crea una lista para empezar", Modifier.weight(1f),
+                Icons.Filled.CheckCircle, stringResource(if (enCarpeta) R.string.carpeta_esta_vacia else R.string.crea_lista_empezar), Modifier.weight(1f),
             ) {
-                Button(onClick = alCrearLista, modifier = Modifier.padding(top = 16.dp)) { Text(if (enCarpeta) "Crear una lista aquí" else "Crear lista") }
+                Button(onClick = alCrearLista, modifier = Modifier.padding(top = 16.dp)) { Text(stringResource(if (enCarpeta) R.string.crear_lista_aqui else R.string.crear_lista)) }
             }
             estado.pendientes.isEmpty() && estado.completados.isEmpty() ->
-                EstadoVacio(if (estado.enEventos) Icons.Filled.Event else Icons.Filled.CheckCircle, if (estado.enEventos) "Sin eventos" else "Sin tareas", Modifier.weight(1f))
+                EstadoVacio(if (estado.enEventos) Icons.Filled.Event else Icons.Filled.CheckCircle, stringResource(if (estado.enEventos) R.string.sin_eventos else R.string.sin_tareas), Modifier.weight(1f))
             else -> LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(bottom = 12.dp)) {
                 items(estado.pendientes, key = { it.id }) { d ->
                     FilaTarea(
@@ -62,7 +64,7 @@ fun ListaTareas(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String) -> 
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(if (completadasVisibles) Icons.Filled.KeyboardArrowDown else Icons.Filled.KeyboardArrowRight, null)
-                            Text("Completadas", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 6.dp))
+                            Text(stringResource(R.string.completadas), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 6.dp))
                             Text(
                                 estado.completados.size.toString(), style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 8.dp),
@@ -85,7 +87,7 @@ fun ListaTareas(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String) -> 
             CampoNuevaTarea(
                 // Fuera de una carpeta el destino también puede ser «Eventos».
                 estado.materiasDelContexto + if (enCarpeta) emptyList() else listOf(ListaEventos), estado.materiaActual, alCrear = { t, m, f -> vm.crearTarea(t, m, f) },
-                marcador = if (estado.enEventos) "Añadir evento" else "Añadir tarea",
+                marcador = stringResource(if (estado.enEventos) R.string.anadir_evento else R.string.anadir_tarea),
             )
         }
     }

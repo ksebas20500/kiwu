@@ -48,6 +48,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
 /** Qué widget se está configurando. */
 private enum class TipoWidget { DEBERES, HORARIO, NOTAS }
@@ -59,6 +61,8 @@ private enum class TipoWidget { DEBERES, HORARIO, NOTAS }
 class ConfiguracionWidgetsActivity : ComponentActivity() {
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
     private var tipo = TipoWidget.DEBERES
+
+    override fun attachBaseContext(base: android.content.Context) = super.attachBaseContext(app.kiwu.android.Idioma.contexto(base))
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -146,18 +150,18 @@ private fun PantallaConfiguracion(
 
     val opciones = when (tipo) {
         TipoWidget.DEBERES -> buildList {
-            add(ConfigWidget.TODAS to "Todas las tareas")
-            add(ConfigWidget.HOY to "Hoy")
-            add(ConfigWidget.PROXIMOS to "Próximos 7 días")
+            add(ConfigWidget.TODAS to stringResource(R.string.todas_tareas))
+            add(ConfigWidget.HOY to stringResource(R.string.hoy))
+            add(ConfigWidget.PROXIMOS to stringResource(R.string.proximos_7))
             materias.filter { it.id != ID_EVENTOS }.forEach { add(ConfigWidget.lista(it.id) to "${it.emoji ?: "📋"} ${it.nombre}") }
             grupos.forEach { add(ConfigWidget.grupo(it.id) to "${it.icono} ${it.nombre}") }
         }
         TipoWidget.HORARIO -> buildList {
-            add(ConfigWidget.TODAS to "Todos los horarios")
+            add(ConfigWidget.TODAS to stringResource(R.string.w_todos_horarios))
             horarios.forEach { add(ConfigWidget.horario(it.id) to "${it.icono} ${it.nombre}") }
         }
         TipoWidget.NOTAS -> buildList {
-            add(ConfigWidget.TODAS to "Todas las notas")
+            add(ConfigWidget.TODAS to stringResource(R.string.todas_notas))
             cuadernos.forEach { add(ConfigWidget.cuaderno(it.id) to "${it.icono} ${it.nombre}") }
         }
     }
@@ -165,18 +169,18 @@ private fun PantallaConfiguracion(
     Column(modifier.fillMaxSize().padding(horizontal = 20.dp)) {
         Text(
             when (tipo) {
-                TipoWidget.DEBERES -> "Widget de deberes"
-                TipoWidget.HORARIO -> "Widget de horario"
-                TipoWidget.NOTAS -> "Widget de nota rápida"
+                TipoWidget.DEBERES -> stringResource(R.string.w_titulo_deberes)
+                TipoWidget.HORARIO -> stringResource(R.string.w_titulo_horario)
+                TipoWidget.NOTAS -> stringResource(R.string.w_titulo_notas)
             },
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
         )
         Text(
             when (tipo) {
-                TipoWidget.DEBERES -> "Elige qué tareas quieres ver. El círculo las completa sin abrir Kiwu."
-                TipoWidget.HORARIO -> "Elige un horario o muéstralos todos juntos."
-                TipoWidget.NOTAS -> "Elige el cuaderno donde se crearán las notas nuevas."
+                TipoWidget.DEBERES -> stringResource(R.string.w_ayuda_deberes)
+                TipoWidget.HORARIO -> stringResource(R.string.w_ayuda_horario)
+                TipoWidget.NOTAS -> stringResource(R.string.w_ayuda_notas)
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -200,8 +204,8 @@ private fun PantallaConfiguracion(
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(onClick = alCancelar) { Text("Cancelar") }
-            Button(onClick = { alGuardar(seleccion) }, modifier = Modifier.padding(start = 8.dp)) { Text("Guardar") }
+            TextButton(onClick = alCancelar) { Text(stringResource(R.string.cancelar)) }
+            Button(onClick = { alGuardar(seleccion) }, modifier = Modifier.padding(start = 8.dp)) { Text(stringResource(R.string.guardar)) }
         }
     }
 }

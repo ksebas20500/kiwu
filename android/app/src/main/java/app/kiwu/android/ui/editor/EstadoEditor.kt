@@ -411,13 +411,13 @@ class EstadoEditor(inicial: Documento) {
 
     // --- menú «/» ----------------------------------------------------------------------------------
 
-    /** Tipos que ofrece el menú «/» para este bloque; vacío si no hay que mostrarlo. */
-    fun opcionesSlash(b: BloqueEd): List<String> {
+    /** Tipos que ofrece el menú «/» para este bloque, filtrados por su nombre en [titulos]; vacío si no hay que mostrarlo. */
+    fun opcionesSlash(b: BloqueEd, titulos: Map<String, String>): List<String> {
         val t = b.texto
         if (b.kind != TiposBloque.PARRAFO || !t.startsWith("/") || t.contains('\n') || b.slashDescartado) return emptyList()
         val filtro = sinTildes(t.drop(1))
         return TiposBloque.todos.filter {
-            it != TiposBloque.PARRAFO && (filtro.isEmpty() || filtro in sinTildes(TiposBloque.titulos[it] ?: ""))
+            it != TiposBloque.PARRAFO && (filtro.isEmpty() || filtro in sinTildes(titulos[it] ?: ""))
         }
     }
 

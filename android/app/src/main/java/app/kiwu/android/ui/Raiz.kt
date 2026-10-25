@@ -35,6 +35,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import app.kiwu.android.R
 import app.kiwu.android.KiwuApp
 import app.kiwu.android.data.AjustesUi
 import app.kiwu.android.domain.Elemento
@@ -109,10 +110,11 @@ fun Raiz(
             NavHost(nav, startDestination = if (guia) "guia" else "principal") {
                 composable("guia") {
                     var terminando by androidx.compose.runtime.remember { mutableStateOf(false) }
+                    val r = androidx.compose.ui.platform.LocalContext.current.resources
                     GuiaScreen(alTerminar = {
                         if (!terminando) alcance.launch {
                             terminando = true
-                            if (app.repo.crearListaDeEjemplo()) abrirLista = Guia.ID_LISTA
+                            if (app.repo.crearListaDeEjemplo(r.getString(Guia.NOMBRE_LISTA), Guia.tareas.map { r.getString(it) })) abrirLista = Guia.ID_LISTA
                             app.ajustes.cambiar { it.copy(guiaVista = true) }
                             nav.navigate("principal") { popUpTo("guia") { inclusive = true } }
                         }
@@ -230,9 +232,9 @@ private fun Principal(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             NavigationBar {
-                NavigationBarItem(selected = modulo == "tareas", onClick = { modulo = "tareas" }, icon = { Icon(Icons.Filled.CheckCircle, null) }, label = { Text("Tareas") })
-                NavigationBarItem(selected = modulo == "notas", onClick = { modulo = "notas" }, icon = { Icon(Icons.Filled.Description, null) }, label = { Text("Notas") })
-                NavigationBarItem(selected = modulo == "horario", onClick = { modulo = "horario" }, icon = { Icon(Icons.Filled.Schedule, null) }, label = { Text("Horario") })
+                NavigationBarItem(selected = modulo == "tareas", onClick = { modulo = "tareas" }, icon = { Icon(Icons.Filled.CheckCircle, null) }, label = { Text(androidx.compose.ui.res.stringResource(R.string.tareas)) })
+                NavigationBarItem(selected = modulo == "notas", onClick = { modulo = "notas" }, icon = { Icon(Icons.Filled.Description, null) }, label = { Text(androidx.compose.ui.res.stringResource(R.string.notas)) })
+                NavigationBarItem(selected = modulo == "horario", onClick = { modulo = "horario" }, icon = { Icon(Icons.Filled.Schedule, null) }, label = { Text(androidx.compose.ui.res.stringResource(R.string.horario)) })
             }
         },
     ) { relleno ->

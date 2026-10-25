@@ -27,7 +27,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /** La lista especial de eventos tal como la ve la pantalla (en la base de datos se crea al añadir el primero). */
-val ListaEventos = Materia(id = ID_EVENTOS, nombre = "Eventos", emoji = "📅", creada = 0, actualizada = 0)
+val ListaEventos: Materia get() = Materia(id = ID_EVENTOS, nombre = app.kiwu.android.Textos.eventos, emoji = "📅", creada = 0, actualizada = 0)
 
 data class TareasEstado(
     val materias: List<Materia> = emptyList(),

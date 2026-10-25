@@ -35,9 +35,12 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import app.kiwu.android.KiwuApp
+import app.kiwu.android.domain.ContadorFaltas
+import app.kiwu.android.domain.EstadoFaltas
 import app.kiwu.android.domain.ReglasHorario
 import app.kiwu.android.domain.UrgenciaTarea
 import kotlinx.coroutines.flow.first
+import app.kiwu.android.R
 
 /** Widget «Horario»: la tarjeta «Ahora / Siguiente» y las clases de hoy, con su color y sus puntos de tareas. */
 class HorarioWidget : GlanceAppWidget() {
@@ -48,10 +51,12 @@ class HorarioWidget : GlanceAppWidget() {
         val horarios = app.repo.horarios.first()
         val clases = app.repo.clases.first()
         val deberes = app.repo.deberes.first()
+        val faltas = app.repo.faltas.first()
         val colores = coloresDelWidget(context)
+        TextosWidget.de(context) // deja «Eventos» y los demás nombres fijos en el idioma de Kiwu
         provideContent {
             val config = currentState<Preferences>().configWidget()
-            val datos = DatosWidgets.horario(horarios, clases, deberes, config, System.currentTimeMillis())
+            val datos = DatosWidgets.horario(horarios, clases, deberes, config, System.currentTimeMillis(), faltas = faltas)
             ContenidoHorario(datos, colores)
         }
     }
@@ -76,7 +81,7 @@ private fun ContenidoHorario(datos: DatosHorario, colores: ColoresWidget) {
             .clickable(actionStartActivity(intencionDeApertura(contexto, seccion = "horario"))),
     ) {
         Row(GlanceModifier.fillMaxWidth()) {
-            Text("Horario", style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = colores.texto))
+            Text(textoWidget(R.string.horario), style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = colores.texto))
             if (datos.nombre != null) {
                 Text(
                     "  ·  ${datos.nombre}",
@@ -87,19 +92,19 @@ private fun ContenidoHorario(datos: DatosHorario, colores: ColoresWidget) {
         }
         Spacer(GlanceModifier.height(8.dp))
         if (!datos.hayHorarios) {
-            AvisoHorario("Crea tu horario en Kiwu.", colores)
+            AvisoHorario(textoWidget(R.string.w_crea_horario), colores)
         } else {
             when {
-                datos.enCurso != null -> TarjetaClase(datos.enCurso, "AHORA", colores)
-                datos.siguiente != null -> TarjetaClase(datos.siguiente, "SIGUIENTE", colores, datos.diasSiguiente)
-                else -> AvisoHorario("Sin más clases próximas.", colores)
+                datos.enCurso != null -> TarjetaClase(datos.enCurso, textoWidget(R.string.w_ahora), colores)
+                datos.siguiente != null -> TarjetaClase(datos.siguiente, textoWidget(R.string.w_siguiente), colores, datos.diasSiguiente)
+                else -> AvisoHorario(textoWidget(R.string.w_sin_mas_clases), colores)
             }
             if (maximo > 0) {
                 Spacer(GlanceModifier.height(10.dp))
-                Text("Clases de hoy", style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, color = colores.secundario))
+                Text(textoWidget(R.string.w_clases_hoy), style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, color = colores.secundario))
                 Spacer(GlanceModifier.height(6.dp))
                 if (datos.hoy.isEmpty()) {
-                    AvisoHorario("Hoy no tienes clases 🎉", colores)
+                    AvisoHorario(textoWidget(R.string.w_hoy_sin_clases), colores)
                 } else {
                     LazyColumn(GlanceModifier.fillMaxSize()) {
                         items(datos.hoy.take(maximo), itemId = { it.id.hashCode().toLong() }) { clase ->
@@ -133,14 +138,15 @@ private fun TarjetaClase(clase: FilaClase, etiqueta: String, colores: ColoresWid
 }
 
 /** Día de la próxima clase, solo cuando no es hoy («Mañana», «Sáb»…). */
-private fun diaDeLaClase(dias: Int, diaSemana: Int): String? = when {
+private fun diaDeLaClase(dias: Int, diaSemana: Int, manana: String): String? = when {
     dias <= 0 -> null
-    dias == 1 -> "Mañana"
-    else -> ReglasHorario.diasCortos[(diaSemana - 1).coerceIn(0, 6)]
+    dias == 1 -> manana
+    else -> app.kiwu.android.ui.Fechas.diaCorto(diaSemana)
 }
 
+@Composable
 private fun detalle(clase: FilaClase, dias: Int = 0): String = listOfNotNull(
-    diaDeLaClase(dias, clase.diaSemana),
+    diaDeLaClase(dias, clase.diaSemana, textoWidget(R.string.manana)),
     "${ReglasHorario.hora(clase.inicioMin)} – ${ReglasHorario.hora(clase.finMin)}",
     clase.aula.takeIf { it.isNotBlank() },
     clase.horario,
@@ -162,10 +168,28 @@ private fun FilaClaseWidget(clase: FilaClase, colores: ColoresWidget) {
                 maxLines = 1,
             )
         }
+        clase.faltas?.let { FaltasWidget(it, colores) }
         if (clase.urgencia != null) {
             PuntoUrgencia(clase.urgencia, colores)
         }
     }
+}
+
+/** Contador de faltas de la clase: las que quedan (o las que lleva, sin máximo), con el color del estado. */
+@Composable
+private fun FaltasWidget(f: ContadorFaltas, colores: ColoresWidget) {
+    val color = when (f.estado) {
+        EstadoFaltas.Superado -> colores.rojo
+        EstadoFaltas.Aviso -> ColorProvider(Color(0xFFF9A825))
+        EstadoFaltas.Tranquilo -> ColorProvider(Color(0xFF2E7D32))
+        EstadoFaltas.SinLimite -> colores.secundario
+    }
+    Text(
+        app.kiwu.android.ui.horario.textoCortoFaltas(f, androidx.glance.LocalContext.current.resources),
+        GlanceModifier.padding(end = 6.dp),
+        style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = color),
+        maxLines = 1,
+    )
 }
 
 @Composable

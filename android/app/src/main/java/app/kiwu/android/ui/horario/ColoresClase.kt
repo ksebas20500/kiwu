@@ -29,22 +29,29 @@ import app.kiwu.android.domain.Clase
 import app.kiwu.android.domain.ReglasHorario
 import app.kiwu.android.ui.ColorPastel
 import app.kiwu.android.ui.Pasteles
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
 /** Colores que se pueden elegir para una clase: sólidos, claros y los pasteles de siempre (el automático es «sin color»). */
 object ColoresClase {
-    class Opcion(val nombre: String, val hex: String)
+    /** [nombre] es un recurso de texto; [numero] o [base] completan los que llevan un dato («Pastel 3», «Rojo claro»). */
+    class Opcion(@androidx.annotation.StringRes val nombre: Int, val hex: String, val numero: Int? = null, @androidx.annotation.StringRes val base: Int? = null)
+
+    private fun claro(@androidx.annotation.StringRes base: Int, hex: String) = Opcion(R.string.color_claro_n, hex, base = base)
 
     val solidos = listOf(
-        Opcion("Rojo", "#E53935"), Opcion("Naranja", "#FB8C00"), Opcion("Ámbar", "#FFB300"), Opcion("Verde", "#43A047"),
-        Opcion("Turquesa", "#00897B"), Opcion("Azul", "#1E88E5"), Opcion("Índigo", "#3949AB"), Opcion("Morado", "#8E24AA"),
-        Opcion("Rosa", "#D81B60"), Opcion("Gris", "#607D8B"),
+        Opcion(R.string.color_rojo, "#E53935"), Opcion(R.string.color_naranja, "#FB8C00"), Opcion(R.string.color_ambar, "#FFB300"),
+        Opcion(R.string.color_verde, "#43A047"), Opcion(R.string.color_turquesa, "#00897B"), Opcion(R.string.color_azul, "#1E88E5"),
+        Opcion(R.string.color_indigo, "#3949AB"), Opcion(R.string.color_morado, "#8E24AA"), Opcion(R.string.color_rosa, "#D81B60"),
+        Opcion(R.string.color_gris, "#607D8B"),
     )
     val claros = listOf(
-        Opcion("Rojo claro", "#FFCDD2"), Opcion("Naranja claro", "#FFE0B2"), Opcion("Amarillo claro", "#FFF3C4"), Opcion("Verde claro", "#C8E6C9"),
-        Opcion("Turquesa claro", "#B2DFDB"), Opcion("Azul claro", "#BBDEFB"), Opcion("Índigo claro", "#C5CAE9"), Opcion("Morado claro", "#E1BEE7"),
-        Opcion("Rosa claro", "#F8BBD0"), Opcion("Gris claro", "#CFD8DC"),
+        claro(R.string.color_rojo, "#FFCDD2"), claro(R.string.color_naranja, "#FFE0B2"), claro(R.string.color_amarillo, "#FFF3C4"),
+        claro(R.string.color_verde, "#C8E6C9"), claro(R.string.color_turquesa, "#B2DFDB"), claro(R.string.color_azul, "#BBDEFB"),
+        claro(R.string.color_indigo, "#C5CAE9"), claro(R.string.color_morado, "#E1BEE7"), claro(R.string.color_rosa, "#F8BBD0"),
+        claro(R.string.color_gris, "#CFD8DC"),
     )
-    val pasteles = Pasteles.colores.mapIndexed { i, c -> Opcion("Pastel ${i + 1}", hex(c.fondo)) }
+    val pasteles = Pasteles.colores.mapIndexed { i, c -> Opcion(R.string.color_pastel_n, hex(c.fondo), numero = i + 1) }
 
     fun hex(c: Color): String = "#%06X".format(c.toArgb() and 0xFFFFFF)
 
@@ -68,13 +75,13 @@ object ColoresClase {
 /** Selector de color de una clase: «Automático», sólidos, claros, pasteles y «Otro color». */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun SelectorColorClase(actual: String?, alElegir: (String?) -> Unit, alOtro: () -> Unit, textoAutomatico: String = "Automático (según la materia)") {
+internal fun SelectorColorClase(actual: String?, alElegir: (String?) -> Unit, alOtro: () -> Unit, textoAutomatico: String = stringResource(R.string.color_automatico)) {
     val activo = ReglasHorario.colorValido(actual)
     @Composable
     fun Grupo(titulo: String, opciones: List<ColoresClase.Opcion>) {
         Text(titulo, style = MaterialTheme.typography.labelMedium)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            for (o in opciones) Muestra(o.hex, o.nombre, activo == o.hex) { alElegir(o.hex) }
+            for (o in opciones) Muestra(o.hex, nombreColor(o), activo == o.hex) { alElegir(o.hex) }
         }
     }
     androidx.compose.foundation.layout.Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -87,9 +94,9 @@ internal fun SelectorColorClase(actual: String?, alElegir: (String?) -> Unit, al
             ) { Text("A", style = MaterialTheme.typography.labelLarge) }
             Text(textoAutomatico, Modifier.align(Alignment.CenterVertically), style = MaterialTheme.typography.bodyMedium)
         }
-        Grupo("Sólidos", ColoresClase.solidos)
-        Grupo("Claros", ColoresClase.claros)
-        Grupo("Pasteles", ColoresClase.pasteles)
+        Grupo(stringResource(R.string.colores_solidos), ColoresClase.solidos)
+        Grupo(stringResource(R.string.colores_claros), ColoresClase.claros)
+        Grupo(stringResource(R.string.colores_pasteles), ColoresClase.pasteles)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             val propio = activo != null && ColoresClase.solidos.none { it.hex == activo } && ColoresClase.claros.none { it.hex == activo } && ColoresClase.pasteles.none { it.hex == activo }
             Box(
@@ -97,10 +104,17 @@ internal fun SelectorColorClase(actual: String?, alElegir: (String?) -> Unit, al
                     .border(if (propio) 3.dp else 1.dp, if (propio) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, CircleShape)
                     .clickable(onClick = alOtro),
                 contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Filled.Palette, "Otro color", Modifier.size(18.dp)) }
-            Text("Otro color…", style = MaterialTheme.typography.bodyMedium)
+            ) { Icon(Icons.Filled.Palette, stringResource(R.string.color_otro), Modifier.size(18.dp)) }
+            Text(stringResource(R.string.color_otro_mas), style = MaterialTheme.typography.bodyMedium)
         }
     }
+}
+
+@Composable
+private fun nombreColor(o: ColoresClase.Opcion): String = when {
+    o.numero != null -> stringResource(o.nombre, o.numero)
+    o.base != null -> stringResource(o.nombre, stringResource(o.base).lowercase()).replaceFirstChar { it.uppercase() }
+    else -> stringResource(o.nombre)
 }
 
 @Composable

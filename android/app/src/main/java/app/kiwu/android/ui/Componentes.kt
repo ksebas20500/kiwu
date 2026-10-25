@@ -41,6 +41,8 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
 /** Cuadro para pedir un texto (nombre de lista, de cuaderno…). */
 @Composable
@@ -48,7 +50,7 @@ fun DialogoTexto(
     titulo: String,
     etiqueta: String,
     inicial: String = "",
-    accion: String = "Guardar",
+    accion: String = stringResource(R.string.guardar),
     alCerrar: () -> Unit,
     alConfirmar: (String) -> Unit,
 ) {
@@ -65,7 +67,7 @@ fun DialogoTexto(
             )
         },
         confirmButton = { TextButton(onClick = enviar, enabled = texto.isNotBlank()) { Text(accion) } },
-        dismissButton = { TextButton(onClick = alCerrar) { Text("Cancelar") } },
+        dismissButton = { TextButton(onClick = alCerrar) { Text(stringResource(R.string.cancelar)) } },
     )
 }
 
@@ -79,7 +81,7 @@ fun DialogoConfirmar(titulo: String, mensaje: String, accion: String, alCerrar: 
         confirmButton = {
             TextButton(onClick = { alConfirmar(); alCerrar() }) { Text(accion, color = MaterialTheme.colorScheme.error) }
         },
-        dismissButton = { TextButton(onClick = alCerrar) { Text("Cancelar") } },
+        dismissButton = { TextButton(onClick = alCerrar) { Text(stringResource(R.string.cancelar)) } },
     )
 }
 
@@ -122,17 +124,17 @@ fun SelectorFechaHora(inicial: Long?, alCerrar: () -> Unit, alElegir: (Long) -> 
                 androidx.compose.foundation.layout.Row {
                     TextButton(onClick = {
                         estado.selectedDateMillis?.let { dia = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() }
-                    }) { Text("Añadir hora") }
+                    }) { Text(stringResource(R.string.anadir_hora)) }
                     TextButton(onClick = {
                         estado.selectedDateMillis?.let {
                             val d = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()
                             alElegir(d.atStartOfDay(zona).toInstant().toEpochMilli())
                             alCerrar()
                         }
-                    }) { Text("Aceptar") }
+                    }) { Text(stringResource(R.string.aceptar)) }
                 }
             },
-            dismissButton = { TextButton(onClick = alCerrar) { Text("Cancelar") } },
+            dismissButton = { TextButton(onClick = alCerrar) { Text(stringResource(R.string.cancelar)) } },
         ) { DatePicker(state = estado) }
     } else {
         var h by remember { mutableStateOf(base.hour) }
@@ -141,19 +143,19 @@ fun SelectorFechaHora(inicial: Long?, alCerrar: () -> Unit, alElegir: (Long) -> 
         var todoElDia by remember { mutableStateOf(inicial != null && base.hour == 0 && base.minute == 0) }
         AlertDialog(
             onDismissRequest = alCerrar,
-            title = { Text("Hora de entrega") },
+            title = { Text(stringResource(R.string.hora_entrega)) },
             text = {
                 Column {
                     androidx.compose.foundation.layout.Row(
                         Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Text("Todo el día")
+                        Text(stringResource(R.string.todo_el_dia))
                         androidx.compose.material3.Switch(checked = todoElDia, onCheckedChange = { todoElDia = it })
                     }
                     if (todoElDia) {
                         Text(
-                            "Sin hora concreta.", style = MaterialTheme.typography.bodySmall,
+                            stringResource(R.string.sin_hora), style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 24.dp),
                         )
                     } else {
@@ -167,9 +169,9 @@ fun SelectorFechaHora(inicial: Long?, alCerrar: () -> Unit, alElegir: (Long) -> 
                     val elegido = LocalDateTime.of(dia!!, hora).atZone(zona).toInstant().toEpochMilli()
                     alElegir(elegido)
                     alCerrar()
-                }) { Text("Aceptar") }
+                }) { Text(stringResource(R.string.aceptar)) }
             },
-            dismissButton = { TextButton(onClick = { dia = null }) { Text("Atrás") } },
+            dismissButton = { TextButton(onClick = { dia = null }) { Text(stringResource(R.string.atras)) } },
         )
     }
 }
@@ -185,9 +187,9 @@ fun SelectorDia(inicial: LocalDate, alCerrar: () -> Unit, alElegir: (LocalDate) 
             TextButton(onClick = {
                 estado.selectedDateMillis?.let { alElegir(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()) }
                 alCerrar()
-            }) { Text("Aceptar") }
+            }) { Text(stringResource(R.string.aceptar)) }
         },
-        dismissButton = { TextButton(onClick = alCerrar) { Text("Cancelar") } },
+        dismissButton = { TextButton(onClick = alCerrar) { Text(stringResource(R.string.cancelar)) } },
     ) { DatePicker(state = estado) }
 }
 
@@ -196,15 +198,15 @@ fun SelectorDia(inicial: LocalDate, alCerrar: () -> Unit, alElegir: (LocalDate) 
  * al final del día) y se muestra como 00:00; las ruedas solo conocen 00–23.
  */
 @Composable
-fun SelectorHora(hora: Int, minuto: Int, alCerrar: () -> Unit, titulo: String = "Hora de entrega", paso: Int = 1, alElegir: (Int, Int) -> Unit) {
+fun SelectorHora(hora: Int, minuto: Int, alCerrar: () -> Unit, titulo: String = stringResource(R.string.hora_entrega), paso: Int = 1, alElegir: (Int, Int) -> Unit) {
     var h by remember { mutableStateOf(hora % 24) }
     var m by remember { mutableStateOf(minutoAjustado(minuto, paso)) }
     AlertDialog(
         onDismissRequest = alCerrar,
         title = { Text(titulo) },
         text = { RuedaHora(h, m, paso) { nh, nm -> h = nh; m = nm } },
-        confirmButton = { TextButton(onClick = { alElegir(h, m); alCerrar() }) { Text("Aceptar") } },
-        dismissButton = { TextButton(onClick = alCerrar) { Text("Cancelar") } },
+        confirmButton = { TextButton(onClick = { alElegir(h, m); alCerrar() }) { Text(stringResource(R.string.aceptar)) } },
+        dismissButton = { TextButton(onClick = alCerrar) { Text(stringResource(R.string.cancelar)) } },
     )
 }
 

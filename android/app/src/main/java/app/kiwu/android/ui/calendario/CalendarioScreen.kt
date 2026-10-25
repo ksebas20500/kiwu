@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.kiwu.android.ui.Fechas
+import app.kiwu.android.ui.fechaCorta
 import app.kiwu.android.ui.Pasteles
 import app.kiwu.android.ui.tareas.CampoNuevaTarea
 import app.kiwu.android.ui.tareas.FilaTarea
@@ -49,8 +50,9 @@ import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
-private val DiasSemana = listOf("L", "M", "X", "J", "V", "S", "D")
 private const val MAX_PUNTOS = 4
 private val ALTO_FILA = 54.dp
 
@@ -78,12 +80,12 @@ fun CalendarioScreen(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(Fechas.mes(primeroDelMes), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).padding(start = 8.dp))
-            IconButton(onClick = { mes = primeroDelMes.minusMonths(1).toString() }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Mes anterior") }
-            TextButton(onClick = { mes = hoy.withDayOfMonth(1).toString(); seleccionado = hoy.toString() }) { Text("Hoy") }
-            IconButton(onClick = { mes = primeroDelMes.plusMonths(1).toString() }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Mes siguiente") }
+            IconButton(onClick = { mes = primeroDelMes.minusMonths(1).toString() }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(R.string.mes_anterior)) }
+            TextButton(onClick = { mes = hoy.withDayOfMonth(1).toString(); seleccionado = hoy.toString() }) { Text(stringResource(R.string.hoy)) }
+            IconButton(onClick = { mes = primeroDelMes.plusMonths(1).toString() }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, stringResource(R.string.mes_siguiente)) }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
-            for (d in DiasSemana) {
+            for (d in (1..7).map { Fechas.letraDia(it) }) {
                 Text(d, Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -112,13 +114,13 @@ fun CalendarioScreen(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String
         androidx.compose.material3.HorizontalDivider(Modifier.padding(top = 6.dp))
         Column(Modifier.fillMaxWidth().weight(1f)) {
             Text(
-                Fechas.corta(diaSel.atStartOfDay(zona).toInstant().toEpochMilli(), estado.ahora, zona)
+                fechaCorta(diaSel.atStartOfDay(zona).toInstant().toEpochMilli(), estado.ahora, zona)
                     .replaceFirstChar { it.uppercase() },
                 style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
             )
             LazyColumn(Modifier.weight(1f)) {
                 if (delDia.isEmpty()) {
-                    item { Text("Sin entregas este día", Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    item { Text(stringResource(R.string.sin_entregas_dia), Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
                 items(delDia, key = { it.id }) { d ->
                     FilaTarea(
@@ -128,7 +130,7 @@ fun CalendarioScreen(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String
                     )
                 }
             }
-            CampoNuevaTarea(estado.materias + app.kiwu.android.ui.tareas.ListaEventos, null, alCrear = { t, m, f -> vm.crearTareaEnDia(t, m, diaSel, f) }, marcador = "Añadir tarea a este día", diaFijo = diaSel)
+            CampoNuevaTarea(estado.materias + app.kiwu.android.ui.tareas.ListaEventos, null, alCrear = { t, m, f -> vm.crearTareaEnDia(t, m, diaSel, f) }, marcador = stringResource(R.string.anadir_tarea_dia), diaFijo = diaSel)
         }
     }
 }

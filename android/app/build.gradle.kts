@@ -7,6 +7,15 @@ plugins {
 }
 
 android {
+    lint {
+        // Español (base), inglés y portugués: un texto sin traducir o una traducción sobrante frena el build.
+        error += listOf("MissingTranslation", "ExtraTranslation", "MissingQuantity", "StringFormatMatches")
+    }
+    bundle {
+        // En Android 8–12 el idioma se elige dentro de Kiwu: el paquete tiene que traer los tres, no solo el del teléfono.
+        language { enableSplit = false }
+    }
+
     namespace = "app.kiwu.android"
     compileSdk = 35
 
@@ -14,8 +23,8 @@ android {
         applicationId = "app.kiwu.android"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "0.4.1"
+        versionCode = 7
+        versionName = "0.4.3"
     }
 
     buildTypes {

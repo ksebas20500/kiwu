@@ -12,6 +12,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
 import java.util.UUID
+import app.kiwu.android.R
 
 /**
  * Formato de las notas. Es el mismo JSON que usan Kiwu para macOS y Linux (`NoteDocument`, `NoteBlock`, `TextRun`):
@@ -37,20 +38,21 @@ object TiposBloque {
         PARRAFO, TITULO, SUBTITULO, VINETAS, NUMERADA, TAREAS, CITA, DESTACADO, CODIGO, IMAGEN, ARCHIVO, DIVISOR, ENLACE,
     )
 
+    /** Nombre de cada tipo en el idioma de la app (recursos de texto). */
     val titulos = mapOf(
-        PARRAFO to "Texto",
-        TITULO to "Título 1",
-        SUBTITULO to "Título 2",
-        VINETAS to "Lista con viñetas",
-        NUMERADA to "Lista numerada",
-        TAREAS to "Lista de tareas",
-        CITA to "Cita",
-        DESTACADO to "Destacado",
-        CODIGO to "Código",
-        IMAGEN to "Imagen",
-        ARCHIVO to "Archivo adjunto (PDF, Word)",
-        DIVISOR to "Divisor",
-        ENLACE to "Enlace con vista previa (web o vídeo)",
+        PARRAFO to R.string.bloque_texto,
+        TITULO to R.string.bloque_titulo1,
+        SUBTITULO to R.string.bloque_titulo2,
+        VINETAS to R.string.bloque_vinetas,
+        NUMERADA to R.string.bloque_numerada,
+        TAREAS to R.string.bloque_tareas,
+        CITA to R.string.bloque_cita,
+        DESTACADO to R.string.bloque_destacado,
+        CODIGO to R.string.bloque_codigo,
+        IMAGEN to R.string.bloque_imagen,
+        ARCHIVO to R.string.bloque_archivo,
+        DIVISOR to R.string.bloque_divisor,
+        ENLACE to R.string.bloque_enlace,
     )
 
     /** Bloques cuyo contenido es texto editable con formato. */

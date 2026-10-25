@@ -53,6 +53,9 @@ import app.kiwu.android.domain.Materia
 import app.kiwu.android.domain.Reglas
 import app.kiwu.android.ui.Chip
 import app.kiwu.android.ui.Fechas
+import app.kiwu.android.ui.fechaCorta
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
 private val VerdeHoy = Color(0xFF2E7D32)
 
@@ -67,7 +70,7 @@ fun ChipFecha(d: Deber, ahora: Long, reglas: Reglas) {
         hoy -> VerdeHoy
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
-    Chip(Fechas.corta(entrega, ahora), fondo = color.copy(alpha = 0.12f), color = color)
+    Chip(fechaCorta(entrega, ahora), fondo = color.copy(alpha = 0.12f), color = color)
 }
 
 /** Menú de una tarea: mover entre columnas del tablero y eliminar. */
@@ -83,11 +86,11 @@ fun MenuTarea(
     DropdownMenu(expanded = abierto, onDismissRequest = alCerrar) {
         if (!esEvento) for (c in Columna.entries) {
             if (c != columnaActual) {
-                DropdownMenuItem(text = { Text("Mover a «${c.titulo}»") }, onClick = { alCerrar(); alMover(c) })
+                DropdownMenuItem(text = { Text(stringResource(R.string.mover_a_n, c.titulo)) }, onClick = { alCerrar(); alMover(c) })
             }
         }
         DropdownMenuItem(
-            text = { Text(if (esEvento) "Eliminar evento" else "Eliminar tarea", color = MaterialTheme.colorScheme.error) },
+            text = { Text(stringResource(if (esEvento) R.string.evento_eliminar else R.string.tarea_eliminar), color = MaterialTheme.colorScheme.error) },
             onClick = { alCerrar(); alEliminar() },
         )
     }
@@ -114,7 +117,7 @@ fun FilaTarea(
         if (d.esEvento) {
             // Un evento no se completa: en lugar del círculo lleva el icono de calendario.
             Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Event, "Evento", tint = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Filled.Event, stringResource(R.string.evento), tint = MaterialTheme.colorScheme.primary)
             }
         } else {
             Checkbox(checked = d.completado, onCheckedChange = alMarcar)
@@ -132,7 +135,7 @@ fun FilaTarea(
             if (hayExtras) {
                 Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (columna == Columna.EN_CURSO) {
-                        Chip("En curso", MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
+                        Chip(stringResource(R.string.en_curso), MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                     ChipFecha(d, ahora, reglas)
                     if (nombreLista != null) {
@@ -142,7 +145,7 @@ fun FilaTarea(
             }
         }
         Box {
-            IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Opciones de la tarea") }
+            IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.tarea_opciones)) }
             MenuTarea(menu, { menu = false }, columna, alMover, alEliminar, esEvento = d.esEvento)
         }
     }
@@ -155,7 +158,7 @@ fun CampoNuevaTarea(
     fija: Materia?,
     alCrear: (titulo: String, materiaId: String, fecha: Long?) -> Unit,
     modifier: Modifier = Modifier,
-    marcador: String = "Añadir tarea",
+    marcador: String = stringResource(R.string.anadir_tarea),
     /** El calendario fija el día que se está viendo: entonces el botón solo elige la hora de entrega. */
     diaFijo: java.time.LocalDate? = null,
 ) {
@@ -185,14 +188,14 @@ fun CampoNuevaTarea(
         if (diaFijo != null) {
             hora?.let { (h, m) -> Box(Modifier.padding(start = 12.dp, top = 8.dp).clickable { hora = null }) { Chip("%02d:%02d  ✕".format(h, m)) } }
         } else {
-            fecha?.let { f -> Box(Modifier.padding(start = 12.dp, top = 8.dp).clickable { fecha = null }) { Chip(Fechas.corta(f, System.currentTimeMillis()) + "  ✕") } }
+            fecha?.let { f -> Box(Modifier.padding(start = 12.dp, top = 8.dp).clickable { fecha = null }) { Chip(fechaCorta(f, System.currentTimeMillis()) + "  ✕") } }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             val puesta = if (diaFijo != null) hora != null else fecha != null
             IconButton(onClick = { selector = true }) {
                 Icon(
                     if (diaFijo != null) Icons.Filled.Schedule else Icons.Filled.Event,
-                    if (diaFijo != null) "Elegir la hora de entrega" else "Elegir fecha de entrega",
+                    stringResource(if (diaFijo != null) R.string.elegir_hora_entrega else R.string.elegir_fecha_entrega),
                     tint = if (puesta) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -200,7 +203,7 @@ fun CampoNuevaTarea(
                 value = texto,
                 onValueChange = { texto = it },
                 modifier = Modifier.weight(1f).widthIn(min = 96.dp),
-                placeholder = { Text(if (materias.isEmpty()) "Crea una lista primero" else marcador) },
+                placeholder = { Text(if (materias.isEmpty()) stringResource(R.string.crea_lista_primero) else marcador) },
                 enabled = materias.isNotEmpty(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
@@ -224,7 +227,7 @@ fun CampoNuevaTarea(
                 }
             }
             IconButton(onClick = enviar, enabled = texto.isNotBlank() && elegida != null) {
-                Icon(Icons.AutoMirrored.Filled.Send, "Añadir")
+                Icon(Icons.AutoMirrored.Filled.Send, stringResource(R.string.anadir))
             }
         }
         }

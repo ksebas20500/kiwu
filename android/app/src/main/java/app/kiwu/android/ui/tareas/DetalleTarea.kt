@@ -77,6 +77,9 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
+import app.kiwu.android.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 
 class DetalleTareaViewModel(private val repo: Repositorio, private val alcanceApp: CoroutineScope, val id: String) : ViewModel() {
     val reglas get() = repo.reglas
@@ -111,7 +114,16 @@ class DetalleTareaViewModel(private val repo: Repositorio, private val alcanceAp
     fun eliminar() = alcanceApp.launch { repo.eliminarDeber(id) }
 }
 
-private val AvisosDisponibles = listOf(0 to "Sin aviso", 1 to "1 hora antes", 2 to "2 horas antes", 6 to "6 horas antes", 12 to "12 horas antes", 24 to "1 día antes", 48 to "2 días antes", 168 to "1 semana antes")
+private val AvisosDisponibles = listOf(0, 1, 2, 6, 12, 24, 48, 168)
+
+/** «Sin aviso», «2 horas antes», «1 día antes», «1 semana antes». */
+@Composable
+private fun textoAvisoTarea(horas: Int): String = when {
+    horas <= 0 -> stringResource(R.string.sin_aviso)
+    horas % 168 == 0 -> pluralStringResource(R.plurals.aviso_semanas_antes, horas / 168, horas / 168)
+    horas % 24 == 0 -> pluralStringResource(R.plurals.aviso_dias_antes, horas / 24, horas / 24)
+    else -> pluralStringResource(R.plurals.aviso_horas_antes, horas, horas)
+}
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -156,10 +168,10 @@ fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVo
         topBar = {
             TopAppBar(
                 title = {},
-                navigationIcon = { IconButton(onClick = alVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } },
+                navigationIcon = { IconButton(onClick = alVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.volver)) } },
                 actions = {
                     if (!actual.esEvento) Checkbox(checked = actual.completado, onCheckedChange = vm::marcar)
-                    IconButton(onClick = { vm.eliminar(); alVolver() }) { Icon(Icons.Filled.Delete, if (actual.esEvento) "Eliminar evento" else "Eliminar tarea") }
+                    IconButton(onClick = { vm.eliminar(); alVolver() }) { Icon(Icons.Filled.Delete, stringResource(if (actual.esEvento) R.string.evento_eliminar else R.string.tarea_eliminar)) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
@@ -172,7 +184,7 @@ fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVo
             TextField(
                 value = titulo, onValueChange = { titulo = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Título", fontSize = 24.sp) },
+                placeholder = { Text(stringResource(R.string.titulo), fontSize = 24.sp) },
                 textStyle = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
                 colors = TextFieldDefaults.colors(
@@ -197,16 +209,16 @@ fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVo
                 Box {
                     AssistChip(
                         onClick = { menuFecha = true },
-                        label = { Text(actual.fechaEntrega?.let { Fechas.dia(it, zona) } ?: if (actual.esEvento) "Fecha del evento" else "Fecha de entrega") },
+                        label = { Text(actual.fechaEntrega?.let { Fechas.dia(it, zona) } ?: stringResource(if (actual.esEvento) R.string.fecha_evento else R.string.fecha_entrega)) },
                         leadingIcon = { Icon(Icons.Filled.CalendarMonth, null) },
                     )
                     DropdownMenu(expanded = menuFecha, onDismissRequest = { menuFecha = false }) {
-                        DropdownMenuItem(text = { Text("Hoy") }, onClick = { menuFecha = false; conDia(LocalDate.now(zona)) })
-                        DropdownMenuItem(text = { Text("Mañana") }, onClick = { menuFecha = false; conDia(LocalDate.now(zona).plusDays(1)) })
-                        DropdownMenuItem(text = { Text("En una semana") }, onClick = { menuFecha = false; conDia(LocalDate.now(zona).plusDays(7)) })
-                        DropdownMenuItem(text = { Text("Elegir día…") }, onClick = { menuFecha = false; seleccionarFecha = true })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.hoy)) }, onClick = { menuFecha = false; conDia(LocalDate.now(zona)) })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.manana)) }, onClick = { menuFecha = false; conDia(LocalDate.now(zona).plusDays(1)) })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.en_una_semana)) }, onClick = { menuFecha = false; conDia(LocalDate.now(zona).plusDays(7)) })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.elegir_dia)) }, onClick = { menuFecha = false; seleccionarFecha = true })
                         if (actual.fechaEntrega != null) {
-                            DropdownMenuItem(text = { Text("Quitar fecha") }, onClick = { menuFecha = false; vm.ponerFecha(null) })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.quitar_fecha)) }, onClick = { menuFecha = false; vm.ponerFecha(null) })
                         }
                     }
                 }
@@ -217,23 +229,23 @@ fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVo
                     Box {
                         AssistChip(
                             onClick = { menuHora = true },
-                            label = { Text(if (todoElDia) "Todo el día" else Fechas.hora(actual.fechaEntrega!!, zona)) },
+                            label = { Text(if (todoElDia) stringResource(R.string.todo_el_dia) else Fechas.hora(actual.fechaEntrega!!, zona)) },
                             leadingIcon = { Icon(Icons.Filled.Schedule, null) },
                         )
                         DropdownMenu(expanded = menuHora, onDismissRequest = { menuHora = false }) {
-                            DropdownMenuItem(text = { Text("Elegir hora…") }, onClick = { menuHora = false; seleccionarHora = true })
-                            DropdownMenuItem(text = { Text("Todo el día (sin hora)") }, onClick = { menuHora = false; conHora(0, 0) })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.elegir_hora)) }, onClick = { menuHora = false; seleccionarHora = true })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.todo_el_dia_sin_hora)) }, onClick = { menuHora = false; conHora(0, 0) })
                         }
                     }
                     Box {
                         AssistChip(
                             onClick = { menuAviso = true },
-                            label = { Text(AvisosDisponibles.firstOrNull { it.first == actual.recordatorioHoras }?.second ?: "${actual.recordatorioHoras} h antes") },
+                            label = { Text(textoAvisoTarea(actual.recordatorioHoras)) },
                             leadingIcon = { Icon(Icons.Filled.Notifications, null) },
                         )
                         DropdownMenu(expanded = menuAviso, onDismissRequest = { menuAviso = false }) {
-                            for ((horas, texto) in AvisosDisponibles) {
-                                DropdownMenuItem(text = { Text(texto) }, onClick = { menuAviso = false; vm.cambiarRecordatorio(horas) })
+                            for (horas in AvisosDisponibles) {
+                                DropdownMenuItem(text = { Text(textoAvisoTarea(horas)) }, onClick = { menuAviso = false; vm.cambiarRecordatorio(horas) })
                             }
                         }
                     }
@@ -242,7 +254,7 @@ fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVo
 
             if (!actual.esEvento) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box {
-                    AssistChip(onClick = { menuLista = true }, label = { Text(materias.firstOrNull { it.id == actual.materiaId }?.nombre ?: "Lista") })
+                    AssistChip(onClick = { menuLista = true }, label = { Text(materias.firstOrNull { it.id == actual.materiaId }?.nombre ?: stringResource(R.string.lista)) })
                     DropdownMenu(expanded = menuLista, onDismissRequest = { menuLista = false }) {
                         for (m in materias) DropdownMenuItem(text = { Text(m.nombre) }, onClick = { menuLista = false; vm.moverAMateria(m.id) })
                     }
@@ -254,14 +266,14 @@ fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVo
                     SegmentedButton(
                         selected = columna == c, onClick = { vm.mover(c) },
                         shape = SegmentedButtonDefaults.itemShape(i, Columna.entries.size),
-                    ) { Text(c.titulo) }
+                    ) { Text(stringResource(c.titulo)) }
                 }
             }
 
             EditorBloques(editor, adjuntos, Modifier.fillMaxWidth().padding(top = 8.dp))
 
             Text(
-                "Editado " + Fechas.completa(actual.actualizada, zona), style = MaterialTheme.typography.labelSmall,
+                stringResource(R.string.editado_n, Fechas.completa(actual.actualizada, zona)), style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 24.dp),
             )
         }

@@ -3,6 +3,7 @@ package app.kiwu.android.domain
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import app.kiwu.android.R
 
 /** Elementos del menú lateral de Tareas. */
 sealed interface Elemento {
@@ -17,10 +18,10 @@ sealed interface Elemento {
     data class DeGrupo(val id: String) : Elemento
 }
 
-enum class Columna(val valor: Int, val titulo: String) {
-    POR_HACER(0, "Por hacer"),
-    EN_CURSO(1, "En curso"),
-    HECHO(2, "Hecho"),
+enum class Columna(val valor: Int, @androidx.annotation.StringRes val titulo: Int) {
+    POR_HACER(0, R.string.columna_por_hacer),
+    EN_CURSO(1, R.string.columna_en_curso),
+    HECHO(2, R.string.columna_hecho),
 }
 
 /**

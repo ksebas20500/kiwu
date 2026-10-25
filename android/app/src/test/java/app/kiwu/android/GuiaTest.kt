@@ -52,22 +52,24 @@ class GuiaTest {
 
     @Test
     fun laListaDeEjemploTraeSusTareasEnOrden() = runBlocking {
-        assertTrue(repo.crearListaDeEjemplo())
+        val r = ApplicationProvider.getApplicationContext<Context>().resources
+        val nombres = Guia.tareas.map { r.getString(it) }
+        assertTrue(repo.crearListaDeEjemplo(r.getString(Guia.NOMBRE_LISTA), nombres))
         val lista = repo.materia(Guia.ID_LISTA)!!
-        assertEquals(Guia.NOMBRE_LISTA, lista.nombre)
+        assertEquals(r.getString(Guia.NOMBRE_LISTA), lista.nombre)
         assertEquals(Guia.EMOJI_LISTA, lista.emoji)
         val tareas = repo.deberesAhora().filter { it.materiaId == Guia.ID_LISTA }.sortedBy { it.creada }
-        assertEquals(Guia.tareas, tareas.map { it.titulo })
+        assertEquals(nombres, tareas.map { it.titulo })
         // Sin fecha: no disparan avisos ni salen vencidas.
         assertTrue(tareas.all { it.fechaEntrega == null && !it.completado })
     }
 
     @Test
     fun laListaDeEjemploNoSeDuplicaNiResucitaSiSeBorro() = runBlocking {
-        assertTrue(repo.crearListaDeEjemplo())
-        assertFalse(repo.crearListaDeEjemplo())
+        assertTrue(repo.crearListaDeEjemplo("Empieza aquí", listOf("Una tarea")))
+        assertFalse(repo.crearListaDeEjemplo("Empieza aquí", listOf("Una tarea")))
         repo.eliminarMateria(Guia.ID_LISTA)
-        assertFalse(repo.crearListaDeEjemplo())
+        assertFalse(repo.crearListaDeEjemplo("Empieza aquí", listOf("Una tarea")))
         assertEquals(null, repo.materia(Guia.ID_LISTA))
     }
 

@@ -86,20 +86,22 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import java.util.Base64
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
 /** Menú de un bloque: mover, duplicar, eliminar y lo propio de cada tipo. */
 @Composable
 internal fun MenuBloque(ed: EstadoEditor, b: BloqueEd, extra: @Composable (cerrar: () -> Unit) -> Unit = {}) {
     var abierto by remember { mutableStateOf(false) }
     Box {
-        IconButton(onClick = { abierto = true }, modifier = Modifier.size(36.dp)) { Icon(Icons.Filled.MoreVert, "Opciones del bloque") }
+        IconButton(onClick = { abierto = true }, modifier = Modifier.size(36.dp)) { Icon(Icons.Filled.MoreVert, stringResource(R.string.bloque_opciones)) }
         DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
             extra { abierto = false }
-            DropdownMenuItem(text = { Text("Mover arriba") }, onClick = { abierto = false; ed.mover(b, -1) })
-            DropdownMenuItem(text = { Text("Mover abajo") }, onClick = { abierto = false; ed.mover(b, 1) })
-            DropdownMenuItem(text = { Text("Duplicar") }, onClick = { abierto = false; ed.duplicar(b) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.mover_arriba)) }, onClick = { abierto = false; ed.mover(b, -1) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.mover_abajo)) }, onClick = { abierto = false; ed.mover(b, 1) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.duplicar)) }, onClick = { abierto = false; ed.duplicar(b) })
             DropdownMenuItem(
-                text = { Text("Eliminar bloque", color = MaterialTheme.colorScheme.error) },
+                text = { Text(stringResource(R.string.bloque_eliminar), color = MaterialTheme.colorScheme.error) },
                 onClick = { abierto = false; ed.eliminar(b) },
             )
         }
@@ -168,19 +170,19 @@ internal fun BloqueCodigoUi(ed: EstadoEditor, b: BloqueEd) {
             Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box {
                     TextButton(onClick = { menuLenguaje = true }) {
-                        Text(if (automatico) "Automático · ${Lenguajes.nombre(lenguaje)}" else Lenguajes.nombre(lenguaje), fontSize = 12.sp)
+                        Text(if (automatico) stringResource(R.string.automatico_n, nombreLenguaje(lenguaje)) else nombreLenguaje(lenguaje), fontSize = 12.sp)
                         Icon(Icons.Filled.ArrowDropDown, null)
                     }
                     DropdownMenu(expanded = menuLenguaje, onDismissRequest = { menuLenguaje = false }) {
-                        DropdownMenuItem(text = { Text("Automático") }, onClick = { menuLenguaje = false; b.language = null; ed.marcarCambio() })
-                        for ((id, nombre) in Lenguajes.nombres) {
-                            DropdownMenuItem(text = { Text(nombre) }, onClick = { menuLenguaje = false; b.language = id; ed.marcarCambio() })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.automatico)) }, onClick = { menuLenguaje = false; b.language = null; ed.marcarCambio() })
+                        for (id in Lenguajes.nombres.keys) {
+                            DropdownMenuItem(text = { Text(nombreLenguaje(id)) }, onClick = { menuLenguaje = false; b.language = id; ed.marcarCambio() })
                         }
                     }
                 }
                 Box(Modifier.weight(1f))
                 IconButton(onClick = { portapapeles.setText(AnnotatedString(b.texto)) }, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Filled.ContentCopy, "Copiar código", Modifier.size(18.dp))
+                    Icon(Icons.Filled.ContentCopy, stringResource(R.string.copiar_codigo), Modifier.size(18.dp))
                 }
                 MenuBloque(ed, b)
             }
@@ -221,9 +223,9 @@ internal fun BloqueImagenUi(ed: EstadoEditor, b: BloqueEd) {
     Box(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
         val img = bitmap
         if (img != null) {
-            Image(img.asImageBitmap(), "Imagen de la nota", Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.FillWidth)
+            Image(img.asImageBitmap(), stringResource(R.string.imagen_nota), Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.FillWidth)
         } else {
-            Text("No se puede mostrar la imagen", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.imagen_no_se_muestra), Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Box(Modifier.align(Alignment.TopEnd)) { MenuBloque(ed, b) }
     }
@@ -258,13 +260,13 @@ internal fun BloqueArchivoUi(ed: EstadoEditor, b: BloqueEd, adjuntos: OrigenAdju
         Row(Modifier.padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.Description, null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.primary)
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                Text(b.fileName ?: "Archivo", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(b.fileName ?: stringResource(R.string.archivo), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    if (vinculado) "Toca para abrir" else "Sin vincular: toca para elegir el archivo en este dispositivo",
+                    stringResource(if (vinculado) R.string.toca_abrir else R.string.sin_vincular_archivo),
                     fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            IconButton(onClick = { ed.eliminar(b) }, modifier = Modifier.size(36.dp)) { Icon(Icons.Filled.Close, "Quitar adjunto (no borra el archivo)") }
+            IconButton(onClick = { ed.eliminar(b) }, modifier = Modifier.size(36.dp)) { Icon(Icons.Filled.Close, stringResource(R.string.quitar_adjunto)) }
         }
     }
 }
@@ -310,11 +312,11 @@ internal fun BloqueEnlaceUi(ed: EstadoEditor, b: BloqueEd, adjuntos: OrigenAdjun
                 androidx.compose.material3.OutlinedTextField(
                     value = entrada, onValueChange = { entrada = it; error = false },
                     modifier = Modifier.weight(1f).focusRequester(foco),
-                    label = { Text("Pega un enlace (web, YouTube o Vimeo)") }, singleLine = true, isError = error,
+                    label = { Text(stringResource(R.string.pega_enlace)) }, singleLine = true, isError = error,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, imeAction = ImeAction.Go, keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri),
                     keyboardActions = KeyboardActions(onGo = { confirmar() }),
                 )
-                TextButton(onClick = { confirmar() }) { Text("Añadir") }
+                TextButton(onClick = { confirmar() }) { Text(stringResource(R.string.anadir)) }
                 MenuBloque(ed, b)
             }
         } else {
@@ -344,7 +346,7 @@ internal fun BloqueEnlaceUi(ed: EstadoEditor, b: BloqueEd, adjuntos: OrigenAdjun
                             Image(img.asImageBitmap(), null, Modifier.fillMaxWidth().aspectRatio(1.91f), contentScale = ContentScale.Crop)
                             if (esVideo) {
                                 Surface(Modifier.align(Alignment.Center).size(52.dp), shape = RoundedCornerShape(99.dp), color = Color.Black.copy(alpha = 0.6f)) {
-                                    Icon(Icons.Filled.PlayArrow, "Reproducir", Modifier.padding(10.dp), tint = Color.White)
+                                    Icon(Icons.Filled.PlayArrow, stringResource(R.string.reproducir), Modifier.padding(10.dp), tint = Color.White)
                                 }
                             }
                         }
@@ -353,22 +355,22 @@ internal fun BloqueEnlaceUi(ed: EstadoEditor, b: BloqueEd, adjuntos: OrigenAdjun
                         Column(Modifier.weight(1f)) {
                             Text(sitio, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                             Text(
-                                titulo ?: if (b.cargandoVistaPrevia) "Cargando vista previa…" else direccion,
+                                titulo ?: if (b.cargandoVistaPrevia) stringResource(R.string.cargando_vista_previa) else direccion,
                                 style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis,
                             )
                             if (!descripcion.isNullOrEmpty()) {
                                 Text(descripcion, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             }
                             if (b.vistaPrevioFallida && titulo == null) {
-                                Text("No se pudo cargar la vista previa", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                                Text(stringResource(R.string.vista_previa_error), fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                             }
                         }
                         MenuBloque(ed, b) { cerrar ->
-                            DropdownMenuItem(text = { Text("Abrir en el navegador") }, onClick = { cerrar(); adjuntos.abrirUrl(direccion) })
-                            DropdownMenuItem(text = { Text("Actualizar vista previa") }, onClick = {
+                            DropdownMenuItem(text = { Text(stringResource(R.string.abrir_navegador)) }, onClick = { cerrar(); adjuntos.abrirUrl(direccion) })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.actualizar_vista_previa)) }, onClick = {
                                 cerrar(); b.preview = null; alcance.launch { cargar() }
                             })
-                            DropdownMenuItem(text = { Text("Convertir en texto") }, onClick = { cerrar(); ed.enlaceATexto(b) })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.convertir_texto)) }, onClick = { cerrar(); ed.enlaceATexto(b) })
                         }
                     }
                 }
@@ -400,8 +402,13 @@ private fun ReproductorDialog(url: String, alCerrar: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
                 )
                 DisposableEffect(Unit) { onDispose { web?.destroy() } }
-                IconButton(onClick = alCerrar, Modifier.align(Alignment.TopEnd)) { Icon(Icons.Filled.Close, "Cerrar", tint = Color.White) }
+                IconButton(onClick = alCerrar, Modifier.align(Alignment.TopEnd)) { Icon(Icons.Filled.Close, stringResource(R.string.cerrar), tint = Color.White) }
             }
         }
     }
 }
+
+/** Nombre del lenguaje de un bloque de código; «Texto plano» en el idioma de la app. */
+@Composable
+private fun nombreLenguaje(id: String?): String =
+    if (id == null || id == "plano") stringResource(R.string.texto_plano) else Lenguajes.nombre(id)

@@ -104,27 +104,29 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.cos
 import kotlin.math.sin
+import app.kiwu.android.ui.Fechas
+import app.kiwu.android.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 
 /** Colores de la racha: el naranja del fuego no sigue el color de la app, para que la racha se reconozca siempre. */
 private val Fuego = Color(0xFFFF6B1A)
 private val FuegoClaro = Color(0xFFFFB347)
-private val es = Locale.forLanguageTag("es")
-private val iniciales = listOf("LU", "MA", "MI", "JU", "VI", "SA", "DO")
 
 /** Fila de la racha arriba del menú de Tareas: la llama se apaga mientras hoy todavía no cuenta. */
 @Composable
 internal fun FilaRacha(r: Racha, alClic: () -> Unit) {
     val descripcion = when {
-        r.hoyCumplido -> "Racha de ${Rachas.texto(r.actual)}, hoy ya cuenta"
-        r.actual > 0 -> "Racha de ${Rachas.texto(r.actual)}, completa una tarea hoy para mantenerla"
-        else -> "Sin racha todavía"
+        r.hoyCumplido -> stringResource(R.string.racha_hoy_cuenta, pluralStringResource(R.plurals.racha_dias, r.actual, r.actual))
+        r.actual > 0 -> stringResource(R.string.racha_mantener, pluralStringResource(R.plurals.racha_dias, r.actual, r.actual))
+        else -> stringResource(R.string.racha_sin)
     }
     NavigationDrawerItem(
-        label = { Text(if (r.actual > 0) Rachas.texto(r.actual) else "Empieza tu racha", maxLines = 1, fontWeight = FontWeight.Medium) },
+        label = { Text(if (r.actual > 0) pluralStringResource(R.plurals.racha_dias, r.actual, r.actual) else stringResource(R.string.racha_empieza), maxLines = 1, fontWeight = FontWeight.Medium) },
         icon = { Llama(24.dp, encendida = r.hoyCumplido) },
         selected = false,
         onClick = alClic,
-        badge = { if (r.enRiesgo) Text("Hoy falta", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium) },
+        badge = { if (r.enRiesgo) Text(stringResource(R.string.racha_hoy_falta), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium) },
         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding).semantics { contentDescription = descripcion },
     )
 }
@@ -146,9 +148,9 @@ fun InsigniaRacha(app: KiwuApp, alClic: () -> Unit) {
 @Composable
 internal fun InsigniaRacha(r: Racha, alClic: () -> Unit) {
     val descripcion = when {
-        r.hoyCumplido -> "Racha de ${Rachas.texto(r.actual)}, hoy ya cuenta. Abrir la racha"
-        r.enRiesgo -> "Racha de ${Rachas.texto(r.actual)} en riesgo. Abrir la racha"
-        else -> "Sin racha todavía. Abrir la racha"
+        r.hoyCumplido -> stringResource(R.string.racha_hoy_cuenta_abrir, pluralStringResource(R.plurals.racha_dias, r.actual, r.actual))
+        r.enRiesgo -> stringResource(R.string.racha_riesgo_abrir, pluralStringResource(R.plurals.racha_dias, r.actual, r.actual))
+        else -> stringResource(R.string.racha_sin_abrir)
     }
     Surface(
         onClick = alClic,
@@ -210,7 +212,7 @@ internal fun SemanaRacha(r: Racha, hoy: LocalDate, animarHoy: Boolean = false, m
             val siguienteHecho = i < 6 && semana[i + 1] in r.dias
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    iniciales[i], style = MaterialTheme.typography.labelMedium,
+                    stringResource(R.string.racha_iniciales).split(",")[i], style = MaterialTheme.typography.labelMedium,
                     color = if (dia == hoy) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = if (dia == hoy) FontWeight.Bold else FontWeight.Normal,
                 )
@@ -272,8 +274,8 @@ fun RachaScreen(app: KiwuApp, alVolver: () -> Unit) {
         topBar = {
             TopAppBar(
                 title = {},
-                navigationIcon = { IconButton(onClick = alVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } },
-                actions = { IconButton(onClick = { ayuda = true }) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, "Cómo funciona la racha") } },
+                navigationIcon = { IconButton(onClick = alVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.volver)) } },
+                actions = { IconButton(onClick = { ayuda = true }) { Icon(Icons.AutoMirrored.Outlined.HelpOutline, stringResource(R.string.racha_como_funciona)) } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
         },
@@ -286,16 +288,16 @@ fun RachaScreen(app: KiwuApp, alVolver: () -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(r.actual.toString(), fontSize = 88.sp, fontWeight = FontWeight.Bold, lineHeight = 88.sp)
-                    Text(if (r.actual == 1) "Día de racha" else "Días de racha", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(if (r.actual == 1) R.string.racha_dia_titulo else R.string.racha_dias_titulo), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                 }
                 Llama(112.dp, encendida = r.hoyCumplido, alerta = r.enRiesgo)
             }
             SemanaRacha(r, hoy)
             AvisoEstado(r)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Cifra(Modifier.weight(1f), { Llama(22.dp, encendida = true) }, r.mejor.toString(), "Mejor racha")
-                Cifra(Modifier.weight(1f), { Icon(Icons.Filled.Today, null, Modifier.size(22.dp), tint = Fuego) }, r.dias.count { !it.isAfter(hoy) }.toString(), "Días cumplidos")
-                Cifra(Modifier.weight(1f), { Icon(Icons.Filled.TaskAlt, null, Modifier.size(22.dp), tint = Fuego) }, r.tareas.toString(), "Tareas hechas")
+                Cifra(Modifier.weight(1f), { Llama(22.dp, encendida = true) }, r.mejor.toString(), stringResource(R.string.racha_mejor))
+                Cifra(Modifier.weight(1f), { Icon(Icons.Filled.Today, null, Modifier.size(22.dp), tint = Fuego) }, r.dias.count { !it.isAfter(hoy) }.toString(), stringResource(R.string.racha_dias_cumplidos))
+                Cifra(Modifier.weight(1f), { Icon(Icons.Filled.TaskAlt, null, Modifier.size(22.dp), tint = Fuego) }, r.tareas.toString(), stringResource(R.string.racha_tareas_hechas))
             }
             SiguienteMeta(r)
             CalendarioRacha(r, hoy)
@@ -303,25 +305,25 @@ fun RachaScreen(app: KiwuApp, alVolver: () -> Unit) {
     }
     if (ayuda) AlertDialog(
         onDismissRequest = { ayuda = false },
-        title = { Text("Cómo funciona la racha") },
+        title = { Text(stringResource(R.string.racha_como_funciona)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("• Un día cuenta si completas al menos una tarea.")
-                Text("• Si hoy aún no has completado nada, la racha sigue viva hasta medianoche: la llama se ve gris con un «!».")
-                Text("• Los eventos no cuentan, y desmarcar la única tarea del día quita ese día.")
-                Text("• A las 20:00 te avisamos si la racha está a punto de perderse (se cambia en Ajustes → Avisos).")
+                Text(stringResource(R.string.racha_ayuda_1))
+                Text(stringResource(R.string.racha_ayuda_2))
+                Text(stringResource(R.string.racha_ayuda_3))
+                Text(stringResource(R.string.racha_ayuda_4))
             }
         },
-        confirmButton = { TextButton(onClick = { ayuda = false }) { Text("Entendido") } },
+        confirmButton = { TextButton(onClick = { ayuda = false }) { Text(stringResource(R.string.entendido)) } },
     )
 }
 
 @Composable
 private fun AvisoEstado(r: Racha) {
     val (texto, destacado) = when {
-        r.hoyCumplido -> "¡Hoy ya cuenta! Vuelve mañana para seguir sumando." to false
-        r.enRiesgo -> "Tu racha está en riesgo: completa una tarea antes de medianoche." to true
-        else -> "Completa una tarea hoy para empezar una racha." to false
+        r.hoyCumplido -> stringResource(R.string.racha_estado_hecho) to false
+        r.enRiesgo -> stringResource(R.string.racha_estado_riesgo) to true
+        else -> stringResource(R.string.racha_estado_empezar) to false
     }
     Surface(
         shape = RoundedCornerShape(16.dp),
@@ -355,7 +357,7 @@ private fun SiguienteMeta(r: Racha) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Filled.EmojiEvents, null, tint = FuegoClaro)
-                Text("Siguiente meta: ${Rachas.texto(meta)}", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.racha_siguiente_meta, pluralStringResource(R.plurals.racha_dias, meta, meta)), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                 Text("${r.actual}/$meta", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             LinearProgressIndicator(
@@ -364,7 +366,7 @@ private fun SiguienteMeta(r: Racha) {
                 gapSize = 0.dp, drawStopIndicator = {},
             )
             Text(
-                if (faltan == 1) "¡Solo te falta 1 día!" else "Te faltan $faltan días seguidos.",
+                pluralStringResource(R.plurals.racha_te_faltan, faltan, faltan),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -378,18 +380,18 @@ private fun CalendarioRacha(r: Racha, hoy: LocalDate) {
     val primero = r.dias.minOrNull()?.let { YearMonth.from(it) }?.coerceAtMost(actual) ?: actual
     var mes by rememberSaveable { mutableStateOf(actual.toString()) }
     val ym = YearMonth.parse(mes)
-    val titulo = ym.format(DateTimeFormatter.ofPattern("MMMM 'de' yyyy", es)).replaceFirstChar { it.titlecase(es) }
-    val formato = DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", es)
+    val titulo = Fechas.mes(ym.atDay(1))
+    val cumplido = stringResource(R.string.racha_dia_cumplido, "%s")
     fun cuenta(d: LocalDate?) = d != null && d in r.dias && !d.isAfter(hoy)
     Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { mes = ym.minusMonths(1).toString() }, enabled = ym > primero) { Icon(Icons.Filled.ChevronLeft, "Mes anterior") }
+                IconButton(onClick = { mes = ym.minusMonths(1).toString() }, enabled = ym > primero) { Icon(Icons.Filled.ChevronLeft, stringResource(R.string.mes_anterior)) }
                 Text(titulo, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
-                IconButton(onClick = { mes = ym.plusMonths(1).toString() }, enabled = ym < actual) { Icon(Icons.Filled.ChevronRight, "Mes siguiente") }
+                IconButton(onClick = { mes = ym.plusMonths(1).toString() }, enabled = ym < actual) { Icon(Icons.Filled.ChevronRight, stringResource(R.string.mes_siguiente)) }
             }
             Row {
-                for (d in listOf("L", "M", "X", "J", "V", "S", "D")) {
+                for (d in (1..7).map { Fechas.letraDia(it) }) {
                     Text(d, Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                 }
             }
@@ -408,7 +410,7 @@ private fun CalendarioRacha(r: Racha, hoy: LocalDate) {
                             Modifier.weight(1f).height(42.dp).then(if (hecho) Modifier.background(Fuego.copy(alpha = 0.18f), forma) else Modifier),
                             contentAlignment = Alignment.Center,
                         ) {
-                            if (dia != null) DiaCalendario(dia, hoy, hecho, Modifier.semantics { contentDescription = formato.format(dia) + if (hecho) ", cumplido" else "" })
+                            if (dia != null) DiaCalendario(dia, hoy, hecho, Modifier.semantics { contentDescription = Fechas.diaLargo(dia).let { if (hecho) cumplido.format(it) else it } })
                         }
                     }
                 }
@@ -506,15 +508,15 @@ fun CelebracionRacha(r: Racha, alCerrar: () -> Unit, modifier: Modifier = Modifi
                 label = "numero",
             ) { n -> Text(n.toString(), fontSize = 96.sp, fontWeight = FontWeight.Black, color = Fuego, lineHeight = 96.sp) }
             Text(
-                if (r.actual == 1) "¡Empezaste una racha!" else "¡${r.actual} días de racha!",
+                if (r.actual == 1) stringResource(R.string.racha_empezaste) else pluralStringResource(R.plurals.racha_n_dias, r.actual, r.actual),
                 style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(6.dp))
             Text(
                 when {
-                    r.actual in Rachas.METAS -> "¡Alcanzaste la meta de ${Rachas.texto(r.actual)}!"
-                    r.actual == 1 -> "Completa una tarea mañana para llegar a 2 días."
-                    else -> "Sigue así: mañana llegas a ${r.actual + 1} días."
+                    r.actual in Rachas.METAS -> stringResource(R.string.racha_meta_alcanzada, pluralStringResource(R.plurals.racha_dias, r.actual, r.actual))
+                    r.actual == 1 -> stringResource(R.string.racha_manana_2)
+                    else -> pluralStringResource(R.plurals.racha_manana_llegas, r.actual + 1, r.actual + 1)
                 },
                 style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center,
             )
@@ -527,7 +529,7 @@ fun CelebracionRacha(r: Racha, alCerrar: () -> Unit, modifier: Modifier = Modifi
                 onClick = alCerrar, enabled = mostrarBoton,
                 modifier = Modifier.fillMaxWidth().height(52.dp).graphicsLayer { alpha = boton; translationY = (1f - boton) * 24.dp.toPx() },
                 colors = ButtonDefaults.buttonColors(containerColor = Fuego, contentColor = Color.White, disabledContainerColor = Fuego, disabledContentColor = Color.White),
-            ) { Text("Continuar", fontWeight = FontWeight.Bold) }
+            ) { Text(stringResource(R.string.continuar), fontWeight = FontWeight.Bold) }
         }
     }
 }

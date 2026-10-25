@@ -126,6 +126,20 @@ Cada fase termina con: compila, pruebas verdes y casillas marcadas aquí.
 - [x] Refresco automático (datos, cada 30 minutos, alarma al próximo cambio de clase o medianoche) y tema de la app
 - [x] `DatosWidgetsTest` y prueba de los tres widgets en el emulador (añadir, configurar, completar, abrir y crear nota)
 
+### Fase K: Faltas de clase (0.4.3)
+- [x] Límite por materia del horario y tabla de faltas, con migración de la base de datos a la versión 5
+- [x] Chip «Faltas: N» en la hoja de la clase y contador de las que quedan en cada clase del horario, agrupadas por `grupo`
+- [x] Vaciar faltas al cambiar de semestre, aviso en pantalla y faltas en el widget de Horario
+- [x] `FaltasTest`, prueba de migración y exportar/importar faltas en la copia `.kiwu.json`
+- [x] Detalle en [plan-0.4.3.md](plan-0.4.3.md)
+
+### Fase L: Idiomas (0.4.3)
+- [x] Extraer los textos a recursos de Android y detectar el idioma del teléfono
+- [x] Android 13+: automático, y Ajustes → Idioma abre el ajuste de idioma de Android para Kiwu (`locales_config.xml`); Android 8–12: selector Sistema / Español / English / Português en Ajustes
+- [x] Traducciones `en` y `pt`, días, fechas y plurales por locale
+- [x] Lint de traducciones y pruebas con varios locales
+- [x] Detalle en [plan-0.4.3.md](plan-0.4.3.md)
+
 ## 5. Cómo se verificó
 
 Hay un emulador (Android 15, con aceleración WHPX) en este equipo, así que se probó la app real además de las pruebas automáticas.
@@ -156,3 +170,5 @@ Hay un emulador (Android 15, con aceleración WHPX) en este equipo, así que se 
 **2026-10-13 (noche).** Horarios de clases (ver [plan-horario.md](plan-horario.md)): tercera pestaña «Horario» con varios horarios (Universidad, Trabajo, Ocio…), vista por día y por semana, formulario de clases en varios días, aviso de choques, «Ahora / Siguiente» y avisos opcionales antes de cada clase. La base de datos pasa a la versión 2 con migración probada. Comprobado en un emulador; los avisos y la vista de semana en tabletas faltan por probar en dispositivo.
 
 **2026-10-24.** Versión 0.4.1 (ver [versiones/android-0.4.1.md](versiones/android-0.4.1.md)). **Racha y guía de inicio** ([plan-0.4.1.md](plan-0.4.1.md)): días seguidos completando al menos una tarea, con pantalla propia, celebración, aviso a las 20:00 y la insignia en Tareas y Notas; pantallas de bienvenida y la lista «Empieza aquí» al primer arranque. Añadidos `RachaTest` y `GuiaTest`. **Widgets** ([plan-widgets-android.md](plan-widgets-android.md)): **Deberes**, **Horario** y **Nota rápida** con Jetpack Glance. Leen Room en el mismo proceso, se configuran al añadirlos (todas / hoy / próximos / lista / carpeta / horario / cuaderno), completan tareas sin abrir la app y refrescan sus datos, cada 30 minutos y con una alarma al próximo cambio de clase o a medianoche. Añadido `DatosWidgetsTest` (14 pruebas). Los tres widgets se probaron en el emulador; falta probar la reprogramación de la alarma tras reiniciar el teléfono real.
+
+**2026-10-24 (noche).** Versión 0.4.3 (ver [versiones/android-0.4.3.md](versiones/android-0.4.3.md) y [plan-0.4.3.md](plan-0.4.3.md)). **Faltas de clase:** máximo por materia, chip «Faltas: N» en la hoja de la clase, contador «quedan N» en el horario y en el widget, aviso al llegar al máximo y vaciado por semestre. La base de datos pasa a la versión 5 y las faltas viajan en la copia. **Idiomas:** todos los textos en recursos con traducciones `en` y `pt`, fechas y plurales por locale. En Android 13+ el idioma es automático y se cambia en el ajuste de Android; en 8–12 hay un selector propio. Lint falla si falta una traducción. Añadidos `FaltasTest`, `IdiomasTest`, `TextosAvisoTest` y la migración 4 → 5. Comprobado en el emulador en inglés y portugués.

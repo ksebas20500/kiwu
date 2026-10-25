@@ -1,66 +1,80 @@
 package app.kiwu.android.ui.ajustes
 
+import android.content.res.Resources
+import androidx.annotation.StringRes
+import app.kiwu.android.R
 import app.kiwu.android.data.AjustesUi
 import app.kiwu.android.ui.Acentos
 
 /** Las secciones de Ajustes. [id] es lo que recuerda la pantalla al girar o volver. */
-enum class SeccionAjustes(val id: String, val titulo: String) {
-    APARIENCIA("apariencia", "Apariencia"),
-    MENU("menu", "Menú de Tareas"),
-    AVISOS("avisos", "Avisos"),
-    COPIA("copia", "Copia de seguridad"),
-    ACERCA("acerca", "Acerca de Kiwu");
+enum class SeccionAjustes(val id: String, @StringRes val titulo: Int) {
+    APARIENCIA("apariencia", R.string.ajustes_apariencia),
+    MENU("menu", R.string.ajustes_menu),
+    AVISOS("avisos", R.string.ajustes_avisos),
+    COPIA("copia", R.string.ajustes_copia),
+    ACERCA("acerca", R.string.ajustes_acerca);
 
     companion object {
         fun deId(id: String?): SeccionAjustes? = entries.firstOrNull { it.id == id }
     }
 }
 
-/** La línea que va bajo cada sección de la pantalla principal de Ajustes: el valor que tiene ahora. Funciones puras. */
-object ResumenAjustes {
-    fun tema(id: String): String = when (id) {
-        "claro" -> "Claro"
-        "oscuro" -> "Oscuro"
-        else -> "Del sistema"
-    }
+/** La línea que va bajo cada sección de la pantalla principal de Ajustes: el valor que tiene ahora, en el idioma de [r]. */
+class ResumenAjustes(private val r: Resources) {
+    fun tema(id: String): String = r.getString(
+        when (id) {
+            "claro" -> R.string.tema_claro
+            "oscuro" -> R.string.tema_oscuro
+            else -> R.string.resumen_tema_sistema
+        },
+    )
 
     fun acento(id: String): String = when {
-        id == Acentos.SISTEMA -> "del sistema"
-        else -> Acentos.predefinidos.firstOrNull { it.id == id }?.titulo?.lowercase() ?: "propio"
+        id == Acentos.SISTEMA -> r.getString(R.string.resumen_color_sistema)
+        else -> Acentos.predefinidos.firstOrNull { it.id == id }?.let { r.getString(it.titulo).lowercase(r.configuration.locales[0]) }
+            ?: r.getString(R.string.resumen_color_propio)
     }
 
-    fun aspecto(id: String): String = when (id) {
-        "compacto" -> "Compacto"
-        "color" -> "Con color"
-        else -> "Plegable"
-    }
+    fun aspecto(id: String): String = r.getString(
+        when (id) {
+            "compacto" -> R.string.aspecto_compacto
+            "color" -> R.string.aspecto_color
+            else -> R.string.aspecto_plegable
+        },
+    )
 
-    fun orden(id: String): String = when (id) {
-        "alfabetico" -> "orden alfabético"
-        "pendientes" -> "por tareas pendientes"
-        else -> "orden manual"
-    }
+    fun orden(id: String): String = r.getString(
+        when (id) {
+            "alfabetico" -> R.string.resumen_orden_alfabetico
+            "pendientes" -> R.string.resumen_orden_pendientes
+            else -> R.string.resumen_orden_manual
+        },
+    )
 
-    fun minutos(m: Int): String = if (m % 60 == 0) "${m / 60} h" else "$m min"
+    fun minutos(m: Int): String = if (m % 60 == 0) r.getString(R.string.duracion_horas, m / 60) else r.getString(R.string.duracion_min, m)
 
     fun apariencia(a: AjustesUi): String =
-        listOfNotNull(tema(a.tema), "color " + acento(a.acento), if (a.fondoUri != null) "con fondo" else null).joinToString(" · ")
+        listOfNotNull(
+            tema(a.tema), r.getString(R.string.resumen_color, acento(a.acento)), if (a.fondoUri != null) r.getString(R.string.resumen_con_fondo) else null,
+        ).joinToString(" · ")
 
     fun menu(a: AjustesUi): String =
         listOfNotNull(
-            aspecto(a.menuAspecto), orden(a.menuOrden), if (!a.menuContadores) "sin contadores" else null, if (!a.rachaVisible) "sin racha" else null,
+            aspecto(a.menuAspecto), orden(a.menuOrden),
+            if (!a.menuContadores) r.getString(R.string.resumen_sin_contadores) else null,
+            if (!a.rachaVisible) r.getString(R.string.resumen_sin_racha) else null,
         ).joinToString(" · ")
 
     fun avisos(a: AjustesUi, notificacionesActivas: Boolean): String = when {
-        !notificacionesActivas -> "Notificaciones desactivadas"
+        !notificacionesActivas -> r.getString(R.string.resumen_notificaciones_off)
         else -> listOfNotNull(
-            "Activados",
-            if (a.segundoAvisoMin > 0) "segundo aviso ${minutos(a.segundoAvisoMin)} antes" else null,
-            if (!a.rachaAviso) "sin aviso de racha" else null,
+            r.getString(R.string.resumen_activados),
+            if (a.segundoAvisoMin > 0) r.getString(R.string.resumen_segundo_aviso, minutos(a.segundoAvisoMin)) else null,
+            if (!a.rachaAviso) r.getString(R.string.resumen_sin_aviso_racha) else null,
         ).joinToString(" · ")
     }
 
-    fun copia(): String = "Exportar e importar (.kiwu.json)"
+    fun copia(): String = r.getString(R.string.resumen_copia)
 
-    fun acerca(version: String): String = "Versión $version"
+    fun acerca(version: String): String = r.getString(R.string.version_n, version)
 }

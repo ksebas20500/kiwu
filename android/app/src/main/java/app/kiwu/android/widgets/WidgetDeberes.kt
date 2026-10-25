@@ -34,6 +34,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import app.kiwu.android.KiwuApp
 import kotlinx.coroutines.flow.first
+import app.kiwu.android.R
 
 /** Widget «Deberes»: las tareas pendientes, con su lista y fecha, y una casilla para completarlas sin abrir la app. */
 class DeberesWidget : GlanceAppWidget() {
@@ -45,9 +46,10 @@ class DeberesWidget : GlanceAppWidget() {
         val grupos = app.repo.grupos.first()
         val deberes = app.repo.deberes.first()
         val colores = coloresDelWidget(context)
+        val textos = TextosWidget.de(context)
         provideContent {
             val config = currentState<Preferences>().configWidget()
-            val datos = DatosWidgets.deberes(materias, grupos, deberes, config, System.currentTimeMillis())
+            val datos = DatosWidgets.deberes(materias, grupos, deberes, config, System.currentTimeMillis(), textos)
             ContenidoDeberes(datos, colores)
         }
     }
@@ -74,7 +76,7 @@ private fun ContenidoDeberes(datos: DatosDeberes, colores: ColoresWidget) {
             GlanceModifier.fillMaxWidth()
                 .clickable(actionStartActivity(intencionDeApertura(contexto, seccion = "tareas"))),
         ) {
-            Text("Deberes", style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = colores.texto))
+            Text(textoWidget(R.string.deberes), style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = colores.texto))
             Spacer(GlanceModifier.defaultWeight())
             if (datos.hayListas) {
                 Text("${datos.total}", style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium, color = colores.acento))
@@ -82,8 +84,8 @@ private fun ContenidoDeberes(datos: DatosDeberes, colores: ColoresWidget) {
         }
         Spacer(GlanceModifier.height(8.dp))
         when {
-            !datos.hayListas -> Aviso("Crea una lista y añade tareas en Kiwu.", colores)
-            datos.pendientes.isEmpty() -> Aviso("Sin pendientes 🎉", colores)
+            !datos.hayListas -> Aviso(textoWidget(R.string.w_crea_lista), colores)
+            datos.pendientes.isEmpty() -> Aviso(textoWidget(R.string.w_sin_pendientes), colores)
             else -> LazyColumn(GlanceModifier.fillMaxSize()) {
                 items(datos.pendientes.take(maximo), itemId = { it.id.hashCode().toLong() }) { fila ->
                     FilaDeberWidget(fila, colores)

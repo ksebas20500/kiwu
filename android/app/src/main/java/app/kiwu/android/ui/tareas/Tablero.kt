@@ -65,6 +65,8 @@ import app.kiwu.android.ui.Pasteles
 import kotlinx.coroutines.delay
 import app.kiwu.android.domain.esEvento
 import kotlin.math.roundToInt
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
 /** Tarea que se está arrastrando: dónde está el dedo, cuánto mide la tarjeta y en qué punto de ella se agarró. */
 private class Arrastre(val tarea: Deber, val color: ColorPastel?, val tamano: IntSize, val agarre: Offset, var dedo: Offset)
@@ -110,8 +112,8 @@ fun Tablero(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String) -> Unit
     Box(Modifier.fillMaxSize().onGloballyPositioned { raiz = it.positionInRoot() }) {
         Column(Modifier.fillMaxSize()) {
             if (estado.cargado && estado.materiasDelContexto.isEmpty()) {
-                EstadoVacio(Icons.Filled.CheckCircle, "Crea una lista para empezar", Modifier.weight(1f)) {
-                    Button(onClick = alCrearLista, modifier = Modifier.padding(top = 16.dp)) { Text("Crear lista") }
+                EstadoVacio(Icons.Filled.CheckCircle, stringResource(R.string.crea_lista_empezar), Modifier.weight(1f)) {
+                    Button(onClick = alCrearLista, modifier = Modifier.padding(top = 16.dp)) { Text(stringResource(R.string.crear_lista)) }
                 }
             } else {
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().onGloballyPositioned { zonaColumnas = it.boundsInRoot() }) {
@@ -192,7 +194,7 @@ private fun ColumnaTablero(
     ) {
         Column(Modifier.padding(8.dp)) {
             Row(Modifier.padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(columna.titulo, style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(columna.titulo), style = MaterialTheme.typography.titleSmall)
                 Text(
                     tareas.size.toString(), style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 8.dp),
@@ -261,7 +263,7 @@ private fun TarjetaBase(d: Deber, estado: TareasEstado, color: ColorPastel?, vm:
             }
             if (conMenu) {
                 Box {
-                    IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Opciones de la tarea") }
+                    IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.tarea_opciones)) }
                     MenuTarea(menu, { menu = false }, vm.reglas.columnaDe(d), { vm.mover(d.id, it) }, { vm.eliminarTarea(d.id) })
                 }
             }

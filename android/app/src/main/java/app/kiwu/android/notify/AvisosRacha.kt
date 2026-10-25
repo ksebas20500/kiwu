@@ -20,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import app.kiwu.android.Idioma
 
 /** Aviso «No pierdas tu racha»: una alarma diaria a las 20:00 que solo avisa si hoy aún no se ha completado nada. */
 object AvisosRacha {
@@ -30,12 +31,11 @@ object AvisosRacha {
     fun crearCanal(contexto: Context) {
         if (Build.VERSION.SDK_INT < 26) return
         val nm = contexto.getSystemService(NotificationManager::class.java)
-        if (nm.getNotificationChannel(CANAL) == null) {
-            nm.createNotificationChannel(
-                NotificationChannel(CANAL, "Racha", NotificationManager.IMPORTANCE_DEFAULT)
-                    .apply { description = "Te avisa por la tarde si tu racha está a punto de perderse" },
-            )
-        }
+        val t = Idioma.contexto(contexto)
+        nm.createNotificationChannel(
+            NotificationChannel(CANAL, t.getString(R.string.canal_racha), NotificationManager.IMPORTANCE_DEFAULT)
+                .apply { description = t.getString(R.string.canal_racha_desc) },
+        )
     }
 
     fun alarma(contexto: Context): PendingIntent =
@@ -47,14 +47,15 @@ object AvisosRacha {
     fun mostrar(contexto: Context, r: Racha): Boolean {
         if (!Avisos.tienePermiso(contexto)) return false
         crearCanal(contexto)
+        val textos = Idioma.contexto(contexto)
         val abrir = PendingIntent.getActivity(
             contexto, IDENTIFICADOR, Intent(contexto, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val notificacion = NotificationCompat.Builder(contexto, CANAL)
             .setSmallIcon(R.drawable.ic_notificacion)
-            .setContentTitle("🔥 No pierdas tu racha de ${Rachas.texto(r.actual)}")
-            .setContentText("Completa una tarea antes de medianoche para mantenerla.")
+            .setContentTitle(textos.getString(R.string.racha_no_pierdas, textos.resources.getQuantityString(R.plurals.racha_dias, r.actual, r.actual)))
+            .setContentText(textos.getString(R.string.racha_aviso_texto))
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
             .setContentIntent(abrir)

@@ -38,8 +38,12 @@ class KiwuApp : Application() {
     private var avisosIniciados = false
     private var widgetsIniciados = false
 
+    // En Android 8–12, el idioma elegido en Ajustes también para lo que no es una pantalla (fechas por defecto, servicios).
+    override fun attachBaseContext(base: android.content.Context) = super.attachBaseContext(Idioma.contexto(base))
+
     override fun onCreate() {
         super.onCreate()
+        Textos.actualizar(this)
         iniciarAvisos()
         iniciarWidgets()
     }
@@ -90,7 +94,7 @@ class KiwuApp : Application() {
         alcance.launch {
             merge(
                 repo.deberes.map { }, repo.materias.map { }, repo.grupos.map { }, repo.paginas.map { },
-                repo.cuadernos.map { }, repo.horarios.map { }, repo.clases.map { }, ajustes.flujo.map { },
+                repo.cuadernos.map { }, repo.horarios.map { }, repo.clases.map { }, repo.faltas.map { }, ajustes.flujo.map { },
             ).collectLatest {
                 delay(350)
                 try {

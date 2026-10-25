@@ -39,7 +39,6 @@ class HorarioReglasTest {
         assertEquals("08:05", ReglasHorario.hora(8 * 60 + 5))
         assertEquals("24:00", ReglasHorario.hora(24 * 60))
         assertEquals("08:00 – 10:30", ReglasHorario.rango(clase(1, "08:00", "10:30")))
-        assertEquals("Miércoles", ReglasHorario.nombreDia(3))
     }
 
     @Test
@@ -85,13 +84,6 @@ class HorarioReglasTest {
     }
 
     @Test
-    fun cuandoEnPalabras() {
-        assertEquals("hoy", ReglasHorario.cuando(0, 3))
-        assertEquals("mañana", ReglasHorario.cuando(1, 4))
-        assertEquals("lunes", ReglasHorario.cuando(5, 1))
-    }
-
-    @Test
     fun proximoInicioDeUnaClaseSemanal() {
         val lunes = clase(1, "08:00", "10:00")
         // miércoles 30 sep 2026 → lunes 5 oct
@@ -127,7 +119,8 @@ class HorarioReglasTest {
 
     @Test
     fun textoDelAviso() {
-        assertEquals("Empieza a las 08:00", ReglasHorario.textoAviso(clase(1, "08:00", "09:00")))
-        assertEquals("Empieza a las 08:00 · Aula 204", ReglasHorario.textoAviso(clase(1, "08:00", "09:00").copy(aula = "Aula 204")))
+        val empieza = { hora: String -> "Empieza a las $hora" }
+        assertEquals("Empieza a las 08:00", ReglasHorario.textoAviso(clase(1, "08:00", "09:00"), empieza))
+        assertEquals("Empieza a las 08:00 · Aula 204", ReglasHorario.textoAviso(clase(1, "08:00", "09:00").copy(aula = "Aula 204"), empieza))
     }
 }

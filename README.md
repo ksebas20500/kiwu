@@ -145,14 +145,15 @@ También puedes comprobar antes la descarga con el archivo `kiwu-linux.tar.gz.sh
 | **Tareas** | Listas por materia, deberes con fecha y hora, recordatorios locales, vistas *Hoy* / *Próximos 7 días* / *Todas* / *Completadas*, en **lista o tablero** (Por hacer · En curso · Hecho) |
 | **Calendario** | Mes completo con un punto de color por entrega y, debajo, el detalle del día para añadir tareas con hora |
 | **Notas** | Cuadernos, páginas con emoji, favoritas, búsqueda (sin distinguir mayúsculas ni tildes) y editor por bloques con menú `/` |
-| **Horario** (macOS y Android) | Varios horarios (Universidad, Trabajo, Ocio…), clases en varios días, vista de semana y de día, «Ahora / Siguiente», aviso de choques y avisos opcionales antes de cada clase |
+| **Horario** (macOS y Android) | Varios horarios (Universidad, Trabajo, Ocio…), clases en varios días, vista de semana y de día, «Ahora / Siguiente», aviso de choques, avisos opcionales antes de cada clase y, en Android, faltas por materia con un máximo y cuántas quedan |
 | **Archivos** | Carpeta de tu equipo vinculada a cada lista con explorador integrado, y PDF/Word adjuntos a notas como referencia, sin duplicarlos |
 | **Ajustes** | Atajos de teclado editables, tema claro/oscuro, color de la app a elegir y fondo de imagen con translucidez ajustable |
 | **Copia de seguridad** | Exportar e importar un archivo `.kiwu.json` que sirve entre macOS, Linux y Android |
-| **Widgets** (solo macOS) | *Deberes*, *Nota rápida* y *Calendario de deberes*, configurables y con acciones directas |
+| **Widgets** | macOS: *Deberes*, *Nota rápida* y *Calendario de deberes*. Android: *Deberes*, *Horario* y *Nota rápida*. Configurables y con acciones directas |
+| **Idiomas** (Android) | Español, inglés y portugués, según el idioma del teléfono o el que elijas para Kiwu |
 | **Privacidad** | Todo local: sin cuentas, sin servidor y sin analíticas |
 
-**Android:** Kotlin · Jetpack Compose · Room (Android 8 o superior; sin widgets por ahora).
+**Android:** Kotlin · Jetpack Compose · Room · Glance (Android 8 o superior).
 **macOS:** SwiftUI · Core Data · WidgetKit (macOS 13 o superior; widgets en macOS 14+).
 **Linux:** Python · GTK4 · libadwaita · SQLite (sin widgets por ahora).
 

@@ -57,6 +57,8 @@ import app.kiwu.android.ui.ColoresNota
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
 /** Resuelve las acciones que necesitan al sistema (elegir imagen o archivo) pedidas por el menú «/» o la barra. */
 @Composable
@@ -101,10 +103,10 @@ private fun MenuColores(icono: ImageVector, descripcion: String, resaltado: Bool
     Box {
         Boton(icono, descripcion) { abierto = true }
         DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
-            DropdownMenuItem(text = { Text("Sin ${if (resaltado) "resaltado" else "color"}") }, onClick = { abierto = false; ed.fijarColor(null, resaltado) })
+            DropdownMenuItem(text = { Text(stringResource(if (resaltado) R.string.sin_resaltado else R.string.sin_color)) }, onClick = { abierto = false; ed.fijarColor(null, resaltado) })
             for ((nombre, par) in ColoresNota.colores) {
                 DropdownMenuItem(
-                    text = { Text(ColoresNota.titulos[nombre] ?: nombre) },
+                    text = { Text(ColoresNota.titulos[nombre]?.let { stringResource(it) } ?: nombre) },
                     leadingIcon = { Box(Modifier.size(18.dp).background(if (oscuro) par.oscuro else par.claro, CircleShape)) },
                     onClick = { abierto = false; ed.fijarColor(nombre, resaltado) },
                 )
@@ -126,27 +128,27 @@ fun BarraFormato(ed: EstadoEditor, adjuntos: OrigenAdjuntos, modifier: Modifier 
     Surface(modifier.fillMaxWidth().imePadding().navigationBarsPadding(), tonalElevation = 3.dp, shadowElevation = 6.dp) {
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             if (esTexto) {
-                Boton(Icons.Filled.FormatBold, "Negrita", ed.activo(b, "b")) { ed.alternarFormato("b") }
-                Boton(Icons.Filled.FormatItalic, "Cursiva", ed.activo(b, "i")) { ed.alternarFormato("i") }
-                Boton(Icons.Filled.FormatUnderlined, "Subrayado", ed.activo(b, "u")) { ed.alternarFormato("u") }
-                Boton(Icons.Filled.FormatStrikethrough, "Tachado", ed.activo(b, "s")) { ed.alternarFormato("s") }
-                Boton(Icons.Filled.Code, "Código en línea", ed.activo(b, "code")) { ed.alternarFormato("code") }
-                MenuColores(Icons.Filled.FormatColorText, "Color del texto", false, ed)
-                MenuColores(Icons.Filled.Highlight, "Resaltado", true, ed)
-                Boton(Icons.Filled.Link, "Enlace", ed.enlaceBajoCursor(b) != null) { dialogoEnlace = true }
-                ed.enlaceBajoCursor(b)?.let { url -> TextButton(onClick = { adjuntos.abrirUrl(url) }) { Text("Abrir") } }
-                Boton(Icons.Filled.FormatIndentDecrease, "Menos sangría") { ed.cambiarSangria(b, -1) }
-                Boton(Icons.Filled.FormatIndentIncrease, "Más sangría") { ed.cambiarSangria(b, 1) }
+                Boton(Icons.Filled.FormatBold, stringResource(R.string.negrita), ed.activo(b, "b")) { ed.alternarFormato("b") }
+                Boton(Icons.Filled.FormatItalic, stringResource(R.string.cursiva), ed.activo(b, "i")) { ed.alternarFormato("i") }
+                Boton(Icons.Filled.FormatUnderlined, stringResource(R.string.subrayado), ed.activo(b, "u")) { ed.alternarFormato("u") }
+                Boton(Icons.Filled.FormatStrikethrough, stringResource(R.string.tachado), ed.activo(b, "s")) { ed.alternarFormato("s") }
+                Boton(Icons.Filled.Code, stringResource(R.string.codigo_en_linea), ed.activo(b, "code")) { ed.alternarFormato("code") }
+                MenuColores(Icons.Filled.FormatColorText, stringResource(R.string.color_texto), false, ed)
+                MenuColores(Icons.Filled.Highlight, stringResource(R.string.resaltado), true, ed)
+                Boton(Icons.Filled.Link, stringResource(R.string.enlace), ed.enlaceBajoCursor(b) != null) { dialogoEnlace = true }
+                ed.enlaceBajoCursor(b)?.let { url -> TextButton(onClick = { adjuntos.abrirUrl(url) }) { Text(stringResource(R.string.abrir)) } }
+                Boton(Icons.Filled.FormatIndentDecrease, stringResource(R.string.menos_sangria)) { ed.cambiarSangria(b, -1) }
+                Boton(Icons.Filled.FormatIndentIncrease, stringResource(R.string.mas_sangria)) { ed.cambiarSangria(b, 1) }
             }
             Box {
-                Boton(Icons.Filled.Add, "Insertar") { menuInsertar = true }
+                Boton(Icons.Filled.Add, stringResource(R.string.insertar)) { menuInsertar = true }
                 DropdownMenu(expanded = menuInsertar, onDismissRequest = { menuInsertar = false }) {
                     for ((tipo, titulo) in listOf(
-                        TiposBloque.IMAGEN to "Imagen",
-                        TiposBloque.ARCHIVO to "Archivo adjunto (PDF, Word)",
-                        TiposBloque.ENLACE to "Enlace con vista previa",
-                        TiposBloque.CODIGO to "Bloque de código",
-                        TiposBloque.DIVISOR to "Divisor",
+                        TiposBloque.IMAGEN to stringResource(R.string.bloque_imagen),
+                        TiposBloque.ARCHIVO to stringResource(R.string.bloque_archivo),
+                        TiposBloque.ENLACE to stringResource(R.string.bloque_enlace_corto),
+                        TiposBloque.CODIGO to stringResource(R.string.bloque_codigo_largo),
+                        TiposBloque.DIVISOR to stringResource(R.string.bloque_divisor),
                     )) {
                         DropdownMenuItem(text = { Text(titulo) }, onClick = {
                             menuInsertar = false
@@ -161,21 +163,21 @@ fun BarraFormato(ed: EstadoEditor, adjuntos: OrigenAdjuntos, modifier: Modifier 
                 }
             }
             Box {
-                Boton(Icons.Filled.MoreVert, "Más opciones del bloque") { menuMas = true }
+                Boton(Icons.Filled.MoreVert, stringResource(R.string.bloque_mas_opciones)) { menuMas = true }
                 DropdownMenu(expanded = menuMas, onDismissRequest = { menuMas = false }) {
-                    DropdownMenuItem(text = { Text("Convertir en…") }, onClick = { menuMas = false; menuConvertir = true })
-                    DropdownMenuItem(text = { Text("Mover arriba") }, onClick = { menuMas = false; ed.mover(b, -1) })
-                    DropdownMenuItem(text = { Text("Mover abajo") }, onClick = { menuMas = false; ed.mover(b, 1) })
-                    DropdownMenuItem(text = { Text("Duplicar") }, onClick = { menuMas = false; ed.duplicar(b) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.convertir_en)) }, onClick = { menuMas = false; menuConvertir = true })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.mover_arriba)) }, onClick = { menuMas = false; ed.mover(b, -1) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.mover_abajo)) }, onClick = { menuMas = false; ed.mover(b, 1) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.duplicar)) }, onClick = { menuMas = false; ed.duplicar(b) })
                     HorizontalDivider()
                     DropdownMenuItem(
-                        text = { Text("Eliminar bloque", color = MaterialTheme.colorScheme.error) },
+                        text = { Text(stringResource(R.string.bloque_eliminar), color = MaterialTheme.colorScheme.error) },
                         onClick = { menuMas = false; ed.eliminar(b) },
                     )
                 }
                 DropdownMenu(expanded = menuConvertir, onDismissRequest = { menuConvertir = false }) {
                     for (tipo in TiposBloque.deTexto + TiposBloque.CODIGO) {
-                        DropdownMenuItem(text = { Text(TiposBloque.titulos[tipo] ?: tipo) }, onClick = { menuConvertir = false; ed.convertir(b, tipo) })
+                        DropdownMenuItem(text = { Text(TiposBloque.titulos[tipo]?.let { stringResource(it) } ?: tipo) }, onClick = { menuConvertir = false; ed.convertir(b, tipo) })
                     }
                 }
             }
@@ -196,19 +198,19 @@ private fun DialogoEnlace(ed: EstadoEditor, b: BloqueEd, adjuntos: OrigenAdjunto
     }
     AlertDialog(
         onDismissRequest = alCerrar,
-        title = { Text("Enlace") },
+        title = { Text(stringResource(R.string.enlace)) },
         text = {
             OutlinedTextField(
-                value = direccion, onValueChange = { direccion = it }, label = { Text("Dirección web") }, singleLine = true,
+                value = direccion, onValueChange = { direccion = it }, label = { Text(stringResource(R.string.direccion_web)) }, singleLine = true,
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
                 keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { aplicar() }),
             )
         },
-        confirmButton = { TextButton(onClick = aplicar, enabled = direccion.isNotBlank()) { Text("Aplicar") } },
+        confirmButton = { TextButton(onClick = aplicar, enabled = direccion.isNotBlank()) { Text(stringResource(R.string.aplicar)) } },
         dismissButton = {
             Row {
-                if (existente != null) TextButton(onClick = { ed.aplicarEnlace(null); alCerrar() }) { Text("Quitar enlace") }
-                TextButton(onClick = alCerrar) { Text("Cancelar") }
+                if (existente != null) TextButton(onClick = { ed.aplicarEnlace(null); alCerrar() }) { Text(stringResource(R.string.quitar_enlace)) }
+                TextButton(onClick = alCerrar) { Text(stringResource(R.string.cancelar)) }
             }
         },
     )
