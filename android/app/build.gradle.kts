@@ -21,6 +21,15 @@ val bannerPrueba = "ca-app-pub-3940256099942544/9214589741"
 val appPrueba = "ca-app-pub-3940256099942544~3347511713"
 
 android {
+    lint {
+        // Español (base), inglés y portugués: un texto sin traducir o una traducción sobrante frena el build.
+        error += listOf("MissingTranslation", "ExtraTranslation", "MissingQuantity", "StringFormatMatches")
+    }
+    bundle {
+        // En Android 8–12 el idioma se elige dentro de Kiwu: el paquete tiene que traer los tres, no solo el del teléfono.
+        language { enableSplit = false }
+    }
+
     namespace = "app.kiwu.android"
     compileSdk = 36
 
@@ -28,8 +37,8 @@ android {
         applicationId = "app.kiwu.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 11
-        versionName = "0.4.1"
+        versionCode = 12
+        versionName = "0.4.3"
     }
 
     signingConfigs {

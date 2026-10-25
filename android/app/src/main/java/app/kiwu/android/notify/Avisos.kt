@@ -22,6 +22,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import app.kiwu.android.Idioma
+import app.kiwu.android.Textos
+import app.kiwu.android.domain.ID_EVENTOS
 
 /** Canal de notificaciones y las acciones de cada aviso. */
 object Avisos {
@@ -39,12 +42,12 @@ object Avisos {
     fun crearCanal(contexto: Context) {
         if (Build.VERSION.SDK_INT < 26) return
         val nm = contexto.getSystemService(NotificationManager::class.java)
-        if (nm.getNotificationChannel(CANAL) == null) {
-            nm.createNotificationChannel(
-                NotificationChannel(CANAL, "Recordatorios de tareas", NotificationManager.IMPORTANCE_HIGH)
-                    .apply { description = "Avisos antes de la fecha de entrega de tus tareas" },
-            )
-        }
+        // Se vuelve a crear siempre: así el nombre sigue al idioma de la app (Android conserva lo que el usuario cambió).
+        val t = Idioma.contexto(contexto)
+        nm.createNotificationChannel(
+            NotificationChannel(CANAL, t.getString(R.string.canal_tareas), NotificationManager.IMPORTANCE_HIGH)
+                .apply { description = t.getString(R.string.canal_tareas_desc) },
+        )
     }
 
     fun tienePermiso(contexto: Context): Boolean =
@@ -65,6 +68,7 @@ object Avisos {
     fun mostrar(contexto: Context, d: Deber, texto: String, nombreLista: String?): Boolean {
         if (!tienePermiso(contexto)) return false
         crearCanal(contexto)
+        val t = Idioma.contexto(contexto)
         val abrir = PendingIntent.getActivity(
             contexto, identificador(d.id),
             Intent(contexto, MainActivity::class.java).putExtra(MainActivity.EXTRA_TAREA, d.id).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP),
@@ -78,8 +82,8 @@ object Avisos {
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
             .setContentIntent(abrir)
-            .addAction(0, "Completar", difusion(contexto, ACCION_COMPLETAR, d.id))
-            .addAction(0, "Posponer 1 h", difusion(contexto, ACCION_POSPONER, d.id))
+            .addAction(0, t.getString(R.string.completar), difusion(contexto, ACCION_COMPLETAR, d.id))
+            .addAction(0, t.getString(R.string.posponer_1h), difusion(contexto, ACCION_POSPONER, d.id))
             .build()
         return try {
             NotificationManagerCompat.from(contexto).notify(identificador(d.id), notificacion)
@@ -147,9 +151,9 @@ class AlarmaReceiver : BroadcastReceiver() {
                 val d = app.repo.deber(id)
                 val toca = d != null && !d.completado && if (reaviso) true else Recordatorios.pendientesDeAviso(listOf(d), ahora).isNotEmpty()
                 if (d != null && toca) {
-                    val lista = app.repo.materia(d.materiaId)?.nombre
+                    val lista = if (d.materiaId == ID_EVENTOS) Textos.eventos else app.repo.materia(d.materiaId)?.nombre
                     // El segundo aviso no cambia el estado «avisada» del primero.
-                    if (Avisos.mostrar(contexto, d, Recordatorios.textoAviso(d, ahora), lista) && !segundo) app.repo.marcarAvisado(id, ahora)
+                    if (Avisos.mostrar(contexto, d, Recordatorios.textoAviso(d, ahora, Idioma.contexto(contexto).resources), lista) && !segundo) app.repo.marcarAvisado(id, ahora)
                 }
             } finally {
                 pendiente.finish()

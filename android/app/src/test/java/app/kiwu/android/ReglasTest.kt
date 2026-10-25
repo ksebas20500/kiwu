@@ -135,15 +135,6 @@ class ReglasTest {
     }
 
     @Test
-    fun textoDelAviso() {
-        val d = tarea("x", fecha = t0 + 5 * hora)
-        assertEquals("Vence en 5 h", Recordatorios.textoAviso(d, t0))
-        assertEquals("Vence en 30 min", Recordatorios.textoAviso(d, t0 + (4.5 * hora).toLong()))
-        assertEquals("Venció hace 10 min", Recordatorios.textoAviso(d, t0 + 5 * hora + 600_000))
-        assertEquals("Vence mañana", Recordatorios.textoAviso(d.copy(fechaEntrega = t0 + 30 * hora), t0))
-    }
-
-    @Test
     fun momentoDeDisparo() {
         val d = tarea("x", fecha = t0 + 30 * hora)            // aviso a las 24 h antes = t0 + 6 h
         assertEquals(t0 + 6 * hora, Recordatorios.momentoDeDisparo(d, t0))

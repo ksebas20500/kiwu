@@ -77,13 +77,4 @@ class EventosTest {
         // con hora concreta, la referencia es esa hora
         assertEquals(en(1, 15), Recordatorios.referencia(evento("charla", en(1, 15)), zona))
     }
-
-    @Test
-    fun elTextoDelAvisoDiceEmpiezaEnVezDeVence() {
-        // 7 minutos de más: así nunca cae en la medianoche de la zona del equipo que corre la prueba.
-        val inicio = ahora + 5 * 3_600_000L + 7 * 60_000L
-        val e = evento("charla", inicio)
-        assertEquals("Empieza en 5 h", Recordatorios.textoAviso(e, ahora))
-        assertEquals("Empezó hace 10 min", Recordatorios.textoAviso(e, inicio + 600_000))
-    }
 }

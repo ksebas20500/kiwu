@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.abs
 import kotlin.math.min
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
 private val ALTO_FILA = 52.dp
 private const val FILAS_VISIBLES = 5
@@ -93,8 +95,8 @@ fun RuedaHora(hora: Int, minuto: Int, paso: Int = 1, alCambiar: (Int, Int) -> Un
     var h by remember { mutableIntStateOf(hora.coerceIn(0, 23)) }
     var m by remember { mutableIntStateOf(minutoAjustado(minuto, paso)) }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-        Rueda(24, h, "Horas", Modifier.width(88.dp)) { h = it; alCambiar(h, m) }
+        Rueda(24, h, stringResource(R.string.horas), Modifier.width(88.dp)) { h = it; alCambiar(h, m) }
         Text(":", Modifier.width(20.dp), fontSize = 30.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-        Rueda(minutos, m / paso, "Minutos", Modifier.width(88.dp), formato = { "%02d".format(it * paso) }) { m = it * paso; alCambiar(h, m) }
+        Rueda(minutos, m / paso, stringResource(R.string.minutos), Modifier.width(88.dp), formato = { "%02d".format(it * paso) }) { m = it * paso; alCambiar(h, m) }
     }
 }

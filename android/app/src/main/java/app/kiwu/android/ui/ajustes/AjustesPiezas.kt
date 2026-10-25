@@ -29,6 +29,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
 /** Una sección en la pantalla principal de Ajustes: icono, título y, debajo, el valor que tiene ahora. */
 @Composable
@@ -56,8 +58,9 @@ fun FilaAjuste(icono: ImageVector, titulo: String, resumen: String, alPulsar: ()
 @Composable
 fun SelectorAspectoMenu(actual: String, conContadores: Boolean, alElegir: (String) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        for ((id, titulo) in listOf("plegable" to "Plegable", "compacto" to "Compacto", "color" to "Con color")) {
+        for ((id, titulo) in listOf("plegable" to stringResource(R.string.aspecto_plegable), "compacto" to stringResource(R.string.aspecto_compacto), "color" to stringResource(R.string.aspecto_color))) {
             val elegido = actual == id
+            val descripcionElegida = stringResource(R.string.elegido_n, titulo)
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Surface(
                     shape = RoundedCornerShape(12.dp),
@@ -67,15 +70,15 @@ fun SelectorAspectoMenu(actual: String, conContadores: Boolean, alElegir: (Strin
                         if (elegido) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                     ),
                     modifier = Modifier.fillMaxWidth().height(88.dp).clickable { alElegir(id) }
-                        .semantics { contentDescription = "$titulo" + if (elegido) " (elegido)" else "" },
+                        .semantics { contentDescription = if (elegido) descripcionElegida else titulo },
                 ) {
                     Column(
                         Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
                         verticalArrangement = Arrangement.spacedBy(if (id == "compacto") 2.dp else 8.dp),
                     ) {
-                        MiniFila("📁", "Semestre", if (conContadores) "5" else null, id, carpeta = true)
-                        MiniFila(if (id == "color") null else "", "Cálculo", if (conContadores) "3" else null, id, sangria = true)
-                        MiniFila(if (id == "color") null else "", "Física", if (conContadores) "2" else null, id, sangria = true)
+                        MiniFila("📁", stringResource(R.string.ejemplo_semestre), if (conContadores) "5" else null, id, carpeta = true)
+                        MiniFila(if (id == "color") null else "", stringResource(R.string.ejemplo_calculo), if (conContadores) "3" else null, id, sangria = true)
+                        MiniFila(if (id == "color") null else "", stringResource(R.string.ejemplo_fisica), if (conContadores) "2" else null, id, sangria = true)
                     }
                 }
                 Text(

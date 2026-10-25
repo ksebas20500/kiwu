@@ -43,6 +43,19 @@ La copia `.kiwu.json` admite dos claves opcionales nuevas. El formato sigue sien
 
 Reglas: `materia` es la lista de tareas vinculada a la clase (Android muestra sus tareas en la hoja de la clase y puntos en el horario); `color` (opcional, desde Android 0.3) es el color elegido para la clase como `#RRGGBB`, y `null` o ausente significa color automático: un valor que no sea `#RRGGBB` se ignora al importar, y las copias sin este campo se importan igual. `diaSemana` va de 1 (lunes) a 7 (domingo); `inicioMin` y `finMin` son **minutos desde las 00:00 en hora local, sin zona horaria** (`0 ≤ inicio < 1440`, `inicio < fin ≤ 1440`); una clase en varios días son varias filas con el mismo `grupo`; `avisoMin` es nulo si no hay aviso. Al importar se descartan las clases con día u horas inválidos o cuyo horario no existe, y no se pisa lo que ya está (ni se resucita lo eliminado).
 
+### Faltas de clase (Android 0.4.3; Linux y macOS pendientes)
+
+Cada clase gana el campo opcional `maxFaltas` y la copia, la clave opcional `faltas`. El formato sigue siendo `1`.
+
+```json
+"clases": [ { "...": "...", "maxFaltas": 5 } ],
+"faltas": [
+  { "id": "UUID", "grupo": "UUID-del-grupo-de-la-clase", "horario": "UUID-del-horario", "dia": "2026-10-20", "justificada": false, "creada": "ISO-8601" }
+]
+```
+
+Reglas: las faltas son de la **materia**, es decir, del `grupo` de la clase (renombrar o mover una clase de día no separa su historial). `maxFaltas` es un entero mayor que 0, igual en todas las filas del grupo; `null`, ausente o `≤ 0` significa sin límite. `dia` es una fecha sin hora ni zona (`AAAA-MM-DD`). Las faltas `justificada: true` se muestran pero no cuentan para el límite. Al importar se descartan las faltas de un `grupo` que no existe y no se pisa lo que ya está. Linux y macOS todavía no las conocen: una copia que pase por ellos pierde las faltas y los máximos. Por eso aún no están en `copia/ejemplo.kiwu.json`.
+
 
 ## Carpetas de listas (Android; Linux y macOS pendientes)
 

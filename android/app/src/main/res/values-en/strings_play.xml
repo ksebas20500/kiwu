@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Textos que solo existen en la versión de Google Play: anuncios, compra y actualizaciones. -->
+<resources>
+    <string name="ajustes_anuncios">Remove ads</string>
+    <string name="resumen_sin_anuncios">Thanks for supporting Kiwu: no ads</string>
+    <string name="resumen_con_anuncios">One-time payment · removes the banner</string>
+    <string name="anuncios_gracias">Thanks for supporting Kiwu: you won\'t see ads anymore.</string>
+    <string name="anuncios_explicacion">Kiwu is free and shows a small banner in the Tasks and Notes lists. Every feature is the same with or without ads; the one-time payment only removes them.</string>
+    <string name="anuncios_quitar_precio">Remove ads · %1$s</string>
+    <string name="actualizacion_buscando">Checking…</string>
+    <string name="actualizacion_descargando">The new version is downloading</string>
+    <string name="actualizacion_al_dia">You already have the latest version</string>
+    <string name="actualizacion_buscar">Check for updates</string>
+    <string name="ajustes_privacidad_play">Your data is stored only on this device: no accounts and no server of our own. The app uses the Internet to download previews of links you paste into a note, to show the ad banner (Google AdMob), which may use the phone\'s advertising ID depending on your consent, and to ask Google Play whether there is a new version.</string>
+    <string name="actualizacion_nueva_titulo">A new version of Kiwu is available</string>
+    <string name="actualizacion_nueva_texto">It downloads while you keep using the app. When it\'s done, you\'ll just need to restart it.</string>
+    <string name="actualizacion_actualizar">Update</string>
+    <string name="actualizacion_mas_tarde">Later</string>
+    <string name="actualizacion_lista_titulo">The update is ready</string>
+    <string name="actualizacion_lista_texto">Restart Kiwu to use the new version. Your data is kept.</string>
+    <string name="actualizacion_reiniciar">Restart</string>
+    <string name="actualizacion_luego">Not now</string>
+</resources>

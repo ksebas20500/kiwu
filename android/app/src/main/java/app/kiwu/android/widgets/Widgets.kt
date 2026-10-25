@@ -145,3 +145,27 @@ class CompletarDeber : androidx.glance.appwidget.action.ActionCallback {
 
 /** Relee la configuración de un widget (la que guarda `ConfiguracionWidgetsActivity`). */
 fun Preferences.configWidget(): String? = this[ClaveConfig]
+
+/** Un texto del widget en el idioma de Kiwu (Glance no pasa por `attachBaseContext`, así que se envuelve el contexto aquí). */
+@androidx.compose.runtime.Composable
+internal fun textoWidget(@androidx.annotation.StringRes id: Int, vararg datos: Any): String =
+    app.kiwu.android.Idioma.contexto(androidx.glance.LocalContext.current).getString(id, *datos)
+
+/** Palabras que `DatosWidgets` pone en los widgets, ya en el idioma de Kiwu (así sus funciones siguen siendo puras). */
+data class TextosWidget(
+    val hoy: String, val manana: String, val proximos: String, val deberes: String,
+    val sinFecha: String, val vencida: String, val sinTitulo: String,
+) {
+    companion object {
+        fun de(contexto: android.content.Context): TextosWidget {
+            val t = app.kiwu.android.Idioma.contexto(contexto)
+            app.kiwu.android.Textos.actualizar(t)
+            return TextosWidget(
+                hoy = t.getString(app.kiwu.android.R.string.hoy), manana = t.getString(app.kiwu.android.R.string.manana),
+                proximos = t.getString(app.kiwu.android.R.string.proximos_7), deberes = t.getString(app.kiwu.android.R.string.deberes),
+                sinFecha = t.getString(app.kiwu.android.R.string.seccion_sin_fecha), vencida = t.getString(app.kiwu.android.R.string.vencida),
+                sinTitulo = t.getString(app.kiwu.android.R.string.sin_titulo),
+            )
+        }
+    }
+}

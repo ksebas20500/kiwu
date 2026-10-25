@@ -197,18 +197,21 @@ class EditorTest {
 
     @Test
     fun menuSlashFiltraPorTitulo() {
+        val titulos = mapOf(
+            TiposBloque.TITULO to "Título 1", TiposBloque.CODIGO to "Código", TiposBloque.IMAGEN to "Imagen", TiposBloque.CITA to "Cita",
+        )
         val ed = editor(Bloque(text = "/"))
         val b = ed.bloques[0]
-        assertTrue(ed.opcionesSlash(b).containsAll(listOf(TiposBloque.TITULO, TiposBloque.CODIGO, TiposBloque.IMAGEN)))
-        assertFalse(TiposBloque.PARRAFO in ed.opcionesSlash(b))
+        assertTrue(ed.opcionesSlash(b, titulos).containsAll(listOf(TiposBloque.TITULO, TiposBloque.CODIGO, TiposBloque.IMAGEN)))
+        assertFalse(TiposBloque.PARRAFO in ed.opcionesSlash(b, titulos))
         escribir(ed, b, "/cód")
-        assertEquals(listOf(TiposBloque.CODIGO), ed.opcionesSlash(b))
+        assertEquals(listOf(TiposBloque.CODIGO), ed.opcionesSlash(b, titulos))
         escribir(ed, b, "/COD")
-        assertEquals("sin tildes ni mayúsculas", listOf(TiposBloque.CODIGO), ed.opcionesSlash(b))
+        assertEquals("sin tildes ni mayúsculas", listOf(TiposBloque.CODIGO), ed.opcionesSlash(b, titulos))
         escribir(ed, b, "/zzz")
-        assertTrue(ed.opcionesSlash(b).isEmpty())
+        assertTrue(ed.opcionesSlash(b, titulos).isEmpty())
         val otro = editor(Bloque(kind = TiposBloque.TITULO, text = "/"))
-        assertTrue(otro.opcionesSlash(otro.bloques[0]).isEmpty())
+        assertTrue(otro.opcionesSlash(otro.bloques[0], titulos).isEmpty())
     }
 
     @Test

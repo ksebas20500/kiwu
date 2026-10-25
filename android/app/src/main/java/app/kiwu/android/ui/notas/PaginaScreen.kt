@@ -51,6 +51,8 @@ import app.kiwu.android.ui.editor.BarraFormato
 import app.kiwu.android.ui.editor.EditorBloques
 import app.kiwu.android.ui.editor.OrigenAdjuntos
 import app.kiwu.android.ui.editor.rememberEstadoEditor
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
 /** Una página de nota: icono, título y editor por bloques. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,20 +75,20 @@ fun PaginaScreen(vm: PaginaViewModel, adjuntos: OrigenAdjuntos, alVolver: () -> 
         topBar = {
             TopAppBar(
                 title = {},
-                navigationIcon = { IconButton(onClick = alVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } },
+                navigationIcon = { IconButton(onClick = alVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.volver)) } },
                 actions = {
                     IconButton(onClick = { vm.favorita(!p.favorita) }) {
                         Icon(
-                            if (p.favorita) Icons.Filled.Star else Icons.Filled.StarBorder, if (p.favorita) "Quitar de favoritas" else "Añadir a favoritas",
+                            if (p.favorita) Icons.Filled.Star else Icons.Filled.StarBorder, stringResource(if (p.favorita) R.string.quitar_favoritas else R.string.anadir_favoritas),
                             tint = if (p.favorita) Color(0xFFE0A100) else MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     Box {
-                        IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Más opciones") }
+                        IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.mas_opciones)) }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                            if (cuadernos.size > 1) DropdownMenuItem(text = { Text("Mover a otro cuaderno…") }, onClick = { menu = false; mover = true })
+                            if (cuadernos.size > 1) DropdownMenuItem(text = { Text(stringResource(R.string.mover_otro_cuaderno)) }, onClick = { menu = false; mover = true })
                             DropdownMenuItem(
-                                text = { Text("Eliminar nota", color = MaterialTheme.colorScheme.error) },
+                                text = { Text(stringResource(R.string.nota_eliminar), color = MaterialTheme.colorScheme.error) },
                                 leadingIcon = { Icon(Icons.Filled.Delete, null, tint = MaterialTheme.colorScheme.error) },
                                 onClick = { menu = false; vm.eliminar(); alVolver() },
                             )
@@ -105,7 +107,7 @@ fun PaginaScreen(vm: PaginaViewModel, adjuntos: OrigenAdjuntos, alVolver: () -> 
                 TextButton(onClick = { elegirIcono = true }) { Text(icono.ifBlank { "📄" }, fontSize = 30.sp) }
                 TextField(
                     value = titulo, onValueChange = vm::cambioTitulo, modifier = Modifier.weight(1f),
-                    placeholder = { Text("Sin título", fontSize = 28.sp) },
+                    placeholder = { Text(stringResource(R.string.sin_titulo), fontSize = 28.sp) },
                     textStyle = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
                     colors = TextFieldDefaults.colors(
@@ -115,7 +117,7 @@ fun PaginaScreen(vm: PaginaViewModel, adjuntos: OrigenAdjuntos, alVolver: () -> 
                 )
             }
             Text(
-                "Editado " + Fechas.completa(p.actualizada), style = MaterialTheme.typography.labelSmall,
+                stringResource(R.string.editado_n, Fechas.completa(p.actualizada)), style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 12.dp, bottom = 8.dp),
             )
             EditorBloques(editor, adjuntos, Modifier.fillMaxWidth())
@@ -124,15 +126,15 @@ fun PaginaScreen(vm: PaginaViewModel, adjuntos: OrigenAdjuntos, alVolver: () -> 
 
     if (elegirIcono) {
         AlertDialog(
-            onDismissRequest = { elegirIcono = false }, title = { Text("Icono de la nota") },
+            onDismissRequest = { elegirIcono = false }, title = { Text(stringResource(R.string.nota_icono)) },
             text = { SelectorEmoji(icono) { vm.cambioIcono(it); elegirIcono = false } },
-            confirmButton = { TextButton(onClick = { vm.cambioIcono(""); elegirIcono = false }) { Text("Quitar icono") } },
-            dismissButton = { TextButton(onClick = { elegirIcono = false }) { Text("Cancelar") } },
+            confirmButton = { TextButton(onClick = { vm.cambioIcono(""); elegirIcono = false }) { Text(stringResource(R.string.quitar_icono)) } },
+            dismissButton = { TextButton(onClick = { elegirIcono = false }) { Text(stringResource(R.string.cancelar)) } },
         )
     }
     if (mover) {
         AlertDialog(
-            onDismissRequest = { mover = false }, title = { Text("Mover a…") },
+            onDismissRequest = { mover = false }, title = { Text(stringResource(R.string.mover_a)) },
             text = {
                 Column {
                     for (c in cuadernos.filter { it.id != p.cuadernoId }) {
@@ -140,7 +142,7 @@ fun PaginaScreen(vm: PaginaViewModel, adjuntos: OrigenAdjuntos, alVolver: () -> 
                     }
                 }
             },
-            confirmButton = {}, dismissButton = { TextButton(onClick = { mover = false }) { Text("Cancelar") } },
+            confirmButton = {}, dismissButton = { TextButton(onClick = { mover = false }) { Text(stringResource(R.string.cancelar)) } },
         )
     }
 }

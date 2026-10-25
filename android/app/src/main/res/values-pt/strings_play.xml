@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Textos que solo existen en la versión de Google Play: anuncios, compra y actualizaciones. -->
+<resources>
+    <string name="ajustes_anuncios">Remover anúncios</string>
+    <string name="resumen_sin_anuncios">Obrigado por apoiar o Kiwu: sem anúncios</string>
+    <string name="resumen_con_anuncios">Pagamento único · remove o banner</string>
+    <string name="anuncios_gracias">Obrigado por apoiar o Kiwu: você não verá mais anúncios.</string>
+    <string name="anuncios_explicacion">O Kiwu é gratuito e mostra um pequeno banner nas listas de Tarefas e Notas. Todas as funções são as mesmas com ou sem anúncios; o pagamento único apenas os remove.</string>
+    <string name="anuncios_quitar_precio">Remover anúncios · %1$s</string>
+    <string name="actualizacion_buscando">Procurando…</string>
+    <string name="actualizacion_descargando">A nova versão está sendo baixada</string>
+    <string name="actualizacion_al_dia">Você já tem a versão mais recente</string>
+    <string name="actualizacion_buscar">Procurar atualizações</string>
+    <string name="ajustes_privacidad_play">Seus dados ficam salvos apenas neste dispositivo: sem contas nem servidor próprio. O app usa a Internet para baixar a prévia dos links que você cola em uma nota, para mostrar o banner de anúncios (Google AdMob), que pode usar o identificador de publicidade do telefone conforme o seu consentimento, e para consultar o Google Play se há uma versão nova.</string>
+    <string name="actualizacion_nueva_titulo">Há uma nova versão do Kiwu</string>
+    <string name="actualizacion_nueva_texto">Ela é baixada enquanto você continua usando o app. Quando terminar, basta reiniciá-lo.</string>
+    <string name="actualizacion_actualizar">Atualizar</string>
+    <string name="actualizacion_mas_tarde">Mais tarde</string>
+    <string name="actualizacion_lista_titulo">A atualização está pronta</string>
+    <string name="actualizacion_lista_texto">Reinicie o Kiwu para usar a nova versão. Seus dados são mantidos.</string>
+    <string name="actualizacion_reiniciar">Reiniciar</string>
+    <string name="actualizacion_luego">Depois</string>
+</resources>

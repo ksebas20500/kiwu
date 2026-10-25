@@ -19,6 +19,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import app.kiwu.android.Idioma
 
 /** Avisos de clases: «Cálculo empieza a las 08:00 · Aula 204». Cada clase con aviso tiene una alarma para su próxima vez. */
 object AvisosClases {
@@ -29,12 +30,11 @@ object AvisosClases {
     fun crearCanal(contexto: Context) {
         if (Build.VERSION.SDK_INT < 26) return
         val nm = contexto.getSystemService(NotificationManager::class.java)
-        if (nm.getNotificationChannel(CANAL) == null) {
-            nm.createNotificationChannel(
-                NotificationChannel(CANAL, "Avisos del horario", NotificationManager.IMPORTANCE_DEFAULT)
-                    .apply { description = "Avisos antes de que empiecen tus clases y actividades" },
-            )
-        }
+        val t = Idioma.contexto(contexto)
+        nm.createNotificationChannel(
+            NotificationChannel(CANAL, t.getString(R.string.canal_horario), NotificationManager.IMPORTANCE_DEFAULT)
+                .apply { description = t.getString(R.string.canal_horario_desc) },
+        )
     }
 
     private fun identificador(id: String) = ("clase:" + id).hashCode()
@@ -50,6 +50,7 @@ object AvisosClases {
     fun mostrar(contexto: Context, c: Clase, horario: String?): Boolean {
         if (!Avisos.tienePermiso(contexto)) return false
         crearCanal(contexto)
+        val textos = Idioma.contexto(contexto)
         val abrir = PendingIntent.getActivity(
             contexto, identificador(c.id), Intent(contexto, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
@@ -57,7 +58,7 @@ object AvisosClases {
         val notificacion = NotificationCompat.Builder(contexto, CANAL)
             .setSmallIcon(R.drawable.ic_notificacion)
             .setContentTitle(c.titulo)
-            .setContentText(listOfNotNull(ReglasHorario.textoAviso(c), horario).joinToString(" · "))
+            .setContentText(listOfNotNull(ReglasHorario.textoAviso(c) { textos.getString(R.string.clase_empieza_a, it) }, horario).joinToString(" · "))
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
             .setContentIntent(abrir)

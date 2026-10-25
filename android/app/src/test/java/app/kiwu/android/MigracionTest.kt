@@ -87,10 +87,29 @@ class MigracionTest {
         db.query("SELECT COUNT(*) FROM grupo_lista").use { it.moveToFirst(); assertEquals(1, it.getInt(0)) }
     }
 
+    /** La versión 4 pasa a la 5: las clases quedan sin límite de faltas y aparece la tabla de faltas, sin perder nada. */
+    @Test
+    fun deLaVersion4ALa5ConservaLasClasesYCreaLasFaltas() {
+        ayudante.createDatabase("migracion4", 4).apply {
+            execSQL("INSERT INTO horario (id, nombre, icono, orden, creada, actualizada, eliminada) VALUES ('H1', 'Uni', '🎓', 0, 1, 1, NULL)")
+            execSQL("INSERT INTO clase (id, horario_id, materia_id, grupo, titulo, dia_semana, inicio_min, fin_min, aula, notas, aviso_min, color, creada, actualizada, eliminada) VALUES ('C1', 'H1', NULL, 'G', 'Cálculo', 1, 480, 600, 'A-1', '', 10, '#E53935', 1, 1, NULL)")
+            close()
+        }
+        val db = ayudante.runMigrationsAndValidate("migracion4", 5, true, KiwuDb.MIGRACION_4_5)
+        db.query("SELECT titulo, color, aviso_min, max_faltas FROM clase").use {
+            assertEquals(1, it.count)
+            it.moveToFirst()
+            assertEquals("Cálculo", it.getString(0)); assertEquals("#E53935", it.getString(1)); assertEquals(10, it.getInt(2))
+            assertEquals(true, it.isNull(3))
+        }
+        db.execSQL("INSERT INTO falta (id, grupo, horario_id, dia, justificada, creada) VALUES ('F1', 'G', 'H1', 20752, 0, 1)")
+        db.query("SELECT COUNT(*) FROM falta").use { it.moveToFirst(); assertEquals(1, it.getInt(0)) }
+    }
+
     /** De la primera versión a la última pasando por todas las migraciones. */
     @Test
-    fun deLaVersion1ALa4EnUnSoloPaso() {
-        ayudante.createDatabase("migracion14", 1).apply { close() }
-        ayudante.runMigrationsAndValidate("migracion14", 4, true, KiwuDb.MIGRACION_1_2, KiwuDb.MIGRACION_2_3, KiwuDb.MIGRACION_3_4)
+    fun deLaVersion1ALa5EnUnSoloPaso() {
+        ayudante.createDatabase("migracion15", 1).apply { close() }
+        ayudante.runMigrationsAndValidate("migracion15", 5, true, KiwuDb.MIGRACION_1_2, KiwuDb.MIGRACION_2_3, KiwuDb.MIGRACION_3_4, KiwuDb.MIGRACION_4_5)
     }
 }

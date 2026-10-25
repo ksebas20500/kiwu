@@ -41,6 +41,8 @@ import app.kiwu.android.ui.FondoArchivos
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.max
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
 /**
  * Deja elegir qué parte de la foto se ve de fondo: se mueve con un dedo y se amplía con dos. El resultado es una imagen del
@@ -101,7 +103,7 @@ fun EncuadreFondo(alAceptar: (Bitmap) -> Unit, alCancelar: () -> Unit) {
             }
         }
         Text(
-            "Arrastra para mover · pellizca para ampliar",
+            stringResource(R.string.encuadre_ayuda),
             Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 12.dp)
                 .background(Color.Black.copy(alpha = 0.55f), androidx.compose.foundation.shape.RoundedCornerShape(50)).padding(horizontal = 14.dp, vertical = 6.dp),
             color = Color.White, style = MaterialTheme.typography.labelLarge,
@@ -110,7 +112,7 @@ fun EncuadreFondo(alAceptar: (Bitmap) -> Unit, alCancelar: () -> Unit) {
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
         ) {
-            OutlinedButton(onClick = alCancelar) { Text("Cancelar", color = Color.White) }
+            OutlinedButton(onClick = alCancelar) { Text(stringResource(R.string.cancelar), color = Color.White) }
             Button(
                 enabled = imagen != null && iniciado,
                 onClick = {
@@ -129,7 +131,7 @@ fun EncuadreFondo(alAceptar: (Bitmap) -> Unit, alCancelar: () -> Unit) {
                     } catch (e: Exception) { null } catch (e: OutOfMemoryError) { null }
                     if (salida != null) alAceptar(salida) else alCancelar()
                 },
-            ) { Text("Listo") }
+            ) { Text(stringResource(R.string.listo)) }
         }
     }
 }

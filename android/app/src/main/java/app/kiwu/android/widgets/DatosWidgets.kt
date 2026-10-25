@@ -2,6 +2,9 @@ package app.kiwu.android.widgets
 
 import app.kiwu.android.data.ResumenPagina
 import app.kiwu.android.domain.Clase
+import app.kiwu.android.domain.ContadorFaltas
+import app.kiwu.android.domain.Falta
+import app.kiwu.android.domain.ReglasFaltas
 import app.kiwu.android.domain.Cuaderno
 import app.kiwu.android.domain.Deber
 import app.kiwu.android.domain.Elemento
@@ -17,6 +20,8 @@ import app.kiwu.android.ui.horario.ColoresClase
 import app.kiwu.android.ui.ColorPastel
 import java.time.Instant
 import java.time.ZoneId
+import java.util.Locale
+import java.time.format.DateTimeFormatter
 
 /** Valores de la configuración de cada widget (se guardan en el estado de Glance, por id de widget). */
 object ConfigWidget {
@@ -56,6 +61,8 @@ data class FilaClase(
     val finMin: Int,
     val color: ColorPastel,
     val urgencia: UrgenciaTarea?,
+    /** Faltas de la materia, si tiene máximo o alguna falta; null = no se muestra nada. */
+    val faltas: ContadorFaltas? = null,
 )
 
 data class DatosHorario(
@@ -83,7 +90,6 @@ data class DatosNotas(
  * probarlas en JVM, igual que `Reglas` y `ReglasHorario`.
  */
 object DatosWidgets {
-    private val meses = listOf("ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sept", "oct", "nov", "dic")
 
     // --- deberes ---------------------------------------------------------------------------------
 
@@ -93,18 +99,19 @@ object DatosWidgets {
         deberes: List<Deber>,
         config: String?,
         ahora: Long,
+        textos: TextosWidget,
         zona: ZoneId = ZoneId.systemDefault(),
     ): DatosDeberes {
         val reglas = Reglas(zona)
         val nombres = materias.associate { it.id to it.nombre }
-        val (elemento, titulo, soloListas) = alcance(config, materias, grupos)
+        val (elemento, titulo, soloListas) = alcance(config, materias, grupos, textos)
         val visibles = deberes.filter { !it.esEvento && (soloListas == null || it.materiaId in soloListas) }
         val pendientes = reglas.pendientes(visibles, elemento, ahora).map {
             FilaDeber(
                 id = it.id,
                 titulo = it.titulo,
                 lista = nombres[it.materiaId].orEmpty(),
-                fecha = textoFecha(it.fechaEntrega, ahora, zona),
+                fecha = textoFecha(it.fechaEntrega, ahora, textos, zona),
                 vencida = reglas.estaVencido(it, ahora),
             )
         }
@@ -115,35 +122,36 @@ object DatosWidgets {
         config: String?,
         materias: List<Materia>,
         grupos: List<GrupoLista>,
+        textos: TextosWidget,
     ): Triple<Elemento, String, Set<String>?> {
         val valor = config ?: ConfigWidget.TODAS
         return when {
-            valor == ConfigWidget.HOY -> Triple(Elemento.Hoy, "Hoy", null)
-            valor == ConfigWidget.PROXIMOS -> Triple(Elemento.Proximos, "Próximos 7 días", null)
+            valor == ConfigWidget.HOY -> Triple(Elemento.Hoy, textos.hoy, null)
+            valor == ConfigWidget.PROXIMOS -> Triple(Elemento.Proximos, textos.proximos, null)
             valor.startsWith(ConfigWidget.LISTA) -> {
                 val id = valor.removePrefix(ConfigWidget.LISTA)
-                if (materias.none { it.id == id }) Triple(Elemento.Todos, "Deberes", null)
+                if (materias.none { it.id == id }) Triple(Elemento.Todos, textos.deberes, null)
                 else Triple(Elemento.DeMateria(id), materias.first { it.id == id }.nombre, setOf(id))
             }
             valor.startsWith(ConfigWidget.GRUPO) -> {
                 val id = valor.removePrefix(ConfigWidget.GRUPO)
-                Triple(Elemento.DeGrupo(id), grupos.firstOrNull { it.id == id }?.nombre ?: "Deberes", materias.filter { it.grupoId == id }.map { it.id }.toSet())
+                Triple(Elemento.DeGrupo(id), grupos.firstOrNull { it.id == id }?.nombre ?: textos.deberes, materias.filter { it.grupoId == id }.map { it.id }.toSet())
             }
-            else -> Triple(Elemento.Todos, "Deberes", null)
+            else -> Triple(Elemento.Todos, textos.deberes, null)
         }
     }
 
     /** Fecha de entrega en palabras: «Vencida», «Hoy», «Mañana», el día de la semana o «3 oct». */
-    fun textoFecha(ms: Long?, ahora: Long, zona: ZoneId = ZoneId.systemDefault()): String {
-        if (ms == null) return "Sin fecha"
+    fun textoFecha(ms: Long?, ahora: Long, textos: TextosWidget, zona: ZoneId = ZoneId.systemDefault()): String {
+        if (ms == null) return textos.sinFecha
         val hoy = Instant.ofEpochMilli(ahora).atZone(zona).toLocalDate()
         val fecha = Instant.ofEpochMilli(ms).atZone(zona).toLocalDate()
         return when {
-            fecha.isBefore(hoy) -> "Vencida"
-            fecha == hoy -> "Hoy"
-            fecha == hoy.plusDays(1) -> "Mañana"
-            fecha.isBefore(hoy.plusDays(7)) -> ReglasHorario.diasCortos[fecha.dayOfWeek.value - 1]
-            else -> "${fecha.dayOfMonth} ${meses[fecha.monthValue - 1]}"
+            fecha.isBefore(hoy) -> textos.vencida
+            fecha == hoy -> textos.hoy
+            fecha == hoy.plusDays(1) -> textos.manana
+            fecha.isBefore(hoy.plusDays(7)) -> app.kiwu.android.ui.Fechas.diaCorto(fecha.dayOfWeek.value)
+            else -> DateTimeFormatter.ofPattern("d MMM", Locale.getDefault()).format(fecha).removeSuffix(".")
         }
     }
 
@@ -156,12 +164,14 @@ object DatosWidgets {
         config: String?,
         ahora: Long,
         zona: ZoneId = ZoneId.systemDefault(),
+        faltas: List<Falta> = emptyList(),
     ): DatosHorario {
         val elegido = config?.takeIf { it.startsWith(ConfigWidget.HORARIO) }
             ?.removePrefix(ConfigWidget.HORARIO)
             ?.let { id -> horarios.firstOrNull { it.id == id } }
         val visibles = if (elegido == null) clases else clases.filter { it.horarioId == elegido.id }
         val nombres = horarios.associate { it.id to it.nombre }
+        val contadores = ReglasFaltas.contadores(clases, faltas)
         val reloj = Instant.ofEpochMilli(ahora).atZone(zona)
         val dia = reloj.dayOfWeek.value
         val minuto = reloj.hour * 60 + reloj.minute
@@ -176,6 +186,7 @@ object DatosWidgets {
             finMin = c.finMin,
             color = ColoresClase.de(c),
             urgencia = TareasDeClase.masUrgente(TareasDeClase.puntos(deberes, c.materiaId, ahora)),
+            faltas = contadores[c.grupo]?.takeIf { ReglasFaltas.seMuestra(it) },
         )
 
         val enCurso = ReglasHorario.enCurso(visibles, dia, minuto)?.let(::fila)
@@ -214,7 +225,7 @@ object DatosWidgets {
 
     // --- notas -----------------------------------------------------------------------------------
 
-    fun notas(cuadernos: List<Cuaderno>, paginas: List<ResumenPagina>, config: String?): DatosNotas {
+    fun notas(cuadernos: List<Cuaderno>, paginas: List<ResumenPagina>, config: String?, textos: TextosWidget): DatosNotas {
         val elegido = config?.takeIf { it.startsWith(ConfigWidget.CUADERNO) }
             ?.removePrefix(ConfigWidget.CUADERNO)
             ?.let { id -> cuadernos.firstOrNull { it.id == id } }
@@ -222,7 +233,7 @@ object DatosWidgets {
         val notas = visibles.sortedByDescending { it.actualizada }.map {
             FilaNota(
                 id = it.id,
-                titulo = it.titulo.ifBlank { "Sin título" },
+                titulo = it.titulo.ifBlank { textos.sinTitulo },
                 icono = it.icono.ifBlank { "📄" },
                 resumen = resumen(it.textoPlano),
             )

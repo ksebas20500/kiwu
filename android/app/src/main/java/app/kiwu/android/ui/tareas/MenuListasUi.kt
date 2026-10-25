@@ -88,6 +88,8 @@ import app.kiwu.android.domain.NodoMenu
 import app.kiwu.android.ui.DialogoConfirmar
 import app.kiwu.android.ui.Pasteles
 import app.kiwu.android.ui.notas.SelectorEmoji
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
 /** Emojis para ponerle a una lista o a una carpeta. */
 val EmojisListas = listOf(
@@ -105,7 +107,7 @@ private class ArrastreLista(val inicio: (Offset) -> Unit, val mover: (Offset) ->
 fun DialogoNuevoElemento(
     titulo: String,
     etiqueta: String,
-    accion: String = "Crear",
+    accion: String = stringResource(R.string.crear),
     inicial: String = "",
     emojiInicial: String? = null,
     alCerrar: () -> Unit,
@@ -131,14 +133,14 @@ fun DialogoNuevoElemento(
                         Modifier.size(44.dp).border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp)),
                         contentAlignment = Alignment.Center,
                     ) { Text(emoji ?: "＋", fontSize = if (emoji != null) 24.sp else 20.sp) }
-                    Text(if (emoji == null) "Emoji (opcional)" else "Emoji · toca para cambiarlo", Modifier.weight(1f).padding(start = 12.dp))
-                    if (emoji != null) TextButton(onClick = { emoji = null }) { Text("Quitar") }
+                    Text(stringResource(if (emoji == null) R.string.emoji_opcional else R.string.emoji_cambiar), Modifier.weight(1f).padding(start = 12.dp))
+                    if (emoji != null) TextButton(onClick = { emoji = null }) { Text(stringResource(R.string.ajustes_quitar)) }
                 }
                 if (elegirEmoji) SelectorEmoji(emoji ?: "", EmojisListas) { emoji = it; elegirEmoji = false }
             }
         },
         confirmButton = { TextButton(onClick = enviar, enabled = texto.isNotBlank()) { Text(accion) } },
-        dismissButton = { TextButton(onClick = alCerrar) { Text("Cancelar") } },
+        dismissButton = { TextButton(onClick = alCerrar) { Text(stringResource(R.string.cancelar)) } },
     )
 }
 
@@ -177,34 +179,34 @@ fun MenuTareas(vm: TareasViewModel, cerrarYLuego: (() -> Unit) -> Unit, alAjuste
 
     when (val d = dialogo) {
         is Dialogo.NuevaLista -> DialogoNuevoElemento(
-            titulo = if (d.nombreCarpeta != null) "Nueva lista en ${d.nombreCarpeta}" else "Nueva lista",
-            etiqueta = "Nombre de la materia", alCerrar = { dialogo = null },
+            titulo = if (d.nombreCarpeta != null) stringResource(R.string.lista_nueva_en, d.nombreCarpeta) else stringResource(R.string.lista_nueva),
+            etiqueta = stringResource(R.string.lista_nombre_materia), alCerrar = { dialogo = null },
         ) { nombre, emoji -> cerrarYLuego { vm.crearLista(nombre, emoji, d.grupoId) } }
-        Dialogo.NuevaCarpeta -> DialogoNuevoElemento("Nueva carpeta", "Nombre de la carpeta", alCerrar = { dialogo = null }) { nombre, emoji ->
+        Dialogo.NuevaCarpeta -> DialogoNuevoElemento(stringResource(R.string.carpeta_nueva), stringResource(R.string.carpeta_nombre), alCerrar = { dialogo = null }) { nombre, emoji ->
             cerrarYLuego { vm.crearGrupo(nombre, emoji) }
         }
         is Dialogo.EditarLista -> DialogoNuevoElemento(
-            "Editar lista", "Nombre", accion = "Guardar", inicial = d.materia.nombre, emojiInicial = d.materia.emoji, alCerrar = { dialogo = null },
+            stringResource(R.string.lista_editar), stringResource(R.string.nombre), accion = stringResource(R.string.guardar), inicial = d.materia.nombre, emojiInicial = d.materia.emoji, alCerrar = { dialogo = null },
         ) { nombre, emoji -> vm.editarLista(d.materia.id, nombre, emoji) }
         is Dialogo.EditarCarpeta -> DialogoNuevoElemento(
-            "Editar carpeta", "Nombre", accion = "Guardar", inicial = d.grupo.nombre,
+            stringResource(R.string.carpeta_editar), stringResource(R.string.nombre), accion = stringResource(R.string.guardar), inicial = d.grupo.nombre,
             emojiInicial = d.grupo.icono.takeIf { it != "📁" }, alCerrar = { dialogo = null },
         ) { nombre, emoji -> vm.editarGrupo(d.grupo.id, nombre, emoji) }
         null -> Unit
     }
     eliminarLista?.let { m ->
         DialogoConfirmar(
-            titulo = "¿Eliminar ${m.nombre}?",
-            mensaje = "Se eliminarán también todas sus tareas. Los archivos de la carpeta vinculada no se tocan.",
-            accion = "Eliminar lista y sus tareas",
+            titulo = stringResource(R.string.lista_eliminar_titulo, m.nombre),
+            mensaje = stringResource(R.string.lista_eliminar_texto),
+            accion = stringResource(R.string.lista_eliminar_boton),
             alCerrar = { eliminarLista = null },
         ) { vm.eliminarLista(m.id) }
     }
     eliminarCarpeta?.let { g ->
         DialogoConfirmar(
-            titulo = "¿Eliminar la carpeta ${g.nombre}?",
-            mensaje = "Sus listas y sus tareas no se borran: pasan a estar sueltas.",
-            accion = "Eliminar carpeta",
+            titulo = stringResource(R.string.carpeta_eliminar_titulo, g.nombre),
+            mensaje = stringResource(R.string.carpeta_eliminar_texto),
+            accion = stringResource(R.string.carpeta_eliminar),
             alCerrar = { eliminarCarpeta = null },
         ) { vm.eliminarGrupo(g.id) }
     }
@@ -260,17 +262,17 @@ private fun PanelLateral(
     ModalDrawerSheet(drawerShape = RoundedCornerShape(topEnd = 28.dp, bottomEnd = 28.dp)) {
         Box(Modifier.fillMaxSize().onGloballyPositioned { raiz = it.positionInRoot() }) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = 20.dp, bottom = 16.dp)) {
-                item { CabeceraMenu("Kiwu", "Tareas y listas") }
+                item { CabeceraMenu("Kiwu", stringResource(R.string.menu_tareas_sub)) }
                 estado.racha?.let { r -> item { FilaRacha(r, alRacha) } }
                 val fijos = listOf(
-                    Triple(Elemento.Hoy, "Hoy", Icons.Filled.Today),
-                    Triple(Elemento.Proximos, "Próximos 7 días", Icons.Filled.DateRange),
-                    Triple(Elemento.Calendario, "Calendario", Icons.Filled.CalendarMonth),
-                    Triple(Elemento.Todos, "Todas las tareas", Icons.Filled.ViewList),
+                    Triple(Elemento.Hoy, R.string.hoy, Icons.Filled.Today),
+                    Triple(Elemento.Proximos, R.string.proximos_7, Icons.Filled.DateRange),
+                    Triple(Elemento.Calendario, R.string.calendario, Icons.Filled.CalendarMonth),
+                    Triple(Elemento.Todos, R.string.todas_tareas, Icons.Filled.ViewList),
                     // Los eventos viven en su propia lista fija, fuera de las carpetas.
-                    Triple(Elemento.DeMateria(ID_EVENTOS), "Eventos", Icons.Filled.Event),
+                    Triple(Elemento.DeMateria(ID_EVENTOS), R.string.eventos, Icons.Filled.Event),
                 )
-                items(fijos) { (e, titulo, icono) -> FilaMenu(titulo, icono, estado.elemento == e, estado.cuentas[e] ?: 0) { alElegir(e) } }
+                items(fijos) { (e, titulo, icono) -> FilaMenu(stringResource(titulo), icono, estado.elemento == e, estado.cuentas[e] ?: 0) { alElegir(e) } }
 
                 item {
                     Row(
@@ -280,15 +282,15 @@ private fun PanelLateral(
                     ) {
                         val sacando = arrastrando?.grupoId != null
                         Text(
-                            if (sacando) "Suelta aquí para sacarla de la carpeta" else "Listas", Modifier.weight(1f),
+                            stringResource(if (sacando) R.string.menu_soltar_aqui else R.string.listas), Modifier.weight(1f),
                             style = MaterialTheme.typography.titleSmall,
                             color = if (sacando && sobre == Destino(null)) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Box {
-                            IconButton(onClick = { menuNueva = true }) { Icon(Icons.Filled.Add, "Nueva lista o carpeta") }
+                            IconButton(onClick = { menuNueva = true }) { Icon(Icons.Filled.Add, stringResource(R.string.lista_o_carpeta_nueva)) }
                             DropdownMenu(expanded = menuNueva, onDismissRequest = { menuNueva = false }) {
-                                DropdownMenuItem(text = { Text("Nueva lista") }, onClick = { menuNueva = false; alNuevaLista() })
-                                DropdownMenuItem(text = { Text("Nueva carpeta") }, onClick = { menuNueva = false; alNuevaCarpeta() })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.lista_nueva)) }, onClick = { menuNueva = false; alNuevaLista() })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.carpeta_nueva)) }, onClick = { menuNueva = false; alNuevaCarpeta() })
                             }
                         }
                     }
@@ -306,17 +308,17 @@ private fun PanelLateral(
                                     cuenta = nodo.pendientes, mostrarCuenta = mostrarCuenta, alClic = { alElegir(Elemento.DeGrupo(g.id)) },
                                     inicio = {
                                         IconButton(onClick = { alPlegar(g, !g.plegado) }, Modifier.size(36.dp)) {
-                                            Icon(if (g.plegado) Icons.Filled.ChevronRight else Icons.Filled.ExpandMore, if (g.plegado) "Desplegar ${g.nombre}" else "Plegar ${g.nombre}")
+                                            Icon(if (g.plegado) Icons.Filled.ChevronRight else Icons.Filled.ExpandMore, stringResource(if (g.plegado) R.string.desplegar_n else R.string.plegar_n, g.nombre))
                                         }
                                     },
                                     icono = { Text(g.icono, fontSize = 20.sp) },
                                     arrastre = null, // las carpetas no se arrastran: así nunca queda una carpeta dentro de otra
                                     menu = { cerrar ->
-                                        DropdownMenuItem(text = { Text("Nueva lista aquí") }, onClick = { cerrar(); alNuevaListaEn(g) })
-                                        DropdownMenuItem(text = { Text("Editar (nombre y emoji)") }, onClick = { cerrar(); alEditarCarpeta(g) })
-                                        DropdownMenuItem(text = { Text("Subir") }, onClick = { cerrar(); alMoverOrdenCarpeta(g, -1) })
-                                        DropdownMenuItem(text = { Text("Bajar") }, onClick = { cerrar(); alMoverOrdenCarpeta(g, 1) })
-                                        DropdownMenuItem(text = { Text("Eliminar carpeta", color = MaterialTheme.colorScheme.error) }, onClick = { cerrar(); alEliminarCarpeta(g) })
+                                        DropdownMenuItem(text = { Text(stringResource(R.string.lista_nueva_aqui)) }, onClick = { cerrar(); alNuevaListaEn(g) })
+                                        DropdownMenuItem(text = { Text(stringResource(R.string.editar_nombre_emoji)) }, onClick = { cerrar(); alEditarCarpeta(g) })
+                                        DropdownMenuItem(text = { Text(stringResource(R.string.subir)) }, onClick = { cerrar(); alMoverOrdenCarpeta(g, -1) })
+                                        DropdownMenuItem(text = { Text(stringResource(R.string.bajar)) }, onClick = { cerrar(); alMoverOrdenCarpeta(g, 1) })
+                                        DropdownMenuItem(text = { Text(stringResource(R.string.carpeta_eliminar), color = MaterialTheme.colorScheme.error) }, onClick = { cerrar(); alEliminarCarpeta(g) })
                                     },
                                 )
                             }
@@ -328,8 +330,8 @@ private fun PanelLateral(
                                             Modifier.fillMaxWidth().padding(start = 60.dp, end = 16.dp).registrar("v-${g.id}", Destino(g.id), limites),
                                             verticalAlignment = Alignment.CenterVertically,
                                         ) {
-                                            Text("Carpeta vacía", Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                                            TextButton(onClick = { alNuevaListaEn(g) }) { Text("＋ Nueva lista") }
+                                            Text(stringResource(R.string.carpeta_vacia), Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                                            TextButton(onClick = { alNuevaListaEn(g) }) { Text(stringResource(R.string.lista_nueva_mas)) }
                                         }
                                     }
                                 }
@@ -359,11 +361,11 @@ private fun PanelLateral(
 
                 item { HorizontalDivider(Modifier.padding(vertical = 8.dp, horizontal = 28.dp)) }
                 item {
-                    FilaMenu("Completadas", Icons.Filled.CheckCircle, estado.elemento == Elemento.Completadas, 0) { alElegir(Elemento.Completadas) }
+                    FilaMenu(stringResource(R.string.completadas), Icons.Filled.CheckCircle, estado.elemento == Elemento.Completadas, 0) { alElegir(Elemento.Completadas) }
                 }
                 item {
                     NavigationDrawerItem(
-                        label = { Text("Ajustes") }, icon = { Icon(Icons.Filled.Settings, null) }, selected = false, onClick = alAjustes,
+                        label = { Text(stringResource(R.string.ajustes)) }, icon = { Icon(Icons.Filled.Settings, null) }, selected = false, onClick = alAjustes,
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                     )
                 }
@@ -408,12 +410,12 @@ private fun FilaDeLista(
         cuenta = pendientes, mostrarCuenta = mostrarCuenta, alClic = { alElegir(e) }, inicio = null,
         icono = { IconoLista(m, estado.aspecto) }, arrastre = arrastre,
         menu = { cerrar ->
-            DropdownMenuItem(text = { Text("Editar (nombre y emoji)") }, onClick = { cerrar(); alEditar(m) })
-            DropdownMenuItem(text = { Text("Mover a una carpeta…") }, onClick = { cerrar(); alMover(m) })
-            if (m.grupoId != null) DropdownMenuItem(text = { Text("Sacar de la carpeta") }, onClick = { cerrar(); alSacar(m) })
-            DropdownMenuItem(text = { Text("Subir") }, onClick = { cerrar(); alMoverOrden(m, -1) })
-            DropdownMenuItem(text = { Text("Bajar") }, onClick = { cerrar(); alMoverOrden(m, 1) })
-            DropdownMenuItem(text = { Text("Eliminar lista", color = MaterialTheme.colorScheme.error) }, onClick = { cerrar(); alEliminar(m) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.editar_nombre_emoji)) }, onClick = { cerrar(); alEditar(m) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.mover_a_carpeta)) }, onClick = { cerrar(); alMover(m) })
+            if (m.grupoId != null) DropdownMenuItem(text = { Text(stringResource(R.string.sacar_de_carpeta)) }, onClick = { cerrar(); alSacar(m) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.subir)) }, onClick = { cerrar(); alMoverOrden(m, -1) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.bajar)) }, onClick = { cerrar(); alMoverOrden(m, 1) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.lista_eliminar), color = MaterialTheme.colorScheme.error) }, onClick = { cerrar(); alEliminar(m) })
         },
     )
 }
@@ -484,7 +486,7 @@ private fun FilaLista(
             )
             if (mostrarCuenta && cuenta > 0) Text(cuenta.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Box {
-                IconButton(onClick = { abierto = true }, Modifier.size(36.dp)) { Icon(Icons.Filled.MoreVert, "Opciones de $titulo") }
+                IconButton(onClick = { abierto = true }, Modifier.size(36.dp)) { Icon(Icons.Filled.MoreVert, stringResource(R.string.opciones_de, titulo)) }
                 DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) { menu { abierto = false } }
             }
         }
@@ -518,17 +520,17 @@ private fun DialogoMoverLista(
     var nueva by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = alCerrar,
-        title = { Text("Mover «${m.nombre}»", maxLines = 2) },
+        title = { Text(stringResource(R.string.mover_n, m.nombre), maxLines = 2) },
         text = {
             Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState())) {
-                OpcionCarpeta("Sin carpeta", m.grupoId == null) { alElegir(null); alCerrar() }
+                OpcionCarpeta(stringResource(R.string.sin_carpeta), m.grupoId == null) { alElegir(null); alCerrar() }
                 for (g in grupos) OpcionCarpeta("${g.icono} ${g.nombre}", m.grupoId == g.id) { alElegir(g.id); alCerrar() }
-                TextButton(onClick = { nueva = true }) { Text("＋ Nueva carpeta…") }
+                TextButton(onClick = { nueva = true }) { Text(stringResource(R.string.carpeta_nueva_mas)) }
             }
         },
-        confirmButton = { TextButton(onClick = alCerrar) { Text("Cerrar") } },
+        confirmButton = { TextButton(onClick = alCerrar) { Text(stringResource(R.string.cerrar)) } },
     )
-    if (nueva) DialogoNuevoElemento("Nueva carpeta", "Nombre de la carpeta", accion = "Crear y mover", alCerrar = { nueva = false }) { nombre, emoji ->
+    if (nueva) DialogoNuevoElemento(stringResource(R.string.carpeta_nueva), stringResource(R.string.carpeta_nombre), accion = stringResource(R.string.crear_y_mover), alCerrar = { nueva = false }) { nombre, emoji ->
         alNuevaCarpeta(nombre, emoji); alCerrar()
     }
 }

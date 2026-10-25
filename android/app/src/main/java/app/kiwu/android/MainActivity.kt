@@ -18,6 +18,9 @@ import androidx.compose.runtime.setValue
 import app.kiwu.android.ui.Raiz
 
 class MainActivity : ComponentActivity() {
+    // En Android 8–12, el idioma elegido en Ajustes (en 13+ lo aplica el sistema).
+    override fun attachBaseContext(base: android.content.Context) = super.attachBaseContext(Idioma.contexto(base))
+
     /** Tarea que pidió abrir una notificación o un acceso directo (también los widgets). */
     private var abrirTarea by mutableStateOf<String?>(null)
     /** Página de notas que pidió abrir el widget de nota rápida. */
@@ -30,6 +33,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        Textos.actualizar(this)
         enableEdgeToEdge()
         // Al girar la pantalla se conserva el estado: no se vuelve a leer el intent (crearía otra nota rápida).
         if (savedInstanceState == null) leer(intent)

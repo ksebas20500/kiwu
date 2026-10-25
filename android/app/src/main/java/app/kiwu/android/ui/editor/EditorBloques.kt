@@ -72,6 +72,8 @@ import app.kiwu.android.domain.TiposBloque
 import app.kiwu.android.domain.VistaPrevia
 import app.kiwu.android.ui.ColoresNota
 import kotlinx.coroutines.delay
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
 /** Lo que el editor necesita del sistema: selectores de archivos, abrir enlaces y descargar vistas previas. */
 class OrigenAdjuntos(
@@ -213,11 +215,11 @@ private fun BloqueTextoUi(ed: EstadoEditor, b: BloqueEd, numero: Int?) {
             Box(Modifier.weight(1f)) {
                 if (b.texto.isEmpty()) {
                     val pista = when {
-                        b.kind == TiposBloque.TITULO -> "Título 1"
-                        b.kind == TiposBloque.SUBTITULO -> "Título 2"
-                        b.kind == TiposBloque.PARRAFO && (enfocado || ed.bloques.lastOrNull()?.id == b.id) -> "Escribe aquí o usa / para insertar bloques"
-                        b.kind == TiposBloque.CITA -> "Cita"
-                        b.kind == TiposBloque.DESTACADO -> "Destacado"
+                        b.kind == TiposBloque.TITULO -> stringResource(R.string.bloque_titulo1)
+                        b.kind == TiposBloque.SUBTITULO -> stringResource(R.string.bloque_titulo2)
+                        b.kind == TiposBloque.PARRAFO && (enfocado || ed.bloques.lastOrNull()?.id == b.id) -> stringResource(R.string.pista_parrafo)
+                        b.kind == TiposBloque.CITA -> stringResource(R.string.bloque_cita)
+                        b.kind == TiposBloque.DESTACADO -> stringResource(R.string.bloque_destacado)
                         else -> ""
                     }
                     if (pista.isNotEmpty()) Text(pista, style = estilo, color = colorTexto.copy(alpha = 0.35f), modifier = Modifier.padding(start = 0.dp))
@@ -253,7 +255,8 @@ private fun BloqueTextoUi(ed: EstadoEditor, b: BloqueEd, numero: Int?) {
             ) { Box(Modifier.padding(10.dp)) { contenido() } }
             else -> contenido()
         }
-        val opciones = if (enfocado) ed.opcionesSlash(b) else emptyList()
+        val titulos = titulosBloques()
+        val opciones = if (enfocado) ed.opcionesSlash(b, titulos) else emptyList()
         if (opciones.isNotEmpty()) MenuSlash(ed, b, opciones)
     }
 }
@@ -307,11 +310,11 @@ private fun MenuSlash(ed: EstadoEditor, b: BloqueEd, opciones: List<String>) {
         Column(Modifier.padding(vertical = 4.dp)) {
             for (tipo in opciones.take(8)) {
                 Text(
-                    TiposBloque.titulos[tipo] ?: tipo,
+                    titulosBloques()[tipo] ?: tipo,
                     Modifier.fillMaxWidth().clickable { ed.elegirSlash(b, tipo) }.padding(horizontal = 14.dp, vertical = 10.dp),
                 )
             }
-            if (opciones.size > 8) Text("… sigue escribiendo para filtrar", Modifier.padding(horizontal = 14.dp, vertical = 4.dp), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (opciones.size > 8) Text(stringResource(R.string.sigue_escribiendo), Modifier.padding(horizontal = 14.dp, vertical = 4.dp), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -325,3 +328,7 @@ fun EstadoEditor.elegirSlash(b: BloqueEd, tipo: String) {
         else -> convertir(b, tipo, "")
     }
 }
+
+/** Nombre de cada tipo de bloque en el idioma de la app (menú «/», «Convertir en…»). */
+@Composable
+internal fun titulosBloques(): Map<String, String> = TiposBloque.titulos.mapValues { (_, id) -> stringResource(id) }

@@ -16,6 +16,7 @@ import java.math.BigInteger
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import java.security.MessageDigest
+import app.kiwu.android.R
 
 private val Coral = Color(0xFFE8705A)
 
@@ -52,21 +53,21 @@ private val Oscuro = darkColorScheme(
 )
 
 /** Un color de acento que se puede elegir en Ajustes. «coral» es el original de Kiwu. */
-class Acento(val id: String, val titulo: String, val muestra: Color)
+class Acento(val id: String, @androidx.annotation.StringRes val titulo: Int, val muestra: Color)
 
 object Acentos {
     const val CORAL = "coral"
     const val SISTEMA = "sistema"
 
     val predefinidos = listOf(
-        Acento(CORAL, "Coral", Coral),
-        Acento("rojo", "Rojo", Color(0xFFD0382E)),
-        Acento("naranja", "Naranja", Color(0xFFE07B10)),
-        Acento("verde", "Verde", Color(0xFF2E8B57)),
-        Acento("azul", "Azul", Color(0xFF2F6FD0)),
-        Acento("morado", "Morado", Color(0xFF8A55C2)),
-        Acento("rosa", "Rosa", Color(0xFFD14A8B)),
-        Acento("grafito", "Grafito", Color(0xFF5F6B73)),
+        Acento(CORAL, R.string.color_coral, Coral),
+        Acento("rojo", R.string.color_rojo, Color(0xFFD0382E)),
+        Acento("naranja", R.string.color_naranja, Color(0xFFE07B10)),
+        Acento("verde", R.string.color_verde, Color(0xFF2E8B57)),
+        Acento("azul", R.string.color_azul, Color(0xFF2F6FD0)),
+        Acento("morado", R.string.color_morado, Color(0xFF8A55C2)),
+        Acento("rosa", R.string.color_rosa, Color(0xFFD14A8B)),
+        Acento("grafito", R.string.color_grafito, Color(0xFF5F6B73)),
     )
 
     /** Color de un acento: predefinido por nombre, o personalizado como «#RRGGBB». null si no se reconoce. */
@@ -242,8 +243,8 @@ object ColoresNota {
     )
 
     val titulos = mapOf(
-        "gris" to "Gris", "marron" to "Marrón", "naranja" to "Naranja", "amarillo" to "Amarillo", "verde" to "Verde",
-        "azul" to "Azul", "morado" to "Morado", "rosa" to "Rosa", "rojo" to "Rojo",
+        "gris" to R.string.color_gris, "marron" to R.string.color_marron, "naranja" to R.string.color_naranja, "amarillo" to R.string.color_amarillo,
+        "verde" to R.string.color_verde, "azul" to R.string.color_azul, "morado" to R.string.color_morado, "rosa" to R.string.color_rosa, "rojo" to R.string.color_rojo,
     )
 
     fun texto(nombre: String?, oscuro: Boolean): Color? = colores[nombre]?.let { if (oscuro) it.oscuro else it.claro }

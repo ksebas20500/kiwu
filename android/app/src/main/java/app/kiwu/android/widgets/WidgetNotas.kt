@@ -33,6 +33,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import app.kiwu.android.KiwuApp
 import kotlinx.coroutines.flow.first
+import app.kiwu.android.R
 
 /** Widget «Nota rápida»: crea una nota en el cuaderno elegido y muestra las más recientes. */
 class NotasWidget : GlanceAppWidget() {
@@ -43,9 +44,10 @@ class NotasWidget : GlanceAppWidget() {
         val cuadernos = app.repo.cuadernos.first()
         val paginas = app.repo.paginas.first()
         val colores = coloresDelWidget(context)
+        val textos = TextosWidget.de(context)
         provideContent {
             val config = currentState<Preferences>().configWidget()
-            ContenidoNotas(DatosWidgets.notas(cuadernos, paginas, config), colores)
+            ContenidoNotas(DatosWidgets.notas(cuadernos, paginas, config, textos), colores)
         }
     }
 }
@@ -70,7 +72,7 @@ private fun ContenidoNotas(datos: DatosNotas, colores: ColoresWidget) {
     ) {
         Row(GlanceModifier.fillMaxWidth()) {
             Text(
-                datos.cuaderno?.let { "${it.icono} ${it.nombre}" } ?: "Notas",
+                datos.cuaderno?.let { "${it.icono} ${it.nombre}" } ?: textoWidget(R.string.notas),
                 style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = colores.texto),
                 maxLines = 1,
                 modifier = GlanceModifier.defaultWeight()
@@ -81,13 +83,13 @@ private fun ContenidoNotas(datos: DatosNotas, colores: ColoresWidget) {
                     .padding(horizontal = 10.dp, vertical = 5.dp)
                     .clickable(actionStartActivity(nueva)),
             ) {
-                Text("+ Nueva", style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colores.sobreAcento))
+                Text(textoWidget(R.string.w_nueva), style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colores.sobreAcento))
             }
         }
         Spacer(GlanceModifier.height(8.dp))
         when {
-            !datos.hayCuadernos -> AvisoNotas("Crea un cuaderno en Notas.", colores)
-            datos.notas.isEmpty() -> AvisoNotas("Sin notas todavía. Toca «+ Nueva».", colores)
+            !datos.hayCuadernos -> AvisoNotas(textoWidget(R.string.w_crea_cuaderno), colores)
+            datos.notas.isEmpty() -> AvisoNotas(textoWidget(R.string.w_sin_notas), colores)
             else -> LazyColumn(GlanceModifier.fillMaxSize()) {
                 items(datos.notas.take(maximo), itemId = { it.id.hashCode().toLong() }) { nota ->
                     FilaNotaWidget(nota, colores)

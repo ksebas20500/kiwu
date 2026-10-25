@@ -3,6 +3,8 @@ package app.kiwu.android.domain
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
+import android.content.res.Resources
+import app.kiwu.android.R
 
 /** Recordatorios: qué tareas toca avisar y con qué texto. Las notificaciones viven en el paquete `notify`. */
 object Recordatorios {
@@ -50,19 +52,20 @@ object Recordatorios {
         }.sortedBy { it.fechaEntrega }
 
     /** «Vence en 5 h», «Vence mañana», «Venció hace 10 min»… (en un evento: «Empieza en 5 h», «Empezó hace 10 min»). */
-    fun textoAviso(d: Deber, ahora: Long): String {
+    fun textoAviso(d: Deber, ahora: Long, r: Resources): String {
         val entrega = referencia(d) ?: return ""
-        val verbo = if (d.esEvento) "Empieza" else "Vence"
+        val ev = d.esEvento
         val resto = entrega - ahora
         if (resto < 0) {
             val minutos = (-resto / 60_000).toInt()
-            if (d.esEvento) return if (minutos < 1) "Acaba de empezar" else "Empezó hace $minutos min"
-            return if (minutos < 1) "Acaba de vencer" else "Venció hace $minutos min"
+            if (minutos < 1) return r.getString(if (ev) R.string.aviso_evento_ya else R.string.aviso_tarea_ya)
+            return r.getString(if (ev) R.string.aviso_evento_hace else R.string.aviso_tarea_hace, minutos)
         }
         val horas = resto.toDouble() / HORA_MS
-        if (horas < 1) return "$verbo en ${maxOf(1, (resto / 60_000).toInt())} min"
-        if (horas < 24) return "$verbo en ${horas.toInt()} h"
+        if (horas < 1) return r.getString(if (ev) R.string.aviso_evento_min else R.string.aviso_tarea_min, maxOf(1, (resto / 60_000).toInt()))
+        if (horas < 24) return r.getString(if (ev) R.string.aviso_evento_h else R.string.aviso_tarea_h, horas.toInt())
         val dias = (horas / 24).toInt()
-        return if (dias == 1) "$verbo mañana" else "$verbo en $dias días"
+        return if (dias == 1) r.getString(if (ev) R.string.aviso_evento_manana else R.string.aviso_tarea_manana)
+        else r.getString(if (ev) R.string.aviso_evento_dias else R.string.aviso_tarea_dias, dias)
     }
 }

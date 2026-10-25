@@ -62,15 +62,18 @@ import app.kiwu.android.ui.DialogoConfirmar
 
 import app.kiwu.android.ui.calendario.CalendarioScreen
 import kotlinx.coroutines.launch
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
+@Composable
 private fun tituloDe(e: Elemento, materia: Materia?, grupo: app.kiwu.android.domain.GrupoLista?): String = when (e) {
-    Elemento.Hoy -> "Hoy"
-    Elemento.Proximos -> "Próximos 7 días"
-    Elemento.Calendario -> "Calendario"
-    Elemento.Todos -> "Todas las tareas"
-    Elemento.Completadas -> "Completadas"
-    is Elemento.DeMateria -> materia?.nombre ?: "Lista"
-    is Elemento.DeGrupo -> grupo?.nombre ?: "Carpeta"
+    Elemento.Hoy -> stringResource(R.string.hoy)
+    Elemento.Proximos -> stringResource(R.string.proximos_7)
+    Elemento.Calendario -> stringResource(R.string.calendario)
+    Elemento.Todos -> stringResource(R.string.todas_tareas)
+    Elemento.Completadas -> stringResource(R.string.completadas)
+    is Elemento.DeMateria -> materia?.nombre ?: stringResource(R.string.lista)
+    is Elemento.DeGrupo -> grupo?.nombre ?: stringResource(R.string.carpeta)
 }
 
 /** Módulo de tareas: lista, tablero o calendario (+ archivos de la lista). El menú lateral vive en la pantalla principal. */
@@ -93,7 +96,7 @@ fun TareasScreen(
         topBar = {
             TopAppBar(
                 title = { Text(tituloDe(estado.elemento, estado.materiaActual, estado.grupoActual)) },
-                navigationIcon = { IconButton(onClick = alAbrirMenu) { Icon(Icons.Filled.Menu, "Abrir menú") } },
+                navigationIcon = { IconButton(onClick = alAbrirMenu) { Icon(Icons.Filled.Menu, stringResource(R.string.abrir_menu)) } },
                 actions = {
                     insigniaRacha()
                     if (estado.elemento != Elemento.Calendario && anchaParaTablero && !estado.enEventos) {
@@ -101,7 +104,7 @@ fun TareasScreen(
                         IconButton(onClick = { vm.cambiarVista(if (tablero) "lista" else "tablero") }) {
                             Icon(
                                 if (tablero) Icons.Filled.ViewList else Icons.Filled.ViewKanban,
-                                if (tablero) "Ver como lista" else "Ver como tablero",
+                                stringResource(if (tablero) R.string.ver_como_lista else R.string.ver_como_tablero),
                             )
                         }
                     }
@@ -120,8 +123,8 @@ fun TareasScreen(
                     containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
                     contentColor = MaterialTheme.colorScheme.onSurface,
                 ) {
-                    Tab(selected = estado.subvista != "archivos", onClick = { vm.cambiarSubvista("tareas") }, text = { Text("Tareas") })
-                    Tab(selected = estado.subvista == "archivos", onClick = { vm.cambiarSubvista("archivos") }, text = { Text("Archivos") })
+                    Tab(selected = estado.subvista != "archivos", onClick = { vm.cambiarSubvista("tareas") }, text = { Text(stringResource(R.string.tareas)) })
+                    Tab(selected = estado.subvista == "archivos", onClick = { vm.cambiarSubvista("archivos") }, text = { Text(stringResource(R.string.archivos)) })
                 }
             }
             Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -157,8 +160,8 @@ fun TareasScreen(
         // Si se está viendo una carpeta, la lista nace dentro de ella.
         val carpeta = (estado.elemento as? Elemento.DeGrupo)?.id
         DialogoNuevoElemento(
-            titulo = if (carpeta != null) "Nueva lista en ${estado.grupoActual?.nombre ?: "la carpeta"}" else "Nueva lista",
-            etiqueta = "Nombre de la materia", accion = "Crear", alCerrar = { dialogoNuevaLista = false },
+            titulo = if (carpeta != null) stringResource(R.string.lista_nueva_en, estado.grupoActual?.nombre ?: stringResource(R.string.la_carpeta)) else stringResource(R.string.lista_nueva),
+            etiqueta = stringResource(R.string.lista_nombre_materia), accion = stringResource(R.string.crear), alCerrar = { dialogoNuevaLista = false },
         ) { nombre, emoji -> vm.crearLista(nombre, emoji, carpeta) }
     }
 }

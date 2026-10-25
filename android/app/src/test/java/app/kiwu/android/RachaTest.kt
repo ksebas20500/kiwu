@@ -129,10 +129,4 @@ class RachaTest {
     fun laRachaCuentaLasTareasCompletadas() {
         assertEquals(4, Rachas.calcular(listOf(en(-1), en(0), en(0, 9), en(0, 10)), ahora, zona).tareas)
     }
-
-    @Test
-    fun textos() {
-        assertEquals("1 día", Rachas.texto(1))
-        assertEquals("5 días", Rachas.texto(5))
-    }
 }

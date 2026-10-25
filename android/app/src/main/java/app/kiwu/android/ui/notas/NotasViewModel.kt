@@ -73,7 +73,7 @@ class NotasViewModel(private val repo: Repositorio) : ViewModel() {
     /** Crea una página en el cuaderno elegido (o en «Notas rápidas», que se crea si no hay ninguno) y devuelve su id. */
     suspend fun nuevaPagina(): String {
         val e = estado.value
-        val cuaderno = e.cuadernoActual ?: e.cuadernos.firstOrNull() ?: repo.crearCuaderno("Notas rápidas", "📝")
+        val cuaderno = e.cuadernoActual ?: e.cuadernos.firstOrNull() ?: repo.crearCuaderno(app.kiwu.android.Textos.notasRapidas, "📝")
         return repo.crearPagina(cuaderno.id).id
     }
 

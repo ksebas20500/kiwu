@@ -6,8 +6,15 @@ import app.kiwu.android.ui.ajustes.SeccionAjustes
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(application = android.app.Application::class, qualifiers = "es")
 class ResumenAjustesTest {
+    private val ResumenAjustes get() = ResumenAjustes(androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>().resources)
+
     @Test
     fun aparienciaResumeTemaColorYFondo() {
         assertEquals("Del sistema · color coral", ResumenAjustes.apariencia(AjustesUi()))
@@ -49,5 +56,16 @@ class ResumenAjustesTest {
         for (s in SeccionAjustes.entries) assertEquals(s, SeccionAjustes.deId(s.id))
         assertNull(SeccionAjustes.deId(null))
         assertNull(SeccionAjustes.deId("no-existe"))
+    }
+}
+
+@RunWith(RobolectricTestRunner::class)
+@Config(application = android.app.Application::class, qualifiers = "en")
+class ResumenAjustesEnInglesTest {
+    @Test
+    fun losResumenesSalenEnIngles() {
+        val r = ResumenAjustes(androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>().resources)
+        assertEquals("Dark · blue color · with background", r.apariencia(AjustesUi(tema = "oscuro", acento = "azul", fondoUri = "x")))
+        assertEquals("On · second reminder 1 h before", r.avisos(AjustesUi(segundoAvisoMin = 60), true))
     }
 }

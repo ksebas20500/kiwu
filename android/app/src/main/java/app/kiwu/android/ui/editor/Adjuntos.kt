@@ -21,6 +21,7 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import app.kiwu.android.R
 
 private const val AGENTE = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36"
 
@@ -32,7 +33,7 @@ internal fun descargar(direccion: String, maxBytes: Int): ByteArray? {
         c.connectTimeout = 8_000
         c.readTimeout = 12_000
         c.setRequestProperty("User-Agent", AGENTE)
-        c.setRequestProperty("Accept-Language", "es,en;q=0.8")
+        c.setRequestProperty("Accept-Language", java.util.Locale.getDefault().toLanguageTag() + ",en;q=0.8")
         c.instanceFollowRedirects = true
         try {
             if (c.responseCode !in 200..299) return null
@@ -124,14 +125,14 @@ fun rememberOrigenAdjuntos(): OrigenAdjuntos {
                 try {
                     contextoActual.startActivity(intento)
                 } catch (e: ActivityNotFoundException) {
-                    Toast.makeText(contextoActual, "No hay una app para abrir este archivo", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(contextoActual, contextoActual.getString(R.string.sin_app_abrir), Toast.LENGTH_SHORT).show()
                 }
             },
             abrirUrl = { url ->
                 try {
                     contextoActual.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 } catch (e: ActivityNotFoundException) {
-                    Toast.makeText(contextoActual, "No se pudo abrir el enlace", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(contextoActual, contextoActual.getString(R.string.enlace_no_abre), Toast.LENGTH_SHORT).show()
                 }
             },
             vistaPrevia = { url -> withContext(Dispatchers.IO) { Enlaces.obtener(url, ::descargar, ::reducirImagen) } },

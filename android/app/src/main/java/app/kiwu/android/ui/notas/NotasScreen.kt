@@ -63,7 +63,10 @@ import app.kiwu.android.domain.Cuaderno
 import app.kiwu.android.ui.DialogoConfirmar
 import app.kiwu.android.ui.EstadoVacio
 import app.kiwu.android.ui.Fechas
+import app.kiwu.android.ui.fechaCorta
 import kotlinx.coroutines.launch
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
 val EmojisCuaderno = listOf("📓", "📝", "📚", "📖", "🎓", "💡", "🧪", "🧮", "💻", "🎨", "🎵", "🌱", "🗂️", "⭐", "🔥", "✅", "📌", "🧠", "🏃", "🍎")
 
@@ -86,37 +89,37 @@ fun NotasScreen(vm: NotasViewModel, alAbrirPagina: (String) -> Unit, alAbrirMenu
                     if (buscando) {
                         OutlinedTextField(
                             value = estado.busqueda, onValueChange = vm::buscar, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text("Buscar en las notas") },
+                            placeholder = { Text(stringResource(R.string.notas_buscar_en)) },
                             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, imeAction = ImeAction.Search),
                         )
                     } else {
                         Text(
                             when (val f = estado.filtro) {
-                                FiltroNotas.Todas -> "Notas"
-                                FiltroNotas.Favoritas -> "Favoritas"
-                                is FiltroNotas.DeCuaderno -> estado.cuadernoActual?.let { "${it.icono} ${it.nombre}" } ?: "Notas"
+                                FiltroNotas.Todas -> stringResource(R.string.notas)
+                                FiltroNotas.Favoritas -> stringResource(R.string.favoritas)
+                                is FiltroNotas.DeCuaderno -> estado.cuadernoActual?.let { "${it.icono} ${it.nombre}" } ?: stringResource(R.string.notas)
                             },
                         )
                     }
                 },
                 navigationIcon = {
                     if (buscando) {
-                        IconButton(onClick = { buscando = false; vm.buscar("") }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Cerrar la búsqueda") }
+                        IconButton(onClick = { buscando = false; vm.buscar("") }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.cerrar_busqueda)) }
                     } else {
-                        IconButton(onClick = alAbrirMenu) { Icon(Icons.Filled.Menu, "Abrir menú") }
+                        IconButton(onClick = alAbrirMenu) { Icon(Icons.Filled.Menu, stringResource(R.string.abrir_menu)) }
                     }
                 },
                 actions = {
                     // Al buscar, el campo de búsqueda necesita el sitio: la racha se esconde.
                     if (!buscando) insigniaRacha()
-                    if (!buscando) IconButton(onClick = { buscando = true }) { Icon(Icons.Filled.Search, "Buscar") }
+                    if (!buscando) IconButton(onClick = { buscando = true }) { Icon(Icons.Filled.Search, stringResource(R.string.buscar)) }
                     if (estado.cuadernoActual != null && !buscando) {
                         Box {
-                            IconButton(onClick = { menuCuaderno = true }) { Icon(Icons.Filled.MoreVert, "Opciones del cuaderno") }
+                            IconButton(onClick = { menuCuaderno = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.cuaderno_opciones)) }
                             DropdownMenu(expanded = menuCuaderno, onDismissRequest = { menuCuaderno = false }) {
-                                DropdownMenuItem(text = { Text("Editar cuaderno") }, onClick = { menuCuaderno = false; dialogoCuaderno = estado.cuadernoActual })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.cuaderno_editar)) }, onClick = { menuCuaderno = false; dialogoCuaderno = estado.cuadernoActual })
                                 DropdownMenuItem(
-                                    text = { Text("Eliminar cuaderno", color = MaterialTheme.colorScheme.error) },
+                                    text = { Text(stringResource(R.string.cuaderno_eliminar), color = MaterialTheme.colorScheme.error) },
                                     onClick = { menuCuaderno = false; eliminarCuaderno = estado.cuadernoActual },
                                 )
                             }
@@ -127,24 +130,24 @@ fun NotasScreen(vm: NotasViewModel, alAbrirPagina: (String) -> Unit, alAbrirMenu
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { alcance.launch { alAbrirPagina(vm.nuevaPagina()) } }) { Icon(Icons.Filled.Add, "Nueva nota") }
+            FloatingActionButton(onClick = { alcance.launch { alAbrirPagina(vm.nuevaPagina()) } }) { Icon(Icons.Filled.Add, stringResource(R.string.nota_nueva)) }
         },
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) { relleno ->
         Column(Modifier.padding(relleno).consumeWindowInsets(relleno).fillMaxSize()) {
             LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                item { FilterChip(estado.filtro == FiltroNotas.Todas, { vm.filtrar(FiltroNotas.Todas) }, { Text("Todas") }) }
-                item { FilterChip(estado.filtro == FiltroNotas.Favoritas, { vm.filtrar(FiltroNotas.Favoritas) }, { Text("★ Favoritas") }) }
+                item { FilterChip(estado.filtro == FiltroNotas.Todas, { vm.filtrar(FiltroNotas.Todas) }, { Text(stringResource(R.string.todas)) }) }
+                item { FilterChip(estado.filtro == FiltroNotas.Favoritas, { vm.filtrar(FiltroNotas.Favoritas) }, { Text(stringResource(R.string.favoritas_estrella)) }) }
                 items(estado.cuadernos, key = { it.id }) { c ->
                     FilterChip(estado.filtro == FiltroNotas.DeCuaderno(c.id), { vm.filtrar(FiltroNotas.DeCuaderno(c.id)) }, { Text("${c.icono} ${c.nombre}") })
                 }
-                item { TextButton(onClick = { nuevoCuaderno = true }) { Text("+ Cuaderno") } }
+                item { TextButton(onClick = { nuevoCuaderno = true }) { Text(stringResource(R.string.cuaderno_mas)) } }
             }
             if (estado.cargado && estado.paginas.isEmpty()) {
                 EstadoVacio(
                     Icons.Filled.Description,
-                    if (estado.busqueda.isNotBlank()) "Sin resultados" else "Sin notas",
+                    stringResource(if (estado.busqueda.isNotBlank()) R.string.sin_resultados else R.string.sin_notas),
                 )
             } else {
                 LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
@@ -164,7 +167,7 @@ fun NotasScreen(vm: NotasViewModel, alAbrirPagina: (String) -> Unit, alAbrirMenu
     }
     eliminarCuaderno?.let { c ->
         DialogoConfirmar(
-            "¿Eliminar ${c.nombre}?", "Se eliminarán también todas sus notas.", "Eliminar cuaderno y sus notas",
+            stringResource(R.string.cuaderno_eliminar_titulo, c.nombre), stringResource(R.string.cuaderno_eliminar_texto), stringResource(R.string.cuaderno_eliminar_boton),
             alCerrar = { eliminarCuaderno = null },
         ) { vm.eliminarCuaderno(c.id) }
     }
@@ -183,30 +186,30 @@ private fun FilaPagina(p: ResumenPagina, cuaderno: String?, cuadernos: List<Cuad
     ) {
         Text(p.icono.ifBlank { "📄" }, fontSize = 24.sp, modifier = Modifier.padding(end = 14.dp))
         Column(Modifier.weight(1f)) {
-            Text(p.titulo.ifBlank { "Sin título" }, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(p.titulo.ifBlank { stringResource(R.string.sin_titulo) }, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val resumen = p.textoPlano.replace('\n', ' ').take(90)
             if (resumen.isNotBlank()) Text(resumen, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
             Text(
-                listOfNotNull(cuaderno, Fechas.corta(p.actualizada, System.currentTimeMillis())).joinToString(" · "),
+                listOfNotNull(cuaderno, fechaCorta(p.actualizada, System.currentTimeMillis())).joinToString(" · "),
                 style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
             )
         }
         IconButton(onClick = { vm.ponerFavorita(p.id, !p.favorita) }) {
-            Icon(if (p.favorita) Icons.Filled.Star else Icons.Filled.StarBorder, if (p.favorita) "Quitar de favoritas" else "Añadir a favoritas",
+            Icon(if (p.favorita) Icons.Filled.Star else Icons.Filled.StarBorder, stringResource(if (p.favorita) R.string.quitar_favoritas else R.string.anadir_favoritas),
                 tint = if (p.favorita) Color(0xFFE0A100) else MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Box {
-            IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Opciones de la nota") }
+            IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.nota_opciones)) }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                DropdownMenuItem(text = { Text(if (p.favorita) "Quitar de favoritas" else "Añadir a favoritas") }, onClick = { menu = false; vm.ponerFavorita(p.id, !p.favorita) })
-                if (cuadernos.size > 1) DropdownMenuItem(text = { Text("Mover a otro cuaderno…") }, onClick = { menu = false; mover = true })
-                DropdownMenuItem(text = { Text("Eliminar nota", color = MaterialTheme.colorScheme.error) }, onClick = { menu = false; eliminar = true })
+                DropdownMenuItem(text = { Text(stringResource(if (p.favorita) R.string.quitar_favoritas else R.string.anadir_favoritas)) }, onClick = { menu = false; vm.ponerFavorita(p.id, !p.favorita) })
+                if (cuadernos.size > 1) DropdownMenuItem(text = { Text(stringResource(R.string.mover_otro_cuaderno)) }, onClick = { menu = false; mover = true })
+                DropdownMenuItem(text = { Text(stringResource(R.string.nota_eliminar), color = MaterialTheme.colorScheme.error) }, onClick = { menu = false; eliminar = true })
             }
         }
     }
     if (mover) {
         AlertDialog(
-            onDismissRequest = { mover = false }, title = { Text("Mover a…") },
+            onDismissRequest = { mover = false }, title = { Text(stringResource(R.string.mover_a)) },
             text = {
                 Column {
                     for (c in cuadernos.filter { it.id != p.cuadernoId }) {
@@ -214,11 +217,11 @@ private fun FilaPagina(p: ResumenPagina, cuaderno: String?, cuadernos: List<Cuad
                     }
                 }
             },
-            confirmButton = {}, dismissButton = { TextButton(onClick = { mover = false }) { Text("Cancelar") } },
+            confirmButton = {}, dismissButton = { TextButton(onClick = { mover = false }) { Text(stringResource(R.string.cancelar)) } },
         )
     }
     if (eliminar) {
-        DialogoConfirmar("¿Eliminar esta nota?", "No se podrá recuperar.", "Eliminar", alCerrar = { eliminar = false }) { vm.eliminarPagina(p.id) }
+        DialogoConfirmar(stringResource(R.string.nota_eliminar_titulo), stringResource(R.string.no_se_recupera), stringResource(R.string.eliminar), alCerrar = { eliminar = false }) { vm.eliminarPagina(p.id) }
     }
 }
 
@@ -229,19 +232,19 @@ fun DialogoCuaderno(cuaderno: Cuaderno?, alCerrar: () -> Unit, alConfirmar: (Str
     var icono by remember { mutableStateOf(cuaderno?.icono ?: "📓") }
     AlertDialog(
         onDismissRequest = alCerrar,
-        title = { Text(if (cuaderno == null) "Nuevo cuaderno" else "Editar cuaderno") },
+        title = { Text(stringResource(if (cuaderno == null) R.string.cuaderno_nuevo else R.string.cuaderno_editar)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
-                    nombre, { nombre = it }, label = { Text("Nombre") }, singleLine = true,
+                    nombre, { nombre = it }, label = { Text(stringResource(R.string.nombre)) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 )
-                Text("Icono", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.horario_icono), style = MaterialTheme.typography.labelMedium)
                 SelectorEmoji(icono) { icono = it }
             }
         },
-        confirmButton = { TextButton(onClick = { alConfirmar(nombre.trim(), icono); alCerrar() }, enabled = nombre.isNotBlank()) { Text("Guardar") } },
-        dismissButton = { TextButton(onClick = alCerrar) { Text("Cancelar") } },
+        confirmButton = { TextButton(onClick = { alConfirmar(nombre.trim(), icono); alCerrar() }, enabled = nombre.isNotBlank()) { Text(stringResource(R.string.guardar)) } },
+        dismissButton = { TextButton(onClick = alCerrar) { Text(stringResource(R.string.cancelar)) } },
     )
 }
 
@@ -270,16 +273,16 @@ private fun PanelNotas(
 ) {
     androidx.compose.material3.ModalDrawerSheet(drawerShape = RoundedCornerShape(topEnd = 28.dp, bottomEnd = 28.dp)) {
         androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = 20.dp, bottom = 16.dp)) {
-            item { app.kiwu.android.ui.tareas.CabeceraMenu("Notas", "Cuadernos y páginas") }
-            item { ItemPanel("Todas las notas", Icons.Filled.Description, estado.filtro == FiltroNotas.Todas) { alElegir(FiltroNotas.Todas) } }
-            item { ItemPanel("Favoritas", Icons.Filled.Star, estado.filtro == FiltroNotas.Favoritas) { alElegir(FiltroNotas.Favoritas) } }
+            item { app.kiwu.android.ui.tareas.CabeceraMenu(stringResource(R.string.notas), stringResource(R.string.notas_menu_sub)) }
+            item { ItemPanel(stringResource(R.string.todas_notas), Icons.Filled.Description, estado.filtro == FiltroNotas.Todas) { alElegir(FiltroNotas.Todas) } }
+            item { ItemPanel(stringResource(R.string.favoritas), Icons.Filled.Star, estado.filtro == FiltroNotas.Favoritas) { alElegir(FiltroNotas.Favoritas) } }
             item {
                 Row(
                     Modifier.fillMaxWidth().padding(start = 28.dp, end = 12.dp, top = 14.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Cuadernos", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    IconButton(onClick = alNuevoCuaderno) { Icon(Icons.Filled.Add, "Nuevo cuaderno") }
+                    Text(stringResource(R.string.cuadernos), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    IconButton(onClick = alNuevoCuaderno) { Icon(Icons.Filled.Add, stringResource(R.string.cuaderno_nuevo)) }
                 }
             }
             items(estado.cuadernos, key = { it.id }) { c ->
@@ -290,10 +293,10 @@ private fun PanelNotas(
                     onClick = { alElegir(FiltroNotas.DeCuaderno(c.id)) },
                     badge = {
                         Box {
-                            IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Opciones de ${c.nombre}") }
+                            IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.opciones_de, c.nombre)) }
                             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                                DropdownMenuItem(text = { Text("Editar cuaderno") }, onClick = { menu = false; alEditar(c) })
-                                DropdownMenuItem(text = { Text("Eliminar cuaderno", color = MaterialTheme.colorScheme.error) }, onClick = { menu = false; alEliminar(c) })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.cuaderno_editar)) }, onClick = { menu = false; alEditar(c) })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.cuaderno_eliminar), color = MaterialTheme.colorScheme.error) }, onClick = { menu = false; alEliminar(c) })
                             }
                         }
                     },
@@ -303,7 +306,7 @@ private fun PanelNotas(
             item { androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 8.dp, horizontal = 28.dp)) }
             item {
                 androidx.compose.material3.NavigationDrawerItem(
-                    label = { Text("Ajustes") }, icon = { Icon(Icons.Filled.Settings, null) }, selected = false, onClick = alAjustes,
+                    label = { Text(stringResource(R.string.ajustes)) }, icon = { Icon(Icons.Filled.Settings, null) }, selected = false, onClick = alAjustes,
                     modifier = Modifier.padding(androidx.compose.material3.NavigationDrawerItemDefaults.ItemPadding),
                 )
             }
@@ -338,7 +341,7 @@ fun MenuNotas(vm: NotasViewModel, cerrarYLuego: (() -> Unit) -> Unit, alAjustes:
     editar?.let { c -> DialogoCuaderno(c, alCerrar = { editar = null }) { nombre, icono -> vm.editarCuaderno(c.id, nombre, icono) } }
     eliminar?.let { c ->
         DialogoConfirmar(
-            "¿Eliminar ${c.nombre}?", "Se eliminarán también todas sus notas.", "Eliminar cuaderno y sus notas",
+            stringResource(R.string.cuaderno_eliminar_titulo, c.nombre), stringResource(R.string.cuaderno_eliminar_texto), stringResource(R.string.cuaderno_eliminar_boton),
             alCerrar = { eliminar = null },
         ) { vm.eliminarCuaderno(c.id) }
     }

@@ -7,6 +7,7 @@ import app.kiwu.android.domain.Deber
 import app.kiwu.android.domain.Documento
 import app.kiwu.android.domain.GrupoLista
 import app.kiwu.android.domain.Guia
+import app.kiwu.android.domain.Falta
 import app.kiwu.android.domain.Horario
 import app.kiwu.android.domain.nuevoId
 import app.kiwu.android.domain.Materia
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import app.kiwu.android.domain.ID_EVENTOS
+import java.time.LocalDate
 
 /**
  * Punto único de acceso a los datos para la interfaz: aplica las reglas de `domain` y guarda con el DAO.
@@ -35,6 +37,7 @@ class Repositorio(
     val horarios: Flow<List<Horario>> = dao.horarios()
     val clases: Flow<List<Clase>> = dao.clases()
     val grupos: Flow<List<GrupoLista>> = dao.grupos()
+    val faltas: Flow<List<Falta>> = dao.faltas()
 
     /** Cuándo se completó cada tarea (también las borradas; sin eventos): de aquí sale la racha. */
     val fechasCompletado: Flow<List<Long>> = dao.fechasCompletado()
@@ -46,11 +49,11 @@ class Repositorio(
     suspend fun hayDatos(): Boolean = dao.hayDatos()
 
     /** Crea la lista de ejemplo de la guía de inicio con sus tareas. Si ya existe (aunque se borrara), no hace nada. */
-    suspend fun crearListaDeEjemplo(): Boolean {
+    suspend fun crearListaDeEjemplo(nombre: String, tareas: List<String>): Boolean {
         val t = reloj()
-        val m = Materia(id = Guia.ID_LISTA, nombre = Guia.NOMBRE_LISTA, emoji = Guia.EMOJI_LISTA, orden = dao.siguienteOrdenMateria(), creada = t, actualizada = t)
+        val m = Materia(id = Guia.ID_LISTA, nombre = nombre, emoji = Guia.EMOJI_LISTA, orden = dao.siguienteOrdenMateria(), creada = t, actualizada = t)
         if (dao.insertarMaterias(listOf(m)).first() == -1L) return false // ya existía (borrada): no se resucita
-        dao.insertarDeberes(Guia.tareas.mapIndexed { i, titulo -> Deber(materiaId = m.id, titulo = titulo, creada = t + i, actualizada = t + i) })
+        dao.insertarDeberes(tareas.mapIndexed { i, titulo -> Deber(materiaId = m.id, titulo = titulo, creada = t + i, actualizada = t + i) })
         return true
     }
 
@@ -152,7 +155,7 @@ class Repositorio(
         val t = reloj()
         val evento = materiaId == ID_EVENTOS
         if (evento && dao.materia(ID_EVENTOS) == null) {
-            dao.guardarMateria(Materia(id = ID_EVENTOS, nombre = "Eventos", emoji = "📅", orden = -1, creada = t, actualizada = t))
+            dao.guardarMateria(Materia(id = ID_EVENTOS, nombre = app.kiwu.android.Textos.eventos, emoji = "📅", orden = -1, creada = t, actualizada = t))
         }
         // Un evento avisa 1 hora antes por defecto (las tareas, 1 día antes).
         val d = Deber(
@@ -247,7 +250,7 @@ class Repositorio(
     suspend fun crearPaginaRapida(cuadernoId: String?): Pagina {
         val cuaderno = cuadernoId?.takeIf { it.isNotBlank() }?.let { dao.cuaderno(it) }
             ?: dao.cuadernos().first().firstOrNull()
-            ?: crearCuaderno("Notas rápidas", "📝")
+            ?: crearCuaderno(app.kiwu.android.Textos.notasRapidas, "📝")
         return crearPagina(cuaderno.id)
     }
 
@@ -314,6 +317,7 @@ class Repositorio(
         notas: String,
         avisoMin: Int?,
         color: String? = null,
+        maxFaltas: Int? = null,
     ): String {
         require(dias.isNotEmpty() && dias.all { it in 1..7 }) { "Elige al menos un día de la semana" }
         require(ReglasHorario.valida(inicioMin, finMin)) { "La hora de fin debe ser posterior a la de inicio" }
@@ -324,7 +328,8 @@ class Repositorio(
             val previa = actuales[dia]
             (previa ?: Clase(horarioId = horarioId, grupo = g, titulo = titulo, diaSemana = dia, inicioMin = inicioMin, finMin = finMin, creada = t, actualizada = t)).copy(
                 horarioId = horarioId, materiaId = materiaId, titulo = titulo.trim(), inicioMin = inicioMin, finMin = finMin,
-                aula = aula.trim(), notas = notas.trim(), avisoMin = avisoMin, color = ReglasHorario.colorValido(color), actualizada = t,
+                aula = aula.trim(), notas = notas.trim(), avisoMin = avisoMin, color = ReglasHorario.colorValido(color),
+                maxFaltas = maxFaltas?.takeIf { it > 0 }, actualizada = t,
             )
         }
         dao.guardarClases(filas)
@@ -340,4 +345,26 @@ class Repositorio(
     }
 
     suspend fun eliminarGrupo(grupo: String) = dao.eliminarGrupo(grupo, reloj())
+
+    // --- faltas de clase ------------------------------------------------------------------------
+
+    suspend fun faltasAhora(): List<Falta> = dao.faltasAhora()
+
+    /** Marca una falta de la materia ([grupo]) el día [dia] (por defecto, hoy). Un mismo día solo cuenta una vez. */
+    suspend fun marcarFalta(grupo: String, horarioId: String, dia: LocalDate = LocalDate.now(), justificada: Boolean = false): Falta {
+        dao.faltasAhora().firstOrNull { it.grupo == grupo && it.dia == dia.toEpochDay() }?.let { return it }
+        val f = Falta(grupo = grupo, horarioId = horarioId, dia = dia.toEpochDay(), justificada = justificada, creada = reloj())
+        dao.guardarFalta(f)
+        return f
+    }
+
+    suspend fun quitarFalta(id: String) = dao.quitarFalta(id)
+
+    suspend fun justificarFalta(id: String, justificada: Boolean) = dao.justificarFalta(id, justificada)
+
+    /** Máximo de faltas de la materia, en todas sus filas; null o 0 = sin límite. */
+    suspend fun ponerMaximoFaltas(grupo: String, maximo: Int?) = dao.ponerMaximoFaltas(grupo, maximo?.takeIf { it > 0 }, reloj())
+
+    /** Borra todas las faltas de un horario (al empezar un semestre nuevo). */
+    suspend fun vaciarFaltas(horarioId: String) = dao.vaciarFaltas(horarioId)
 }

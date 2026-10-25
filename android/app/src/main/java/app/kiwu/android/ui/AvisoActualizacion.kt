@@ -16,11 +16,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kiwu.android.EstadoActualizacion
 import app.kiwu.android.KiwuApp
+import app.kiwu.android.R
 
 /**
  * Ventana «Hay una versión nueva» al abrir o volver a Kiwu, y «Reiniciar» cuando ya se descargó. Va por encima de cualquier
@@ -40,20 +42,20 @@ fun AvisoActualizacion(app: KiwuApp) {
         is EstadoActualizacion.Disponible -> AlertDialog(
             onDismissRequest = { actualizaciones.posponer() },
             icon = { Icon(Icons.Filled.SystemUpdate, null) },
-            title = { Text("Hay una versión nueva de Kiwu") },
-            text = { Text("Se descarga mientras sigues usando la app. Cuando termine, solo tendrás que reiniciarla.") },
+            title = { Text(stringResource(R.string.actualizacion_nueva_titulo)) },
+            text = { Text(stringResource(R.string.actualizacion_nueva_texto)) },
             confirmButton = {
-                TextButton(onClick = { if (!actualizaciones.actualizar(lanzador)) abrirEnPlay(contexto) }) { Text("Actualizar") }
+                TextButton(onClick = { if (!actualizaciones.actualizar(lanzador)) abrirEnPlay(contexto) }) { Text(stringResource(R.string.actualizacion_actualizar)) }
             },
-            dismissButton = { TextButton(onClick = { actualizaciones.posponer() }) { Text("Más tarde") } },
+            dismissButton = { TextButton(onClick = { actualizaciones.posponer() }) { Text(stringResource(R.string.actualizacion_mas_tarde)) } },
         )
         EstadoActualizacion.Lista -> AlertDialog(
             onDismissRequest = { actualizaciones.ocultar() },
             icon = { Icon(Icons.Filled.RestartAlt, null) },
-            title = { Text("La actualización está lista") },
-            text = { Text("Reinicia Kiwu para usar la versión nueva. Tus datos se conservan.") },
-            confirmButton = { TextButton(onClick = { actualizaciones.reiniciar() }) { Text("Reiniciar") } },
-            dismissButton = { TextButton(onClick = { actualizaciones.ocultar() }) { Text("Luego") } },
+            title = { Text(stringResource(R.string.actualizacion_lista_titulo)) },
+            text = { Text(stringResource(R.string.actualizacion_lista_texto)) },
+            confirmButton = { TextButton(onClick = { actualizaciones.reiniciar() }) { Text(stringResource(R.string.actualizacion_reiniciar)) } },
+            dismissButton = { TextButton(onClick = { actualizaciones.ocultar() }) { Text(stringResource(R.string.actualizacion_luego)) } },
         )
         else -> Unit
     }

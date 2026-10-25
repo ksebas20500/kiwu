@@ -10,6 +10,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
+import app.kiwu.android.R
 
 /*
  * Horarios semanales (esquema v2 en Android). Una persona puede tener varios («Universidad», «Trabajo», «Ocio»…)
@@ -55,9 +56,26 @@ data class Clase(
     @ColumnInfo(name = "aviso_min") val avisoMin: Int? = null,
     /** Color elegido para la clase como `#RRGGBB`; null = color automático (el de siempre). */
     val color: String? = null,
+    /** Máximo de faltas de la materia (igual en todas las filas del grupo); null = sin límite. */
+    @ColumnInfo(name = "max_faltas") val maxFaltas: Int? = null,
     val creada: Long,
     val actualizada: Long,
     val eliminada: Long? = null,
+)
+
+/**
+ * Una inasistencia a una materia del horario. Se guarda por [grupo] (la materia, aunque se dé varios días) y no por fila,
+ * y sin clave foránea: cambiar o renombrar la clase no borra su historial.
+ */
+@Entity(tableName = "falta", indices = [Index("grupo"), Index("horario_id")])
+data class Falta(
+    @PrimaryKey val id: String = nuevoId(),
+    val grupo: String,
+    @ColumnInfo(name = "horario_id") val horarioId: String,
+    /** El día de la falta como `LocalDate.toEpochDay()`: una falta es un día, no un momento. */
+    val dia: Long,
+    val justificada: Boolean = false,
+    val creada: Long,
 )
 
 /** Reglas del horario: funciones puras, sin base de datos (equivalente a `Reglas` para las tareas). */
@@ -67,14 +85,8 @@ object ReglasHorario {
 
     const val MINUTOS_DIA = 1440
 
-    val diasLargos = listOf("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo")
-    val diasCortos = listOf("Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom")
-    val diasLetra = listOf("L", "M", "X", "J", "V", "S", "D")
-
     /** Opciones de aviso, en minutos de antelación. */
     val avisos = listOf(5, 10, 15, 30, 60)
-
-    fun nombreDia(dia: Int): String = diasLargos[(dia - 1).coerceIn(0, 6)]
 
     fun hora(minutos: Int): String = "%02d:%02d".format(minutos / 60, minutos % 60)
 
@@ -139,14 +151,8 @@ object ReglasHorario {
     }
 
     /** Texto del aviso: «Empieza a las 08:00 · Aula 204». */
-    fun textoAviso(c: Clase): String = listOfNotNull("Empieza a las ${hora(c.inicioMin)}", c.aula.takeIf { it.isNotBlank() }).joinToString(" · ")
-
-    /** Cuántos días faltan hasta la siguiente clase, dicho en palabras. */
-    fun cuando(dias: Int, dia: Int): String = when (dias) {
-        0 -> "hoy"
-        1 -> "mañana"
-        else -> diasLargos[(dia - 1).coerceIn(0, 6)].lowercase()
-    }
+    fun textoAviso(c: Clase, empieza: (hora: String) -> String): String =
+        listOfNotNull(empieza(hora(c.inicioMin)), c.aula.takeIf { it.isNotBlank() }).joinToString(" · ")
 }
 
 /** Cómo de urgente es una tarea pendiente: decide el color del punto que se ve en la clase del horario. */
@@ -156,8 +162,8 @@ enum class UrgenciaTarea { Vencida, Pronto, Normal }
 data class PuntoTarea(val id: String, val urgencia: UrgenciaTarea)
 
 /** Dónde se coloca una tarea en la hoja de tareas de una clase. */
-enum class SeccionTarea(val titulo: String) {
-    Vencidas("Vencidas"), EstaSemana("Esta semana"), Proximas("Próximas"), SinFecha("Sin fecha"),
+enum class SeccionTarea(@androidx.annotation.StringRes val titulo: Int) {
+    Vencidas(R.string.seccion_vencidas), EstaSemana(R.string.seccion_esta_semana), Proximas(R.string.seccion_proximas), SinFecha(R.string.seccion_sin_fecha),
 }
 
 /** Tareas de la lista vinculada a una clase: qué puntos se dibujan y cómo se agrupan en su hoja. Funciones puras. */

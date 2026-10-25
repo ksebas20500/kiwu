@@ -50,16 +50,18 @@ import app.kiwu.android.ui.cargarAsync
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.Collator
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
 private class Elemento(val doc: DocumentFile, val nombre: String, val esCarpeta: Boolean, val tamano: Long, val modificado: Long)
 
 /** Lee una carpeta: carpetas primero y luego por nombre. null si no se puede leer. */
 private fun listar(carpeta: DocumentFile): List<Elemento>? {
     if (!carpeta.exists() || !carpeta.canRead()) return null
-    val coleccion = Collator.getInstance(java.util.Locale("es"))
+    val coleccion = Collator.getInstance(java.util.Locale.getDefault())
     return try {
         carpeta.listFiles()
-            .map { Elemento(it, it.name ?: "(sin nombre)", it.isDirectory, it.length(), it.lastModified()) }
+            .map { Elemento(it, it.name ?: "?", it.isDirectory, it.length(), it.lastModified()) }
             .filter { !it.nombre.startsWith(".") }
             .sortedWith(compareBy<Elemento> { !it.esCarpeta }.thenComparator { a, b -> coleccion.compare(a.nombre, b.nombre) })
     } catch (e: Exception) {
@@ -82,8 +84,8 @@ fun ArchivosScreen(materia: Materia, alVincular: (String?) -> Unit) {
 
     val raiz = materia.carpeta?.let { DocumentFile.fromTreeUri(contexto, Uri.parse(it)) }
     if (materia.carpeta == null) {
-        EstadoVacio(Icons.Filled.FolderOpen, "Vincula una carpeta de tu dispositivo con los archivos de esta lista") {
-            Button(onClick = { elegir.launch(null) }, modifier = Modifier.padding(top = 16.dp)) { Text("Elegir carpeta") }
+        EstadoVacio(Icons.Filled.FolderOpen, stringResource(R.string.archivos_vincular)) {
+            Button(onClick = { elegir.launch(null) }, modifier = Modifier.padding(top = 16.dp)) { Text(stringResource(R.string.elegir_carpeta)) }
         }
         return
     }
@@ -99,21 +101,21 @@ fun ArchivosScreen(materia: Materia, alVincular: (String?) -> Unit) {
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                (listOf(raiz?.name ?: "Carpeta") + camino.map { it.name ?: "" }).joinToString(" › "),
+                (listOf(raiz?.name ?: stringResource(R.string.carpeta)) + camino.map { it.name ?: "" }).joinToString(" › "),
                 Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
             Box {
-                IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Opciones de la carpeta") }
+                IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.carpeta_opciones)) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    DropdownMenuItem(text = { Text("Cambiar carpeta") }, onClick = { menu = false; elegir.launch(null) })
-                    DropdownMenuItem(text = { Text("Desvincular (no borra nada)") }, onClick = { menu = false; alVincular(null) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.cambiar_carpeta)) }, onClick = { menu = false; elegir.launch(null) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.desvincular)) }, onClick = { menu = false; alVincular(null) })
                 }
             }
         }
         val lista = elementos
         when {
-            lista == null && actual != null && !(actual.exists() && actual.canRead()) -> EstadoVacio(Icons.Filled.Warning, "La carpeta vinculada no está disponible") {
-                Button(onClick = { elegir.launch(null) }, modifier = Modifier.padding(top = 16.dp)) { Text("Elegir de nuevo") }
+            lista == null && actual != null && !(actual.exists() && actual.canRead()) -> EstadoVacio(Icons.Filled.Warning, stringResource(R.string.carpeta_no_disponible)) {
+                Button(onClick = { elegir.launch(null) }, modifier = Modifier.padding(top = 16.dp)) { Text(stringResource(R.string.elegir_de_nuevo)) }
             }
             lista == null -> Box(Modifier.fillMaxSize())
             else -> LazyColumn(Modifier.fillMaxSize()) {
@@ -121,11 +123,11 @@ fun ArchivosScreen(materia: Materia, alVincular: (String?) -> Unit) {
                     item {
                         Row(Modifier.fillMaxWidth().clickable { camino.removeAt(camino.lastIndex) }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Filled.FolderOpen, null, tint = MaterialTheme.colorScheme.primary)
-                            Text("Subir un nivel", Modifier.padding(start = 16.dp))
+                            Text(stringResource(R.string.subir_nivel), Modifier.padding(start = 16.dp))
                         }
                     }
                 }
-                if (lista.isEmpty()) item { Text("La carpeta está vacía", Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                if (lista.isEmpty()) item { Text(stringResource(R.string.carpeta_la_vacia), Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 items(lista, key = { it.doc.uri.toString() }) { e ->
                     Row(
                         Modifier.fillMaxWidth().clickable {
@@ -159,6 +161,6 @@ private fun abrir(contexto: android.content.Context, doc: DocumentFile) {
             Intent(Intent.ACTION_VIEW).setDataAndType(doc.uri, doc.type ?: "*/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK),
         )
     } catch (e: ActivityNotFoundException) {
-        Toast.makeText(contexto, "No hay una app para abrir este archivo", Toast.LENGTH_SHORT).show()
+        Toast.makeText(contexto, contexto.getString(R.string.sin_app_abrir), Toast.LENGTH_SHORT).show()
     }
 }

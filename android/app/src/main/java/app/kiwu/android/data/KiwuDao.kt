@@ -16,6 +16,7 @@ import android.content.Context
 import app.kiwu.android.domain.Clase
 import app.kiwu.android.domain.Cuaderno
 import app.kiwu.android.domain.Deber
+import app.kiwu.android.domain.Falta
 import app.kiwu.android.domain.Horario
 import app.kiwu.android.domain.GrupoLista
 import app.kiwu.android.domain.Materia
@@ -233,6 +234,35 @@ abstract class KiwuDao {
     @Query("UPDATE clase SET eliminada = :ahora, actualizada = :ahora WHERE grupo = :grupo AND eliminada IS NULL")
     abstract suspend fun eliminarGrupo(grupo: String, ahora: Long)
 
+    // --- faltas de clase --------------------------------------------------------------------------
+
+    @Query("SELECT * FROM falta ORDER BY dia DESC, creada DESC")
+    abstract fun faltas(): Flow<List<Falta>>
+
+    @Query("SELECT * FROM falta")
+    abstract suspend fun faltasAhora(): List<Falta>
+
+    @Upsert
+    abstract suspend fun guardarFalta(f: Falta)
+
+    @Query("DELETE FROM falta WHERE id = :id")
+    abstract suspend fun quitarFalta(id: String)
+
+    @Query("UPDATE falta SET justificada = :justificada WHERE id = :id")
+    abstract suspend fun justificarFalta(id: String, justificada: Boolean)
+
+    @Query("DELETE FROM falta WHERE horario_id = :horarioId")
+    abstract suspend fun vaciarFaltas(horarioId: String)
+
+    @Query("DELETE FROM falta WHERE grupo = :grupo")
+    abstract suspend fun quitarFaltasDeGrupo(grupo: String)
+
+    @Query("UPDATE clase SET max_faltas = :maximo, actualizada = :ahora WHERE grupo = :grupo AND eliminada IS NULL")
+    abstract suspend fun ponerMaximoFaltas(grupo: String, maximo: Int?, ahora: Long)
+
+    @Query("SELECT DISTINCT grupo FROM clase WHERE eliminada IS NULL")
+    abstract suspend fun gruposDeClases(): List<String>
+
     // --- importación (no pisa lo existente ni resucita lo eliminado) ------------------------------
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -253,6 +283,9 @@ abstract class KiwuDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     abstract suspend fun insertarClases(filas: List<Clase>): List<Long>
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    abstract suspend fun insertarFaltas(filas: List<Falta>): List<Long>
+
     @Query("SELECT id FROM horario WHERE eliminada IS NULL")
     abstract suspend fun idsHorarios(): List<String>
 
@@ -264,8 +297,8 @@ abstract class KiwuDao {
 }
 
 @Database(
-    entities = [Materia::class, Deber::class, Cuaderno::class, Pagina::class, Horario::class, Clase::class, GrupoLista::class],
-    version = 4,
+    entities = [Materia::class, Deber::class, Cuaderno::class, Pagina::class, Horario::class, Clase::class, GrupoLista::class, Falta::class],
+    version = 5,
     exportSchema = true,
 )
 abstract class KiwuDb : RoomDatabase() {
@@ -303,9 +336,19 @@ abstract class KiwuDb : RoomDatabase() {
             }
         }
 
+        /** v4 → v5: faltas de clase. Tabla nueva `falta` y el máximo opcional en `clase` (sin límite en las existentes). */
+        val MIGRACION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `clase` ADD COLUMN `max_faltas` INTEGER")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `falta` (`id` TEXT NOT NULL, `grupo` TEXT NOT NULL, `horario_id` TEXT NOT NULL, `dia` INTEGER NOT NULL, `justificada` INTEGER NOT NULL, `creada` INTEGER NOT NULL, PRIMARY KEY(`id`))")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_falta_grupo` ON `falta` (`grupo`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_falta_horario_id` ON `falta` (`horario_id`)")
+            }
+        }
+
         fun obtener(contexto: Context): KiwuDb = instancia ?: synchronized(this) {
             instancia ?: Room.databaseBuilder(contexto.applicationContext, KiwuDb::class.java, "kiwu.db")
-                .addMigrations(MIGRACION_1_2, MIGRACION_2_3, MIGRACION_3_4)
+                .addMigrations(MIGRACION_1_2, MIGRACION_2_3, MIGRACION_3_4, MIGRACION_4_5)
                 .build().also { instancia = it }
         }
     }

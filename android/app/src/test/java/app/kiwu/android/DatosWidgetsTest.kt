@@ -12,6 +12,7 @@ import app.kiwu.android.domain.Materia
 import app.kiwu.android.domain.UrgenciaTarea
 import app.kiwu.android.widgets.ConfigWidget
 import app.kiwu.android.widgets.DatosWidgets
+import app.kiwu.android.widgets.TextosWidget
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -23,6 +24,14 @@ import org.junit.Test
 /** Lo que muestran los widgets, con datos de ejemplo y una zona horaria fija (sin emulador). */
 class DatosWidgetsTest {
     private val zona: ZoneId = ZoneId.of("Europe/Madrid")
+    private val textos = TextosWidget("Hoy", "Mañana", "Próximos 7 días", "Deberes", "Sin fecha", "Vencida", "Sin título")
+    private val antes = java.util.Locale.getDefault()
+
+    @org.junit.Before
+    fun enEspanol() = java.util.Locale.setDefault(java.util.Locale.forLanguageTag("es"))
+
+    @org.junit.After
+    fun restaurar() = java.util.Locale.setDefault(antes)
 
     /** Lunes 19 de octubre de 2026, 12:00. */
     private val lunes: LocalDate = LocalDate.of(2026, 10, 19)
@@ -63,7 +72,7 @@ class DatosWidgetsTest {
             deber("manana", "mate", "Mañana", ms(lunes.plusDays(1))),
             deber("hecha", "mate", "Ya hecha", ms(lunes), completado = true),
         )
-        val datos = DatosWidgets.deberes(listas, emptyList(), deberes, null, ahora, zona)
+        val datos = DatosWidgets.deberes(listas, emptyList(), deberes, null, ahora, textos, zona)
         assertEquals(listOf("manana", "tarde", "sin"), datos.pendientes.map { it.id })
         assertEquals(3, datos.total)
         assertTrue(datos.hayListas)
@@ -78,7 +87,7 @@ class DatosWidgetsTest {
             deber("evento", ID_EVENTOS, "Cumpleaños", ms(lunes)),
             deber("tarea", "mate", "Informe", ms(lunes.plusDays(2))),
         )
-        val datos = DatosWidgets.deberes(listas, emptyList(), deberes, null, ahora, zona)
+        val datos = DatosWidgets.deberes(listas, emptyList(), deberes, null, ahora, textos, zona)
         assertEquals(listOf("tarea"), datos.pendientes.map { it.id })
     }
 
@@ -97,35 +106,35 @@ class DatosWidgetsTest {
             deber("m2", "mate", "Examen", ms(lunes.plusDays(30))),
         )
 
-        val una = DatosWidgets.deberes(listas, grupos, deberes, ConfigWidget.lista("mate"), ahora, zona)
+        val una = DatosWidgets.deberes(listas, grupos, deberes, ConfigWidget.lista("mate"), ahora, textos, zona)
         assertEquals("Cálculo", una.titulo)
         assertEquals(listOf("m1", "m2"), una.pendientes.map { it.id })
 
-        val carpeta = DatosWidgets.deberes(listas, grupos, deberes, ConfigWidget.grupo("uni"), ahora, zona)
+        val carpeta = DatosWidgets.deberes(listas, grupos, deberes, ConfigWidget.grupo("uni"), ahora, textos, zona)
         assertEquals("Universidad", carpeta.titulo)
         assertEquals(listOf("m1", "f1", "m2"), carpeta.pendientes.map { it.id })
 
-        val hoy = DatosWidgets.deberes(listas, grupos, deberes, ConfigWidget.HOY, ahora, zona)
+        val hoy = DatosWidgets.deberes(listas, grupos, deberes, ConfigWidget.HOY, ahora, textos, zona)
         assertEquals("Hoy", hoy.titulo)
         assertEquals(listOf("o1", "m1"), hoy.pendientes.map { it.id })
 
-        val proximos = DatosWidgets.deberes(listas, grupos, deberes, ConfigWidget.PROXIMOS, ahora, zona)
+        val proximos = DatosWidgets.deberes(listas, grupos, deberes, ConfigWidget.PROXIMOS, ahora, textos, zona)
         assertEquals(listOf("o1", "m1", "f1"), proximos.pendientes.map { it.id })
     }
 
     @Test
     fun fechaEnPalabras() {
-        assertEquals("Sin fecha", DatosWidgets.textoFecha(null, ahora, zona))
-        assertEquals("Vencida", DatosWidgets.textoFecha(ms(lunes.minusDays(1)), ahora, zona))
-        assertEquals("Hoy", DatosWidgets.textoFecha(ms(lunes), ahora, zona))
-        assertEquals("Mañana", DatosWidgets.textoFecha(ms(lunes.plusDays(1)), ahora, zona))
-        assertEquals("Jue", DatosWidgets.textoFecha(ms(lunes.plusDays(3)), ahora, zona))
-        assertEquals("3 nov", DatosWidgets.textoFecha(ms(LocalDate.of(2026, 11, 3)), ahora, zona))
+        assertEquals("Sin fecha", DatosWidgets.textoFecha(null, ahora, textos, zona))
+        assertEquals("Vencida", DatosWidgets.textoFecha(ms(lunes.minusDays(1)), ahora, textos, zona))
+        assertEquals("Hoy", DatosWidgets.textoFecha(ms(lunes), ahora, textos, zona))
+        assertEquals("Mañana", DatosWidgets.textoFecha(ms(lunes.plusDays(1)), ahora, textos, zona))
+        assertEquals("Jue", DatosWidgets.textoFecha(ms(lunes.plusDays(3)), ahora, textos, zona))
+        assertEquals("3 nov", DatosWidgets.textoFecha(ms(LocalDate.of(2026, 11, 3)), ahora, textos, zona))
     }
 
     @Test
     fun sinListasElWidgetInvitaACrear() {
-        val datos = DatosWidgets.deberes(emptyList(), emptyList(), emptyList(), null, ahora, zona)
+        val datos = DatosWidgets.deberes(emptyList(), emptyList(), emptyList(), null, ahora, textos, zona)
         assertEquals(false, datos.hayListas)
         assertTrue(datos.pendientes.isEmpty())
     }
@@ -188,6 +197,24 @@ class DatosWidgetsTest {
     }
 
     @Test
+    fun horarioMuestraLasFaltasDeLaMateriaSoloSiHayAlgoQueContar() {
+        val h = horario("uni", "Universidad")
+        val clases = listOf(
+            clase("calculo", h.id, "Cálculo").copy(grupo = "G1", maxFaltas = 4),
+            clase("fisica", h.id, "Física", inicio = 600, fin = 700).copy(grupo = "G2"),
+        )
+        val faltas = listOf(
+            app.kiwu.android.domain.Falta(grupo = "G1", horarioId = h.id, dia = 0, creada = 0),
+            app.kiwu.android.domain.Falta(grupo = "G1", horarioId = h.id, dia = 1, justificada = true, creada = 0),
+        )
+        val datos = DatosWidgets.horario(listOf(h), clases, emptyList(), null, ahora, zona, faltas)
+        val calculo = datos.hoy.first { it.id == "calculo" }.faltas!!
+        assertEquals(1, calculo.cuentan)
+        assertEquals(3, calculo.quedan)
+        assertEquals(null, datos.hoy.first { it.id == "fisica" }.faltas)
+    }
+
+    @Test
     fun horarioUsaElColorElegidoDeLaClase() {
         val h = horario("uni", "Universidad")
         val clases = listOf(clase("calculo", h.id, "Cálculo", color = "#1E88E5"))
@@ -217,7 +244,7 @@ class DatosWidgetsTest {
             pagina("b", "ideas", "Otra", "Más ideas", 300),
             pagina("c", "clase", "Apuntes", "Tema 1", 200),
         )
-        val datos = DatosWidgets.notas(cuadernos, paginas, ConfigWidget.cuaderno("ideas"))
+        val datos = DatosWidgets.notas(cuadernos, paginas, ConfigWidget.cuaderno("ideas"), textos)
         assertEquals("Ideas", datos.cuaderno?.nombre)
         assertEquals(listOf("b", "a"), datos.notas.map { it.id })
         assertEquals("Ideas para el proyecto", datos.notas.last().resumen)
@@ -229,7 +256,7 @@ class DatosWidgetsTest {
         val cuadernos = listOf(cuaderno("ideas", "Ideas"))
         val texto = "Una nota muy larga ".repeat(20)
         val paginas = listOf(pagina("a", "ideas", "", texto, 100))
-        val datos = DatosWidgets.notas(cuadernos, paginas, null)
+        val datos = DatosWidgets.notas(cuadernos, paginas, null, textos)
         assertNull(datos.cuaderno)
         assertEquals("Sin título", datos.notas.first().titulo)
         assertTrue(datos.notas.first().resumen.endsWith("…"))
@@ -238,7 +265,7 @@ class DatosWidgetsTest {
 
     @Test
     fun notasSinCuadernos() {
-        val datos = DatosWidgets.notas(emptyList(), emptyList(), null)
+        val datos = DatosWidgets.notas(emptyList(), emptyList(), null, textos)
         assertEquals(false, datos.hayCuadernos)
         assertTrue(datos.notas.isEmpty())
     }

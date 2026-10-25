@@ -30,15 +30,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
-private data class PaginaGuia(val emoji: String, val titulo: String, val texto: String)
+private data class PaginaGuia(val emoji: String, @androidx.annotation.StringRes val titulo: Int, @androidx.annotation.StringRes val texto: Int)
 
 private val paginas = listOf(
-    PaginaGuia("👋", "Te damos la bienvenida a Kiwu", "Tus tareas, tus apuntes y tu horario de clases en un solo sitio. Todo se guarda en tu teléfono."),
-    PaginaGuia("✅", "Tareas en listas y carpetas", "Crea una lista por materia y agrupa las listas en carpetas. Abre el menú ☰ para verlas y toca la casilla de una tarea para completarla."),
-    PaginaGuia("📅", "Fechas, avisos y eventos", "Ponle fecha a una tarea y Kiwu te avisa antes. Los eventos (cumpleaños, charlas) salen en el calendario y no hay que completarlos."),
-    PaginaGuia("📝", "Notas y horario", "En Notas escribes apuntes con títulos, listas, código e imágenes. En Horario añades tus clases y ves las tareas de cada una."),
-    PaginaGuia("🔥", "Tu racha", "Completa al menos una tarea al día para mantener tu racha. Por la tarde te avisamos si está a punto de perderse."),
+    PaginaGuia("👋", R.string.guia_1_titulo, R.string.guia_1_texto),
+    PaginaGuia("✅", R.string.guia_2_titulo, R.string.guia_2_texto),
+    PaginaGuia("📅", R.string.guia_3_titulo, R.string.guia_3_texto),
+    PaginaGuia("📝", R.string.guia_4_titulo, R.string.guia_4_texto),
+    PaginaGuia("🔥", R.string.guia_5_titulo, R.string.guia_5_texto),
 )
 
 /** Guía de inicio: unas pocas pantallas que se pasan deslizando. «Saltar» y «Empezar» llaman a [alTerminar]. */
@@ -47,24 +49,25 @@ fun GuiaScreen(alTerminar: () -> Unit) {
     val estado = rememberPagerState { paginas.size }
     val alcance = rememberCoroutineScope()
     val ultima = estado.currentPage == paginas.lastIndex
+    val descripcionPagina = stringResource(R.string.pagina_n_de, estado.currentPage + 1, paginas.size)
     androidx.activity.compose.BackHandler(enabled = estado.currentPage > 0) { alcance.launch { estado.animateScrollToPage(estado.currentPage - 1) } }
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).safeDrawingPadding().padding(16.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            if (!ultima) TextButton(onClick = alTerminar) { Text("Saltar") }
+            if (!ultima) TextButton(onClick = alTerminar) { Text(stringResource(R.string.saltar)) }
         }
         HorizontalPager(estado, Modifier.weight(1f).fillMaxWidth()) { i ->
             val p = paginas[i]
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(Modifier.widthIn(max = 420.dp).padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text(p.emoji, fontSize = 72.sp)
-                    Text(p.titulo, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
-                    Text(p.texto, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                    Text(stringResource(p.titulo), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+                    Text(stringResource(p.texto), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                 }
             }
         }
         Row(
-            Modifier.fillMaxWidth().padding(vertical = 16.dp).semantics { contentDescription = "Página ${estado.currentPage + 1} de ${paginas.size}" },
+            Modifier.fillMaxWidth().padding(vertical = 16.dp).semantics { contentDescription = descripcionPagina },
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         ) {
             repeat(paginas.size) { i ->
@@ -77,6 +80,6 @@ fun GuiaScreen(alTerminar: () -> Unit) {
         Button(
             onClick = { if (ultima) alTerminar() else alcance.launch { estado.animateScrollToPage(estado.currentPage + 1) } },
             Modifier.widthIn(max = 420.dp).fillMaxWidth().align(Alignment.CenterHorizontally),
-        ) { Text(if (ultima) "Empezar" else "Siguiente") }
+        ) { Text(stringResource(if (ultima) R.string.empezar else R.string.siguiente)) }
     }
 }

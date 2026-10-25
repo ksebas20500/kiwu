@@ -53,7 +53,11 @@ import app.kiwu.android.domain.SeccionTarea
 import app.kiwu.android.domain.TareasDeClase
 import app.kiwu.android.ui.DialogoConfirmar
 import app.kiwu.android.ui.Fechas
+import app.kiwu.android.ui.fechaCorta
 import app.kiwu.android.ui.tareas.CampoNuevaTarea
+import java.time.LocalDate
+import app.kiwu.android.R
+import androidx.compose.ui.res.stringResource
 
 /**
  * Hoja de tareas de una clase: se abre al tocarla en el horario. Muestra las tareas de la lista vinculada (pendientes y hechas),
@@ -74,13 +78,19 @@ internal fun HojaTareasClase(
     crearTarea: (titulo: String, materiaId: String, fecha: Long?) -> Unit,
     vincular: (materiaId: String?) -> Unit,
     crearYVincular: (nombre: String) -> Unit,
+    marcarFalta: (LocalDate) -> Unit,
+    quitarFalta: (String) -> Unit,
+    justificarFalta: (String, Boolean) -> Unit,
+    ponerMaximoFaltas: (Int?) -> Unit,
 ) {
     val color = ColoresClase.de(clase)
     val materia = estado.materias.firstOrNull { it.id == clase.materiaId }
     var menu by remember { mutableStateOf(false) }
     var elegirLista by remember { mutableStateOf(false) }
     var confirmarEliminar by remember { mutableStateOf(false) }
-    var verHechas by remember { mutableStateOf(false) }
+    // Qué se ve debajo de la cabecera: las tareas pendientes, las hechas o las faltas.
+    var vista by remember { mutableStateOf(VistaHoja.Pendientes) }
+    val contador = estado.contadores[clase.grupo]
 
     ModalBottomSheet(onDismissRequest = alCerrar, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
@@ -90,60 +100,72 @@ internal fun HojaTareasClase(
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
                     Text(clase.titulo, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     val detalle = listOfNotNull(
-                        "${ReglasHorario.nombreDia(clase.diaSemana)} ${ReglasHorario.rango(clase)}",
+                        "${Fechas.nombreDia(clase.diaSemana)} ${ReglasHorario.rango(clase)}",
                         clase.aula.takeIf { it.isNotBlank() },
                         estado.nombres[clase.horarioId]?.takeIf { estado.horarios.size > 1 },
                     ).joinToString(" · ")
                     Text(detalle, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Box {
-                    IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Opciones de la clase") }
+                    IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.clase_opciones)) }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                        DropdownMenuItem(text = { Text("Editar clase") }, onClick = { menu = false; alEditar() })
-                        DropdownMenuItem(text = { Text("Cambiar la lista vinculada") }, onClick = { menu = false; elegirLista = true })
-                        DropdownMenuItem(text = { Text("Eliminar clase", color = MaterialTheme.colorScheme.error) }, onClick = { menu = false; confirmarEliminar = true })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.clase_editar)) }, onClick = { menu = false; alEditar() })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.clase_cambiar_lista)) }, onClick = { menu = false; elegirLista = true })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.clase_eliminar), color = MaterialTheme.colorScheme.error) }, onClick = { menu = false; confirmarEliminar = true })
                     }
                 }
             }
             Spacer(Modifier.height(8.dp))
 
-            if (materia == null) {
+            // Pestañas: Pendientes y Hechas (si hay lista) y siempre Faltas.
+            val pendientes = materia?.let { TareasDeClase.pendientes(deberes, it.id) }.orEmpty()
+            val hechas = materia?.let { TareasDeClase.hechas(deberes, it.id) }.orEmpty()
+            Row(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (materia != null) {
+                    FilterChip(vista == VistaHoja.Pendientes, { vista = VistaHoja.Pendientes }, { Text(stringResource(R.string.hoja_pendientes, pendientes.size)) })
+                    FilterChip(vista == VistaHoja.Hechas, { vista = VistaHoja.Hechas }, { Text(stringResource(R.string.hoja_hechas, hechas.size)) })
+                } else {
+                    FilterChip(vista != VistaHoja.Faltas, { vista = VistaHoja.Pendientes }, { Text(stringResource(R.string.hoja_tareas)) })
+                }
+                ChipFaltas(contador, vista == VistaHoja.Faltas) { vista = VistaHoja.Faltas }
+            }
+
+            if (vista == VistaHoja.Faltas) {
+                SeccionFaltas(
+                    clase = clase, clasesDelGrupo = estado.todas.filter { it.grupo == clase.grupo }, faltas = estado.faltasDe(clase.grupo),
+                    contador = contador, marcar = marcarFalta, quitar = quitarFalta, justificar = justificarFalta, ponerMaximo = ponerMaximoFaltas,
+                )
+            } else if (materia == null) {
                 // Clase sin lista de tareas.
                 Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Esta clase no tiene lista de tareas.", style = MaterialTheme.typography.titleMedium)
-                    Text("Vincúlala a una lista para ver aquí sus tareas y que aparezcan puntos en la clase.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Button(onClick = { crearYVincular(clase.titulo) }, Modifier.fillMaxWidth()) { Text("Crear la lista «${clase.titulo}»") }
-                    if (estado.materias.isNotEmpty()) OutlinedButton(onClick = { elegirLista = true }, Modifier.fillMaxWidth()) { Text("Vincular una lista") }
+                    Text(stringResource(R.string.hoja_sin_lista), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.hoja_sin_lista_texto), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Button(onClick = { crearYVincular(clase.titulo) }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.hoja_crear_lista, clase.titulo)) }
+                    if (estado.materias.isNotEmpty()) OutlinedButton(onClick = { elegirLista = true }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.hoja_vincular)) }
                 }
             } else {
-                val pendientes = TareasDeClase.pendientes(deberes, materia.id)
-                val hechas = TareasDeClase.hechas(deberes, materia.id)
-                Row(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(!verHechas, { verHechas = false }, { Text("Pendientes (${pendientes.size})") })
-                    FilterChip(verHechas, { verHechas = true }, { Text("Hechas (${hechas.size})") })
-                }
                 Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 6.dp)) {
-                    if (!verHechas) {
-                        if (pendientes.isEmpty()) Text("No hay tareas pendientes. ¡Bien!", Modifier.padding(8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (vista == VistaHoja.Pendientes) {
+                        if (pendientes.isEmpty()) Text(stringResource(R.string.hoja_nada_pendiente), Modifier.padding(8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         for ((seccion, filas) in TareasDeClase.agrupadas(pendientes, estado.ahora)) {
                             Text(
-                                seccion.titulo, Modifier.padding(start = 8.dp, top = 10.dp, bottom = 2.dp), style = MaterialTheme.typography.labelMedium,
+                                stringResource(seccion.titulo), Modifier.padding(start = 8.dp, top = 10.dp, bottom = 2.dp), style = MaterialTheme.typography.labelMedium,
                                 color = if (seccion == SeccionTarea.Vencidas) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                             )
                             for (d in filas) FilaTarea(d, estado.ahora, false, marcar, alAbrirTarea)
                         }
                     } else {
-                        if (hechas.isEmpty()) Text("Todavía no has completado ninguna.", Modifier.padding(8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (hechas.isEmpty()) Text(stringResource(R.string.hoja_nada_hecho), Modifier.padding(8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         for (d in hechas.sortedByDescending { it.fechaCompletado ?: 0L }) FilaTarea(d, estado.ahora, true, marcar, alAbrirTarea)
                     }
                 }
                 CampoNuevaTarea(
                     materias = estado.materias, fija = materia,
                     alCrear = { titulo, materiaId, fecha -> crearTarea(titulo, materiaId, fecha) },
-                    marcador = "Añadir tarea a ${materia.nombre}",
+                    marcador = stringResource(R.string.hoja_anadir_a, materia.nombre),
                 )
                 TextButton(onClick = { alAbrirLista(materia.id) }, Modifier.align(Alignment.CenterHorizontally)) {
-                    Text("Abrir la lista completa")
+                    Text(stringResource(R.string.hoja_abrir_lista))
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
                 }
             }
@@ -154,23 +176,25 @@ internal fun HojaTareasClase(
     if (elegirLista) {
         AlertDialog(
             onDismissRequest = { elegirLista = false },
-            title = { Text("Lista de tareas de esta clase") },
+            title = { Text(stringResource(R.string.hoja_lista_titulo)) },
             text = {
                 Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
-                    OpcionLista("Sin lista", clase.materiaId == null) { vincular(null); elegirLista = false }
+                    OpcionLista(stringResource(R.string.hoja_sin_lista_opcion), clase.materiaId == null) { vincular(null); elegirLista = false }
                     for (m in estado.materias) OpcionLista(m.nombre, clase.materiaId == m.id) { vincular(m.id); elegirLista = false }
                 }
             },
-            confirmButton = { TextButton(onClick = { elegirLista = false }) { Text("Cerrar") } },
+            confirmButton = { TextButton(onClick = { elegirLista = false }) { Text(stringResource(R.string.cerrar)) } },
         )
     }
     if (confirmarEliminar) {
         DialogoConfirmar(
-            "¿Eliminar «${clase.titulo}»?", "Se quitará la clase de todos sus días. Las tareas de su lista no se tocan.", "Eliminar clase",
+            stringResource(R.string.hoja_eliminar_titulo, clase.titulo), stringResource(R.string.hoja_eliminar_texto), stringResource(R.string.clase_eliminar),
             alCerrar = { confirmarEliminar = false },
         ) { alEliminar() }
     }
 }
+
+private enum class VistaHoja { Pendientes, Hechas, Faltas }
 
 @Composable
 private fun OpcionLista(texto: String, marcada: Boolean, alPulsar: () -> Unit) {
@@ -192,7 +216,7 @@ private fun FilaTarea(d: Deber, ahora: Long, hecha: Boolean, marcar: (String, Bo
             )
             d.fechaEntrega?.let { f ->
                 val vencida = !hecha && f < ahora
-                Text(Fechas.corta(f, ahora), fontSize = 12.sp, color = if (vencida) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(fechaCorta(f, ahora), fontSize = 12.sp, color = if (vencida) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
