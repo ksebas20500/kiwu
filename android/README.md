@@ -2,7 +2,7 @@
 
 App nativa de Android (Kotlin, Jetpack Compose, Room). Mismas funciones que la de escritorio, con widgets de pantalla de inicio. Para ver qué hace Kiwu, consulta el [README principal](../README.md); la ruta de desarrollo está en [docs/android-plan.md](../docs/android-plan.md).
 
-Versión actual: **0.4.1** (en desarrollo) · Android 8.0 (API 26) o superior.
+Versión actual: **0.4.3** (en desarrollo) · Android 8.0 (API 26) o superior.
 
 ## Qué incluye
 
@@ -16,8 +16,11 @@ Versión actual: **0.4.1** (en desarrollo) · Android 8.0 (API 26) o superior.
 | **Racha** | Días seguidos completando al menos una tarea, arriba del menú de Tareas, con la mejor racha y las últimas 8 semanas; aviso opcional a las 20:00 si hoy aún falta |
 | **Guía de inicio** | Al abrir la app por primera vez: unas pantallas de bienvenida y la lista de ejemplo «Empieza aquí»; se puede repetir desde Ajustes → Acerca de |
 | **Recordatorios** | Notificaciones con las acciones *Completar* y *Posponer 1 h*; se reprograman al reiniciar el teléfono |
-| **Ajustes** | Ordenados por secciones (Apariencia, Menú de Tareas, Avisos, Copia de seguridad, Acerca de): tema claro/oscuro/sistema, color, fondo de imagen con velo, aspecto y orden del menú, segundo aviso y copia de seguridad `.kiwu.json` (el mismo formato que Linux) |
+| **Ajustes** | Ordenados por secciones (Apariencia, Idioma, Menú de Tareas, Avisos, Copia de seguridad, Acerca de): tema claro/oscuro/sistema, color, fondo de imagen con velo, aspecto y orden del menú, segundo aviso y copia de seguridad `.kiwu.json` (el mismo formato que Linux) |
 | **Widgets** | Tres widgets de pantalla de inicio: **Deberes** (pendientes por fecha, con casilla para completar sin abrir la app), **Horario** («Ahora / Siguiente» y clases de hoy con sus tareas urgentes) y **Nota rápida** (crea una nota y muestra las recientes). Se configuran al añadirlos: todas, una lista/carpeta, un horario o un cuaderno |
+
+| **Faltas de clase** | Máximo de faltas por materia, chip «Faltas: N» en la hoja de la clase, contador «quedan N» en el horario y en el widget, faltas justificadas que no cuentan, aviso al llegar al máximo y «Vaciar faltas» al cambiar de semestre |
+| **Idiomas** | Español, inglés y portugués. En Android 13 o superior sigue el idioma del teléfono y se cambia en el ajuste de idioma de Android para Kiwu; en Android 8 a 12 se elige en Ajustes → Idioma |
 
 No incluye atajos de teclado editables (no aplican en el móvil).
 
@@ -52,6 +55,8 @@ android/app/src/test/   Pruebas: dominio, contrato compartido, editor, Room (Rob
 
 Tercera pestaña de la barra inferior. Se pueden crear varios horarios (Universidad, Trabajo, Ocio…) con clases o actividades que se repiten cada semana, en varios días a la vez, con aula, notas y aviso opcional. En el teléfono se ve un día cada vez (o la semana entera con el botón de la barra); en pantallas anchas, la semana. Ver [docs/plan-horario.md](../docs/plan-horario.md).
 
+Desde la 0.4.3 cada materia puede llevar la cuenta de sus **faltas**: se marcan desde la hoja de la clase (hoy u otro día), se pueden justificar y el horario muestra cuántas quedan antes del máximo. Ver [docs/plan-0.4.3.md](../docs/plan-0.4.3.md).
+
 ## Widgets
 
 Se añaden desde el lanzador (mantén pulsado el fondo → Widgets → Kiwu) y se configuran al ponerlos:
@@ -62,6 +67,10 @@ Se añaden desde el lanzador (mantén pulsado el fondo → Widgets → Kiwu) y s
 
 Siguen el tema y el color de la app, se refrescan solos cuando cambian los datos y, además, cada 30 minutos y con una alarma al próximo cambio de clase o a medianoche. Ver [docs/plan-widgets-android.md](../docs/plan-widgets-android.md).
 
+## Idiomas
+
+Todos los textos están en `res/values/strings.xml` (español, el idioma base), `values-en` y `values-pt`. Las fechas, los días y los plurales salen del idioma activo. `Idioma.kt` decide qué idioma usar y `lintDebug` falla si a una traducción le falta un texto (`MissingTranslation`, `MissingQuantity`). Para añadir un texto nuevo hay que ponerlo en los tres archivos. En la rama de Google Play, los textos que solo existen allí (anuncios, compra y actualizaciones) van aparte, en `strings_play.xml`, para que unir `main` no choque.
+
 ## Datos y compatibilidad
 
 - El modelo es el mismo que en Linux (esquema v2): UUID como identificador y **borrado lógico** (`eliminada`), listo para sincronizar.
@@ -70,5 +79,4 @@ Siguen el tema y el color de la app, se refrescan solos cuando cambian los datos
 
 ## Pendiente
 
-- Traducción al inglés (las cadenas aún están en el código de las pantallas).
 - Firma de publicación, identificador definitivo y ficha de Google Play (ver [plan](../docs/plan-desarrollo.md) §5).

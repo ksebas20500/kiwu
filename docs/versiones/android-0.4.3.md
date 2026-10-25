@@ -21,10 +21,22 @@ Se instala encima de la 0.4.1 y conserva los datos. La base de datos pasa a la *
 - **Android 8 a 12:** Ajustes → **Idioma** abre un selector (Sistema / Español / English / Português) y la app se recarga al momento.
 - Las listas que crea la app («Eventos», «Notas rápidas», «Empieza aquí») toman el nombre en el idioma que haya al crearlas.
 
+#### Solo en la versión de Google Play
+
+- Los textos propios de Play también están en inglés y portugués: «Quitar anuncios», la compra, «Buscar actualizaciones», el aviso «Hay una versión nueva de Kiwu» y la nota de privacidad.
+- La sección «Quitar anuncios» y «Buscar actualizaciones» siguen en Ajustes, junto a la nueva fila «Idioma».
+
 ### Cambios
 
 - La copia de seguridad exporta e importa las faltas y el máximo de cada clase. Al importar se descartan las faltas de materias que no existen, y el resumen indica cuántas faltas entraron.
 - Los mensajes de error al importar una copia salen en el idioma de la app.
+
+### Versiones publicadas
+
+| Canal | versionCode | Archivo |
+| --- | --- | --- |
+| `main` (APK de GitHub) | 7 | sin publicar todavía |
+| Google Play (rama `anuncios-prueba`) | 12 | `kiwu-0.4.3-codigo12.aab` |
 
 ### Limitaciones conocidas
 
