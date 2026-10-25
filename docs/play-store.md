@@ -1,6 +1,6 @@
 # Ficha de Kiwu en Google Play
 
-Textos y recursos para Play Console. Todo en español; se puede añadir inglés más adelante.
+Textos y recursos para Play Console. La app está en español, inglés y portugués desde la 0.4.3, así que la ficha también (ver «Ficha en inglés» y «Ficha en portugués»).
 
 ## Textos
 
@@ -29,8 +29,10 @@ HORARIO
 • Varios horarios a la vez (Universidad, Trabajo, Ocio…).
 • Vista por día o por semana, con la clase en curso y la siguiente.
 • Avisos antes de cada clase.
+• Faltas por materia: marca las que tienes y mira cuántas te quedan antes del máximo.
 
 PERSONALÍZALA
+• En español, inglés o portugués.
 • Tema claro, oscuro o el del sistema.
 • Color de acento propio o los colores de tu teléfono.
 • Fondo con tu propia imagen.
@@ -47,6 +49,118 @@ Kiwu es gratis y muestra un banner pequeño en las listas de Tareas y Notas, nun
 **Categoría:** Productividad · **Etiquetas:** Productividad, Educación, Notas, Organización.
 **Correo de contacto público:** kevinsebas5020@gmail.com
 **Política de privacidad (URL):** la de GitHub Pages de `docs/privacidad.md` (ver abajo).
+
+## Novedades de la versión (máx. 500 por idioma)
+
+Se pegan en Play Console → la versión → «Notas de la versión», una por idioma.
+
+### 0.4.3 (versionCode 12)
+
+```
+<es-419>
+• Faltas de clase: pon un máximo por materia, marca tus faltas desde la clase y mira cuántas te quedan.
+• Kiwu ahora está en español, inglés y portugués.
+• Las faltas se guardan en la copia de seguridad.
+</es-419>
+<en-US>
+• Class absences: set a limit per subject, mark absences from the class and see how many you have left.
+• Kiwu is now available in Spanish, English and Portuguese.
+• Absences are included in the backup.
+</en-US>
+<pt-BR>
+• Faltas nas aulas: defina um limite por matéria, marque suas faltas pela aula e veja quantas ainda restam.
+• O Kiwu agora está em espanhol, inglês e português.
+• As faltas são salvas no backup.
+</pt-BR>
+```
+
+Si Play Console pide otro código de idioma (por ejemplo `es-ES`), se cambia solo la etiqueta.
+
+## Ficha en inglés (en-US)
+
+**Descripción breve** (máx. 80):
+`Tasks, notes and your class schedule in one place. No accounts, data on device.`
+
+**Descripción completa:**
+
+```
+Kiwu brings together what a student needs every day: your tasks, your notes and your class schedule, in a simple, fast and free app.
+
+TASKS
+• Lists by subject: University, Work, whatever you need.
+• Today, Next 7 days, All and Completed views.
+• Calendar with each day's deadlines.
+• Reminders at the exact time you choose.
+• Add a task in seconds from the bottom bar, with date and time.
+
+NOTES
+• Notebooks and pages with a block editor: headings, lists, checkboxes, quotes, code, images and links with previews.
+• Search across all your notes.
+
+SCHEDULE
+• Several schedules at once (University, Work, Free time…).
+• Day or week view, with the current and next class.
+• Reminders before each class.
+• Absences per subject: mark the ones you have and see how many are left before the limit.
+
+MAKE IT YOURS
+• In Spanish, English or Portuguese.
+• Light, dark or system theme.
+• Your own accent color or your phone's colors.
+• Background with your own image.
+
+YOUR DATA IS YOURS
+• No accounts or sign-up: everything is stored on your phone.
+• Backup to a file you keep wherever you want.
+• Compatible with Kiwu for Linux and macOS (same data format).
+
+ABOUT ADS
+Kiwu is free and shows a small banner in the Tasks and Notes lists, never while you write. You won't see ads during the first days. If you'd rather not see them, there is an optional one-time payment to remove them; every feature is the same with or without ads.
+```
+
+## Ficha en portugués (pt-BR)
+
+**Descripción breve** (máx. 80):
+`Tarefas, notas e horário das aulas num só lugar. Sem contas, dados no celular.`
+
+**Descripción completa:**
+
+```
+O Kiwu reúne o que um estudante precisa todos os dias: suas tarefas, suas notas e seu horário de aulas, em um app simples, rápido e gratuito.
+
+TAREFAS
+• Listas por matéria: Faculdade, Trabalho, o que você precisar.
+• Visualizações Hoje, Próximos 7 dias, Todas e Concluídas.
+• Calendário com as entregas de cada dia.
+• Lembretes na hora exata que você escolher.
+• Adicione uma tarefa em segundos pela barra inferior, com data e hora.
+
+NOTAS
+• Cadernos e páginas com um editor por blocos: títulos, listas, caixas de seleção, citações, código, imagens e links com prévia.
+• Busca em todas as suas notas.
+
+HORÁRIO
+• Vários horários ao mesmo tempo (Faculdade, Trabalho, Lazer…).
+• Visualização por dia ou por semana, com a aula atual e a próxima.
+• Avisos antes de cada aula.
+• Faltas por matéria: marque as que você tem e veja quantas restam antes do limite.
+
+DEIXE DO SEU JEITO
+• Em espanhol, inglês ou português.
+• Tema claro, escuro ou o do sistema.
+• Cor de destaque própria ou as cores do seu celular.
+• Fundo com a sua própria imagem.
+
+SEUS DADOS SÃO SEUS
+• Sem contas nem cadastro: tudo fica salvo no seu celular.
+• Backup em um arquivo que você guarda onde quiser.
+• Compatível com o Kiwu para Linux e macOS (mesmo formato de dados).
+
+SOBRE OS ANÚNCIOS
+O Kiwu é gratuito e mostra um pequeno banner nas listas de Tarefas e Notas, nunca enquanto você escreve. Nos primeiros dias você não verá anúncios. Se preferir não vê-los, há um pagamento único opcional para removê-los; todas as funções são as mesmas com ou sem anúncios.
+```
+
+Las capturas siguen en español; si se quieren capturas por idioma, se sacan con el idioma de la app cambiado (`adb shell cmd locale set-app-locales app.kiwu.android --locales en-US`).
 
 ## Gráficos
 
