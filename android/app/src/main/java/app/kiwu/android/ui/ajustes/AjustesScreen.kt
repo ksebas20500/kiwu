@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
@@ -77,7 +79,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kiwu.android.BuildConfig
 import app.kiwu.android.KiwuApp
 import app.kiwu.android.data.AjustesUi
+import app.kiwu.android.data.AutorizacionDrive
 import app.kiwu.android.data.Copia
+import app.kiwu.android.data.ErrorCuenta
+import app.kiwu.android.data.PermisoDrive
+import app.kiwu.android.data.RespaldoDrive
 import app.kiwu.android.data.ErrorCopia
 import app.kiwu.android.notify.Avisos
 import app.kiwu.android.notify.ProgramadorAvisos
@@ -97,6 +103,12 @@ private fun Seccion(titulo: String, contenido: @Composable () -> Unit) {
         if (titulo.isNotBlank()) Text(titulo, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
         contenido()
     }
+}
+
+private fun textoErrorCopia(contexto: android.content.Context, e: ErrorCopia): String = when (e.motivo) {
+    MotivoErrorCopia.Ilegible -> contexto.getString(R.string.copia_ilegible, e.detalle.orEmpty())
+    MotivoErrorCopia.NoEsKiwu -> contexto.getString(R.string.copia_no_es_kiwu)
+    MotivoErrorCopia.MasNueva -> contexto.getString(R.string.copia_nueva)
 }
 
 /** Ajustes: apariencia, fondo, avisos del sistema y copia de seguridad. */
@@ -136,13 +148,48 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit, alVerGuia: () -> Unit = {}
                 val r = Copia.importar(app.db.dao(), texto)
                 textoImportado(contexto.resources, r)
             } catch (e: ErrorCopia) {
-                when (e.motivo) {
-                    MotivoErrorCopia.Ilegible -> contexto.getString(R.string.copia_ilegible, e.detalle.orEmpty())
-                    MotivoErrorCopia.NoEsKiwu -> contexto.getString(R.string.copia_no_es_kiwu)
-                    MotivoErrorCopia.MasNueva -> contexto.getString(R.string.copia_nueva)
-                }
+                textoErrorCopia(contexto, e)
             } catch (e: Exception) {
                 contexto.getString(R.string.ajustes_importar_error, e.message)
+            }
+        }
+    }
+
+    // Copia en Google Drive: el permiso se pide una vez (pantalla de Google) y la acción pendiente sigue al volver.
+    val actividad = contexto.actividad()
+    var ocupadoDrive by remember { mutableStateOf(false) }
+    var pendienteDrive by remember { mutableStateOf<(suspend (RespaldoDrive) -> String)?>(null) }
+    suspend fun correrDrive(accion: suspend () -> String?) {
+        ocupadoDrive = true
+        val texto = try {
+            accion()
+        } catch (e: ErrorCuenta) {
+            textoErrorCuenta(contexto, e)
+        } catch (e: ErrorCopia) {
+            textoErrorCopia(contexto, e)
+        } catch (e: Exception) {
+            contexto.getString(R.string.ajustes_importar_error, e.message)
+        }
+        ocupadoDrive = false
+        if (texto != null) mensaje = texto
+    }
+    val consentimientoDrive = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { r ->
+        val accion = pendienteDrive
+        pendienteDrive = null
+        if (accion != null && actividad != null) alcance.launch { correrDrive { accion(RespaldoDrive(AutorizacionDrive.token(actividad, r.data))) } }
+    }
+    fun conDrive(accion: suspend (RespaldoDrive) -> String) {
+        if (actividad == null) return
+        alcance.launch {
+            correrDrive {
+                when (val p = AutorizacionDrive.pedir(actividad)) {
+                    is PermisoDrive.Listo -> accion(RespaldoDrive(p.token))
+                    is PermisoDrive.Pedir -> {
+                        pendienteDrive = accion
+                        consentimientoDrive.launch(IntentSenderRequest.Builder(p.intencion).build())
+                        null
+                    }
+                }
             }
         }
     }
@@ -182,6 +229,7 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit, alVerGuia: () -> Unit = {}
                         }
                         FilaAjuste(Icons.Filled.ViewList, stringResource(SeccionAjustes.MENU.titulo), resumen.menu(ajustes)) { elegida = SeccionAjustes.MENU.id }
                         FilaAjuste(Icons.Filled.Notifications, stringResource(SeccionAjustes.AVISOS.titulo), resumen.avisos(ajustes, notificaciones)) { elegida = SeccionAjustes.AVISOS.id }
+                        FilaAjuste(Icons.Filled.Person, stringResource(SeccionAjustes.CUENTA.titulo), app.sync.estado.value.correo ?: stringResource(R.string.cuenta_sin_cuenta)) { elegida = SeccionAjustes.CUENTA.id }
                         FilaAjuste(Icons.Filled.Backup, stringResource(SeccionAjustes.COPIA.titulo), resumen.copia()) { elegida = SeccionAjustes.COPIA.id }
                         val sinAnuncios by app.compras.sinAnuncios.collectAsStateWithLifecycle()
                         FilaAjuste(Icons.Filled.Star, stringResource(SeccionAjustes.ANUNCIOS.titulo), resumen.anuncios(sinAnuncios)) { elegida = SeccionAjustes.ANUNCIOS.id }
@@ -293,12 +341,29 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit, alVerGuia: () -> Unit = {}
                             }
                         }
                     }
+                    SeccionAjustes.CUENTA -> SeccionCuenta(app)
                     SeccionAjustes.COPIA -> {
                         Seccion("") {
                             Text(stringResource(R.string.ajustes_copia_texto), style = MaterialTheme.typography.bodyMedium)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(onClick = { exportar.launch("kiwu-${LocalDate.now()}.kiwu.json") }) { Text(stringResource(R.string.exportar)) }
                                 OutlinedButton(onClick = { importar.launch(arrayOf("application/json", "application/octet-stream", "*/*")) }) { Text(stringResource(R.string.importar)) }
+                            }
+                            Text(stringResource(R.string.drive_texto), style = MaterialTheme.typography.bodyMedium)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(
+                                    onClick = { conDrive { d -> d.subir(Copia.exportar(app.db.dao())); contexto.getString(R.string.drive_subida_ok) } },
+                                    enabled = !ocupadoDrive && actividad != null,
+                                ) { Text(stringResource(R.string.drive_guardar)) }
+                                OutlinedButton(
+                                    onClick = {
+                                        conDrive { d ->
+                                            val copia = d.bajar()
+                                            if (copia == null) contexto.getString(R.string.drive_sin_copia) else textoImportado(contexto.resources, Copia.importar(app.db.dao(), copia))
+                                        }
+                                    },
+                                    enabled = !ocupadoDrive && actividad != null,
+                                ) { Text(stringResource(R.string.drive_restaurar)) }
                             }
                             mensaje?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
                         }

@@ -11,6 +11,7 @@ enum class SeccionAjustes(val id: String, @StringRes val titulo: Int) {
     APARIENCIA("apariencia", R.string.ajustes_apariencia),
     MENU("menu", R.string.ajustes_menu),
     AVISOS("avisos", R.string.ajustes_avisos),
+    CUENTA("cuenta", R.string.ajustes_cuenta),
     COPIA("copia", R.string.ajustes_copia),
     ANUNCIOS("anuncios", R.string.ajustes_anuncios),
     ACERCA("acerca", R.string.ajustes_acerca);

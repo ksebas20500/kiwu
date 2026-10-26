@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import app.kiwu.android.data.AjustesStore
 import app.kiwu.android.data.KiwuDb
 import app.kiwu.android.data.Repositorio
+import app.kiwu.android.data.ServicioSync
 import app.kiwu.android.notify.Avisos
 import app.kiwu.android.domain.Rachas
 import app.kiwu.android.notify.AvisosClases
@@ -31,6 +32,7 @@ class KiwuApp : Application() {
     val ajustes by lazy { AjustesStore(this) }
     val compras by lazy { Compras(this) }
     val actualizaciones by lazy { Actualizaciones(this) }
+    val sync by lazy { ServicioSync(this) }
 
     /** Alcance que sobrevive a las pantallas: para guardar lo pendiente cuando se cierra una (p. ej. una nota). */
     val alcance = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -48,6 +50,7 @@ class KiwuApp : Application() {
         Textos.actualizar(this)
         iniciarAvisos()
         iniciarWidgets()
+        sync.iniciar()
     }
 
     /** Con el tema «sistema», el widget tiene que seguir al modo claro/oscuro del teléfono sin esperar 30 minutos. */

@@ -349,6 +349,10 @@ abstract class KiwuDb : RoomDatabase() {
         fun obtener(contexto: Context): KiwuDb = instancia ?: synchronized(this) {
             instancia ?: Room.databaseBuilder(contexto.applicationContext, KiwuDb::class.java, "kiwu.db")
                 .addMigrations(MIGRACION_1_2, MIGRACION_2_3, MIGRACION_3_4, MIGRACION_4_5)
+                // Las tablas y triggers de sincronización no son entidades de Room: se instalan en cada apertura.
+                .addCallback(object : RoomDatabase.Callback() {
+                    override fun onOpen(db: SupportSQLiteDatabase) = SyncSql.instalar(db)
+                })
                 .build().also { instancia = it }
         }
     }

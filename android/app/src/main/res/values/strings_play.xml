@@ -11,7 +11,7 @@
     <string name="actualizacion_descargando">La versión nueva se está descargando</string>
     <string name="actualizacion_al_dia">Ya tienes la última versión</string>
     <string name="actualizacion_buscar">Buscar actualizaciones</string>
-    <string name="ajustes_privacidad_play">Tus datos se guardan solo en este dispositivo: sin cuentas ni servidor propio. La app usa Internet para descargar la vista previa de los enlaces que pegas en una nota, para mostrar el banner de anuncios (Google AdMob), que puede usar el identificador de publicidad del teléfono según tu consentimiento, y para consultar a Google Play si hay una versión nueva.</string>
+    <string name="ajustes_privacidad_play">Tus datos se guardan en este dispositivo. Si creas una cuenta (opcional), el texto de tus listas, tareas y notas se sincroniza con tus otros dispositivos mediante Google Firebase, nunca imágenes ni archivos; y si usas «Guardar en Drive», la copia queda en tu Google Drive. La app usa Internet para descargar la vista previa de los enlaces que pegas en una nota, para mostrar el banner de anuncios (Google AdMob), que puede usar el identificador de publicidad del teléfono según tu consentimiento, y para consultar a Google Play si hay una versión nueva.</string>
     <string name="actualizacion_nueva_titulo">Hay una versión nueva de Kiwu</string>
     <string name="actualizacion_nueva_texto">Se descarga mientras sigues usando la app. Cuando termine, solo tendrás que reiniciarla.</string>
     <string name="actualizacion_actualizar">Actualizar</string>

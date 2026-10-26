@@ -77,6 +77,8 @@ fun intencionDeApertura(
     seccion: String? = null,
 ): Intent = Intent(contexto, MainActivity::class.java).apply {
     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+    // Los PendingIntent ignoran los extras al compararse: sin un `data` distinto, un widget pisaría el destino de otro.
+    data = android.net.Uri.parse("kiwu://widget/${seccion.orEmpty()}/${tarea.orEmpty()}/${nota.orEmpty()}/${nuevaNotaEnCuaderno ?: "-"}")
     if (tarea != null) putExtra(MainActivity.EXTRA_TAREA, tarea)
     if (nota != null) putExtra(MainActivity.EXTRA_NOTA, nota)
     if (nuevaNotaEnCuaderno != null) putExtra(MainActivity.EXTRA_NUEVA_NOTA, nuevaNotaEnCuaderno)

@@ -19,6 +19,11 @@ val admobApp = admob.getProperty("appId") ?: "ca-app-pub-3940256099942544~334751
 val admobBanner = admob.getProperty("banner") ?: "ca-app-pub-3940256099942544/9214589741"
 val bannerPrueba = "ca-app-pub-3940256099942544/9214589741"
 val appPrueba = "ca-app-pub-3940256099942544~3347511713"
+// La cuenta y la sincronización usan Firebase. La clave y el proyecto salen de local.properties (que no se sube al repo);
+// sin ellos la app compila y funciona igual, solo que sin cuenta.
+val propiedadesLocales = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
 
 android {
     lint {
@@ -37,8 +42,11 @@ android {
         applicationId = "app.kiwu.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 12
-        versionName = "0.4.3"
+        versionCode = 13
+        versionName = "0.5.0"
+        buildConfigField("String", "FIREBASE_API_KEY", "\"${propiedadesLocales.getProperty("firebase.apiKey", "")}\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${propiedadesLocales.getProperty("google.webClientId", "")}\"")
+        buildConfigField("String", "FIREBASE_PROJECT_ID", "\"${propiedadesLocales.getProperty("firebase.projectId", "")}\"")
     }
 
     signingConfigs {
@@ -133,6 +141,10 @@ dependencies {
     implementation(libs.billing)
     implementation(libs.play.app.update)
     implementation(libs.glance.appwidget)
+    implementation(libs.credentials)
+    implementation(libs.credentials.play)
+    implementation(libs.googleid)
+    implementation(libs.play.auth)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

@@ -69,7 +69,7 @@ internal fun DialogoIdioma(alCerrar: () -> Unit) {
     )
 }
 
-private fun Context.actividad(): Activity? = when (this) {
+internal fun Context.actividad(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.actividad()
     else -> null

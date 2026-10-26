@@ -54,6 +54,26 @@ Kiwu es gratis y muestra un banner pequeño en las listas de Tareas y Notas, nun
 
 Se pegan en Play Console → la versión → «Notas de la versión», una por idioma.
 
+### 0.5.0 (versionCode 13)
+
+```
+<es-419>
+• Cuenta opcional (correo o Google) para ver tus tareas, notas y horarios en tu teléfono y tu tablet.
+• Copia de seguridad en tu Google Drive: guarda y restaura desde Ajustes.
+• Los widgets ya no se confunden al abrirlos.
+</es-419>
+<en-US>
+• Optional account (email or Google) to see your tasks, notes and schedules on your phone and tablet.
+• Backup to your Google Drive: save and restore from Settings.
+• Widgets no longer open the wrong section.
+</en-US>
+<pt-BR>
+• Conta opcional (e-mail ou Google) para ver suas tarefas, notas e horários no celular e no tablet.
+• Backup no seu Google Drive: salve e restaure em Ajustes.
+• Os widgets não se confundem mais ao abrir.
+</pt-BR>
+```
+
 ### 0.4.3 (versionCode 12)
 
 ```

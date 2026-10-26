@@ -36,8 +36,8 @@ Decisiones: un día cuenta si se **completa al menos una tarea** · la guía son
 
 ## Después: racha con amigos
 
-Necesita cuenta y servidor. Encaja sobre la cuenta de Supabase de [plan-sincronizacion.md](plan-sincronizacion.md) (§4.5), pero **no hace falta esperar a la sincronización completa**: basta con subir los días cumplidos, no las tareas.
+Necesita cuenta y servidor. Encaja sobre la cuenta de Firebase (plan Spark) de [plan-sincronizacion.md](plan-sincronizacion.md) (§4.5), pero **no hace falta esperar a la sincronización completa**: basta con subir los días cumplidos, no las tareas.
 
-- Tabla de rachas por usuario (días cumplidos) y de amistades, con *Row Level Security*: cada persona solo ve la racha de sus amigos.
+- Colección de rachas por usuario (días cumplidos) y de amistades, con reglas de seguridad de Firestore (`firestore.rules`): cada persona solo ve la racha de sus amigos.
 - Invitación por código o enlace; racha compartida = días en que **todos** cumplieron.
 - Antes de lanzarla: actualizar [privacidad.md](privacidad.md) (hoy dice «sin cuentas ni servidor») y la ficha de seguridad de datos de Google Play.

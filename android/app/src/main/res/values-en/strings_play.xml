@@ -11,7 +11,7 @@
     <string name="actualizacion_descargando">The new version is downloading</string>
     <string name="actualizacion_al_dia">You already have the latest version</string>
     <string name="actualizacion_buscar">Check for updates</string>
-    <string name="ajustes_privacidad_play">Your data is stored only on this device: no accounts and no server of our own. The app uses the Internet to download previews of links you paste into a note, to show the ad banner (Google AdMob), which may use the phone\'s advertising ID depending on your consent, and to ask Google Play whether there is a new version.</string>
+    <string name="ajustes_privacidad_play">Your data is stored on this device. If you create an account (optional), the text of your lists, tasks and notes syncs with your other devices through Google Firebase, never images or files; and if you use “Save to Drive”, the backup goes to your own Google Drive. The app uses the Internet to download previews of links you paste into a note, to show the ad banner (Google AdMob), which may use the phone\'s advertising ID depending on your consent, and to ask Google Play whether there is a new version.</string>
     <string name="actualizacion_nueva_titulo">A new version of Kiwu is available</string>
     <string name="actualizacion_nueva_texto">It downloads while you keep using the app. When it\'s done, you\'ll just need to restart it.</string>
     <string name="actualizacion_actualizar">Update</string>

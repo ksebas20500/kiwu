@@ -20,6 +20,9 @@ junit = "4.13.2"
 robolectric = "4.14.1"
 androidxTest = "1.6.1"
 splash = "1.0.1"
+credentials = "1.3.0"
+googleid = "1.1.1"
+playAuth = "21.3.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -49,6 +52,10 @@ play-app-update = { module = "com.google.android.play:app-update-ktx", version.r
 play-services-ads = { module = "com.google.android.gms:play-services-ads", version.ref = "playServicesAds" }
 datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "glance" }
+credentials = { module = "androidx.credentials:credentials", version.ref = "credentials" }
+credentials-play = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
+googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
+play-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playAuth" }
 junit = { module = "junit:junit", version.ref = "junit" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTest" }
