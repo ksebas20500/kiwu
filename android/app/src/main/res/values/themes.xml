@@ -10,4 +10,11 @@
     <style name="Theme.Kiwu" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/kiwu_fondo</item>
     </style>
+
+    <!-- Pantalla de «añadir tarea» del widget: transparente, para verla encima del escritorio. -->
+    <style name="Theme.Kiwu.Flotante" parent="Theme.Kiwu">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation.Dialog</item>
+    </style>
 </resources>

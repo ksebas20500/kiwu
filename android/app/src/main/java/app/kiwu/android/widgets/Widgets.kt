@@ -86,6 +86,18 @@ fun intencionDeApertura(
 }
 
 /**
+ * Intención para añadir una tarea desde el widget de deberes sin abrir la app. [lista] es la lista fija del widget (null =
+ * elegirla) y [hoy] hace que la tarea venza hoy, para que aparezca en un widget que solo muestra «Hoy».
+ */
+fun intencionNuevaTarea(contexto: Context, lista: String?, hoy: Boolean): Intent =
+    Intent(contexto, NuevaTareaActivity::class.java).apply {
+        // Un `data` distinto por destino, por lo mismo que en `intencionDeApertura`.
+        data = android.net.Uri.parse("kiwu://widget/nueva-tarea/${lista.orEmpty()}/$hoy")
+        if (lista != null) putExtra(NuevaTareaActivity.EXTRA_LISTA, lista)
+        putExtra(NuevaTareaActivity.EXTRA_HOY, hoy)
+    }
+
+/**
  * Refresco de los widgets: cuando cambian los datos de la app (cualquier lista, tarea, nota, clase o ajuste) y cuando
  * toca por una alarma (cambio de clase o medianoche).
  */

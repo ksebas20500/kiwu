@@ -33,10 +33,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -161,7 +163,12 @@ fun CampoNuevaTarea(
     marcador: String = stringResource(R.string.anadir_tarea),
     /** El calendario fija el día que se está viendo: entonces el botón solo elige la hora de entrega. */
     diaFijo: java.time.LocalDate? = null,
+    /** Pone el cursor en el campo al abrirse (la pantalla de añadir desde el widget). */
+    enfocar: Boolean = false,
 ) {
+    val foco = remember { androidx.compose.ui.focus.FocusRequester() }
+    // El campo está desactivado hasta que llegan las listas: se enfoca cuando ya se puede escribir.
+    LaunchedEffect(materias.isNotEmpty()) { if (enfocar && materias.isNotEmpty()) foco.requestFocus() }
     var texto by remember { mutableStateOf("") }
     var fecha by remember { mutableStateOf<Long?>(null) }
     var hora by remember { mutableStateOf<Pair<Int, Int>?>(null) }
@@ -202,7 +209,7 @@ fun CampoNuevaTarea(
             TextField(
                 value = texto,
                 onValueChange = { texto = it },
-                modifier = Modifier.weight(1f).widthIn(min = 96.dp),
+                modifier = Modifier.weight(1f).widthIn(min = 96.dp).focusRequester(foco),
                 placeholder = { Text(if (materias.isEmpty()) stringResource(R.string.crea_lista_primero) else marcador) },
                 enabled = materias.isNotEmpty(),
                 singleLine = true,

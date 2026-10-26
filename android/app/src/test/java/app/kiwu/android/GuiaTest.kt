@@ -74,7 +74,7 @@ class GuiaTest {
     }
 
     @Test
-    fun lasFechasDeLaRachaIncluyenTareasBorradasPeroNoEventosNiDesmarcadas() = runBlocking {
+    fun laEntradaDeLaRachaIncluyeTareasBorradasPeroNoEventos() = runBlocking {
         val lista = repo.crearMateria("Química")
         val hecha = repo.crearDeber("Informe", lista.id)
         val borrada = repo.crearDeber("Quiz", lista.id)
@@ -86,7 +86,9 @@ class GuiaTest {
         repo.marcar(desmarcada.id, true)
         repo.marcar(desmarcada.id, false)
         repo.marcar(evento.id, true)
-        assertEquals(2, repo.fechasCompletado.first().size)
-        assertEquals(2, repo.fechasCompletadoAhora().size)
+        val tareas = repo.entradaRacha.first().tareas
+        assertEquals(3, tareas.size) // hecha, borrada y desmarcada; el evento queda fuera
+        assertEquals(2, tareas.count { it.completado && it.completada != null })
+        assertEquals(3, repo.entradaRachaAhora().tareas.size)
     }
 }

@@ -1,51 +1,103 @@
 package app.kiwu.android.domain
 
+import androidx.room.ColumnInfo
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 
 /**
- * La racha: cuántos días seguidos se ha completado al menos una tarea. [dias] son los días cumplidos (para la cuadrícula).
- * Si hoy todavía no se ha completado nada pero ayer sí, la racha sigue viva ([hoyCumplido] = false): se pierde al acabar el día.
+ * La racha «al día»: cuántos días exigentes seguidos se cerraron sin nada vencido. [dias] son los días cumplidos (para la
+ * cuadrícula). Hoy aún no se ha cerrado: si quedan tareas por entregar ([pendientes]) la racha sigue viva pero en riesgo.
  */
 data class Racha(
     val actual: Int = 0,
     val mejor: Int = 0,
     val hoyCumplido: Boolean = false,
     val dias: Set<LocalDate> = emptySet(),
-    /** Cuántas tareas se han completado en total (las que cuentan para la racha). */
+    /** Cuántas tareas se han completado en total. */
     val tareas: Int = 0,
+    /** Tareas con entrega hoy o antes que siguen sin resolver. */
+    val pendientes: Int = 0,
 ) {
-    /** La racha se pierde esta noche si no se completa nada hoy. */
-    val enRiesgo: Boolean get() = actual > 0 && !hoyCumplido
+    /** La racha se pierde esta noche si siguen quedando tareas por entregar. */
+    val enRiesgo: Boolean get() = actual > 0 && pendientes > 0
 }
 
+/** De una tarea solo lo que cuenta para la racha. Incluye las borradas (`eliminada`); los eventos no se piden. */
+data class TareaRacha(
+    @ColumnInfo(name = "fecha_entrega") val entrega: Long?,
+    val completado: Boolean,
+    @ColumnInfo(name = "fecha_completado") val completada: Long?,
+    val eliminada: Long?,
+    val creada: Long,
+)
+
+/** Lo que necesita el cálculo: las tareas y los días de la semana (1 = lunes … 7) que tienen clase. */
+data class EntradaRacha(val tareas: List<TareaRacha> = emptyList(), val diasConClase: Set<Int> = emptySet())
+
 /**
- * Cálculo de la racha a partir de cuándo se completó cada tarea (`fecha_completado`). No se guarda nada aparte: desmarcar la
- * única tarea de un día quita ese día. Los eventos no cuentan (no se completan).
+ * Cálculo de la racha «al día». Un día **se rompe** si al terminarlo queda una tarea con entrega ese día o antes sin
+ * resolver (completada o borrada); es **exigente** si hay una entrega ese día o si hay clase ese día de la semana **y**
+ * hubo actividad (se completó o se añadió una tarea); el resto son días **neutros**: no suman ni rompen. Así crear un
+ * horario no cumple ni acredita días por sí solo. Las tareas sin fecha y los eventos no cuentan para vencer. No se
+ * guarda nada aparte: sale del historial.
+ *
+ * shortcut: los días con clase salen del horario actual (el modelo no guarda desde cuándo vale cada clase) y basta una
+ * tarea trivial, completada o añadida, para que un día de clase cuente. Endurecer (p. ej. solo «completada») si se abusa.
  */
 object Rachas {
     /** Hora del aviso «No pierdas tu racha». */
     val HORA_AVISO: LocalTime = LocalTime.of(20, 0)
 
-    fun calcular(completados: List<Long>, ahora: Long, zona: ZoneId = ZoneId.systemDefault()): Racha {
-        val hoy = Instant.ofEpochMilli(ahora).atZone(zona).toLocalDate()
-        val dias = completados.mapTo(HashSet()) { Instant.ofEpochMilli(it).atZone(zona).toLocalDate() }
-        val hoyCumplido = hoy in dias
-        // Se cuenta hacia atrás desde hoy (si ya cumplió) o desde ayer (si hoy aún está a tiempo).
-        var dia = if (hoyCumplido) hoy else hoy.minusDays(1)
-        var actual = 0
-        while (dia in dias) { actual++; dia = dia.minusDays(1) }
+    fun calcular(entrada: EntradaRacha, ahora: Long, zona: ZoneId = ZoneId.systemDefault()): Racha {
+        fun dia(ms: Long) = Instant.ofEpochMilli(ms).atZone(zona).toLocalDate()
+        val hoy = dia(ahora)
+        val rotos = HashSet<LocalDate>()
+        val entregas = HashSet<LocalDate>()
+        val actividad = HashSet<LocalDate>()
+        var pendientes = 0
+        var completadas = 0
+        var inicio = hoy
+        for (t in entrada.tareas) {
+            if (t.completado && t.completada != null) completadas++
+            inicio = minOf(inicio, dia(t.creada))
+            actividad += dia(t.creada)
+            if (t.completado && t.completada != null) actividad += dia(t.completada)
+            val entrega = t.entrega?.let(::dia) ?: continue
+            if (entrega.isAfter(hoy)) continue
+            val borrada = t.eliminada?.let(::dia)
+            if (borrada != null && !borrada.isAfter(entrega)) continue // borrada a tiempo: nunca se exigió
+            // Cuándo dejó de estar pendiente; una tarea marcada sin fecha de completado se da por entregada a tiempo.
+            val hecha = if (t.completado) (t.completada?.let(::dia) ?: entrega) else null
+            val resuelta = listOfNotNull(hecha, borrada).minOrNull()
+            entregas += entrega
+            if (resuelta == null || resuelta.isAfter(hoy)) pendientes++
+            var d = entrega
+            val ultimo = if (resuelta == null) hoy else minOf(hoy, resuelta.minusDays(1))
+            while (!d.isAfter(ultimo)) { rotos += d; d = d.plusDays(1) }
+        }
+        val dias = HashSet<LocalDate>()
         var mejor = 0
         var tramo = 0
-        var anterior: LocalDate? = null
-        for (d in dias.filter { !it.isAfter(hoy) }.sorted()) {
-            tramo = if (anterior != null && d == anterior.plusDays(1)) tramo + 1 else 1
-            mejor = maxOf(mejor, tramo)
-            anterior = d
+        var d = inicio
+        while (d.isBefore(hoy)) { // los días ya cerrados
+            if (d in rotos) tramo = 0
+            else if (d in entregas || (d.dayOfWeek.value in entrada.diasConClase && d in actividad)) {
+                tramo++
+                mejor = maxOf(mejor, tramo)
+                dias += d
+            }
+            d = d.plusDays(1)
         }
-        return Racha(actual = actual, mejor = maxOf(mejor, actual), hoyCumplido = hoyCumplido, dias = dias, tareas = completados.size)
+        val hoyCumplido = pendientes == 0 &&
+            (hoy in entregas || (hoy.dayOfWeek.value in entrada.diasConClase && hoy in actividad))
+        if (hoyCumplido) {
+            tramo++
+            mejor = maxOf(mejor, tramo)
+            dias += hoy
+        } // si no, hoy todavía puede cumplirse: la racha se cuenta hasta ayer
+        return Racha(actual = tramo, mejor = mejor, hoyCumplido = hoyCumplido, dias = dias, tareas = completadas, pendientes = pendientes)
     }
 
     /** El próximo momento del aviso (hoy a las 20:00 si aún no ha pasado; si no, mañana). */

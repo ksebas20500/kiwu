@@ -5,6 +5,7 @@ import app.kiwu.android.domain.Columna
 import app.kiwu.android.domain.Cuaderno
 import app.kiwu.android.domain.Deber
 import app.kiwu.android.domain.Documento
+import app.kiwu.android.domain.EntradaRacha
 import app.kiwu.android.domain.GrupoLista
 import app.kiwu.android.domain.Guia
 import app.kiwu.android.domain.Falta
@@ -14,6 +15,7 @@ import app.kiwu.android.domain.Materia
 import app.kiwu.android.domain.Pagina
 import app.kiwu.android.domain.Reglas
 import app.kiwu.android.domain.ReglasHorario
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -39,12 +41,12 @@ class Repositorio(
     val grupos: Flow<List<GrupoLista>> = dao.grupos()
     val faltas: Flow<List<Falta>> = dao.faltas()
 
-    /** Cuándo se completó cada tarea (también las borradas; sin eventos): de aquí sale la racha. */
-    val fechasCompletado: Flow<List<Long>> = dao.fechasCompletado()
+    /** Las tareas (también las borradas; sin eventos) y los días con clase: de aquí sale la racha. */
+    val entradaRacha: Flow<EntradaRacha> = combine(dao.tareasRacha(), dao.diasConClase()) { t, d -> EntradaRacha(t, d.toSet()) }
 
     fun ahora(): Long = reloj()
 
-    suspend fun fechasCompletadoAhora(): List<Long> = dao.fechasCompletadoAhora()
+    suspend fun entradaRachaAhora(): EntradaRacha = EntradaRacha(dao.tareasRachaAhora(), dao.diasConClaseAhora().toSet())
 
     suspend fun hayDatos(): Boolean = dao.hayDatos()
 

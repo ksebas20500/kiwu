@@ -92,7 +92,7 @@ class RachaReceiver : BroadcastReceiver() {
             try {
                 val ahora = System.currentTimeMillis()
                 if (!app.ajustes.flujo.first().rachaAviso) return@launch
-                val r = Rachas.calcular(app.repo.fechasCompletadoAhora(), ahora)
+                val r = Rachas.calcular(app.repo.entradaRachaAhora(), ahora)
                 if (r.enRiesgo) AvisosRacha.mostrar(contexto, r)
                 // Un minuto después, para que la próxima sea la de mañana y no esta misma.
                 ProgramadorRacha(contexto).reconciliar(true, ahora + 60_000)
