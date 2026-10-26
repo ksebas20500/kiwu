@@ -71,8 +71,8 @@ class TareasViewModel(private val repo: Repositorio, private val ajustes: Ajuste
     private val datos = combine(repo.materias, repo.grupos, repo.deberes) { materias, grupos, deberes -> Triple(materias, grupos, deberes) }
 
     val estado: StateFlow<TareasEstado> = combine(
-        datos, seleccion, ajustes.flujo, reloj, repo.fechasCompletado,
-    ) { (materias, grupos, deberes), (elemento, sub), aj, ahora, fechasHechas ->
+        datos, seleccion, ajustes.flujo, reloj, repo.entradaRacha,
+    ) { (materias, grupos, deberes), (elemento, sub), aj, ahora, entradaRacha ->
         // Si la lista o la carpeta elegida ya no existe, se vuelve a «Todas las tareas».
         val actual = when {
             elemento is Elemento.DeMateria && elemento.id != ID_EVENTOS && materias.none { it.id == elemento.id } -> Elemento.Todos
@@ -95,7 +95,7 @@ class TareasViewModel(private val repo: Repositorio, private val ajustes: Ajuste
             grupos = grupos,
             menu = MenuListas.construir(materias, grupos, materias.associate { it.id to (cuentas[Elemento.DeMateria(it.id)] ?: 0) }, aj.menuOrden),
             aspecto = aj.menuAspecto, contadores = aj.menuContadores,
-            racha = if (aj.rachaVisible) Rachas.calcular(fechasHechas, ahora) else null,
+            racha = if (aj.rachaVisible) Rachas.calcular(entradaRacha, ahora) else null,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TareasEstado())
 

@@ -55,6 +55,13 @@
         </receiver>
         <receiver android:name=".widgets.WidgetAlarmaReceiver" android:exported="false" />
         <activity
+            android:name=".widgets.NuevaTareaActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:windowSoftInputMode="adjustResize|stateVisible"
+            android:theme="@style/Theme.Kiwu.Flotante" />
+        <activity
             android:name=".widgets.ConfiguracionWidgetsActivity"
             android:exported="true"
             android:label="@string/widget_configuracion"

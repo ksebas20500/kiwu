@@ -54,6 +54,29 @@ Kiwu es gratis y muestra un banner pequeño en las listas de Tareas y Notas, nun
 
 Se pegan en Play Console → la versión → «Notas de la versión», una por idioma.
 
+### 0.5.1 (versionCode 14)
+
+```
+<es-419>
+• Racha «al día»: un día cuenta si lo cierras sin tareas vencidas; los días libres no la rompen.
+• Widget de Deberes: botón + para añadir tareas sin abrir la app, se actualiza al instante y la casilla de completar es más grande.
+• Los widgets ya no se mezclan entre sí.
+• Menos consumo de datos al sincronizar.
+</es-419>
+<en-US>
+• "Up to date" streak: a day counts if you finish it with nothing overdue; days off don't break it.
+• Tasks widget: + button to add tasks without opening the app, instant updates and a bigger complete button.
+• Widgets no longer get mixed up with each other.
+• Less data used when syncing.
+</en-US>
+<pt-BR>
+• Sequência "em dia": um dia conta se você o termina sem tarefas atrasadas; dias livres não a quebram.
+• Widget de Tarefas: botão + para adicionar tarefas sem abrir o app, atualização instantânea e botão de concluir maior.
+• Os widgets não se misturam mais entre si.
+• Menos consumo de dados ao sincronizar.
+</pt-BR>
+```
+
 ### 0.5.0 (versionCode 13)
 
 ```

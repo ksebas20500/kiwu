@@ -213,7 +213,7 @@
     <string name="ajustes_sin_segundo">Sin segundo aviso</string>
     <string name="antes_de">%1$s antes</string>
     <string name="ajustes_aviso_racha">Aviso de la racha</string>
-    <string name="ajustes_aviso_racha_texto">A las 20:00, si hoy aún no has completado ninguna tarea</string>
+    <string name="ajustes_aviso_racha_texto">A las 20:00, si hoy te quedan tareas por entregar o vencidas</string>
     <string name="ajustes_notif_on">Las notificaciones están activadas.</string>
     <string name="ajustes_notif_off">Las notificaciones están desactivadas: no recibirás avisos.</string>
     <string name="ajustes_abrir_notif">Abrir ajustes de notificaciones</string>
@@ -485,7 +485,7 @@
 
     <!-- Racha, guía, avisos y piezas -->
     <string name="racha_hoy_cuenta">Racha de %1$s, hoy ya cuenta</string>
-    <string name="racha_mantener">Racha de %1$s, completa una tarea hoy para mantenerla</string>
+    <string name="racha_mantener">Racha de %1$s, entrega lo pendiente hoy para mantenerla</string>
     <string name="racha_sin">Sin racha todavía</string>
     <string name="racha_empieza">Empieza tu racha</string>
     <string name="racha_hoy_falta">Hoy falta</string>
@@ -496,14 +496,15 @@
     <string name="racha_mejor">Mejor racha</string>
     <string name="racha_dias_cumplidos">Días cumplidos</string>
     <string name="racha_tareas_hechas">Tareas hechas</string>
-    <string name="racha_ayuda_1">• Un día cuenta si completas al menos una tarea.</string>
-    <string name="racha_ayuda_2">• Si hoy aún no has completado nada, la racha sigue viva hasta medianoche: la llama se ve gris con un «!».</string>
-    <string name="racha_ayuda_3">• Los eventos no cuentan, y desmarcar la única tarea del día quita ese día.</string>
+    <string name="racha_ayuda_1">• Un día con entrega cuenta si queda todo entregado. Un día con clase cuenta si ese día completas o añades una tarea.</string>
+    <string name="racha_ayuda_2">• Los días sin entregas ni actividad no suman ni rompen la racha.</string>
+    <string name="racha_ayuda_3">• Si hoy te quedan tareas por entregar, la racha sigue viva hasta medianoche: la llama se ve gris con un «!». Las tareas sin fecha y los eventos no cuentan.</string>
     <string name="racha_ayuda_4">• A las 20:00 te avisamos si la racha está a punto de perderse (se cambia en Ajustes → Avisos).</string>
     <string name="entendido">Entendido</string>
-    <string name="racha_estado_hecho">¡Hoy ya cuenta! Vuelve mañana para seguir sumando.</string>
-    <string name="racha_estado_riesgo">Tu racha está en riesgo: completa una tarea antes de medianoche.</string>
-    <string name="racha_estado_empezar">Completa una tarea hoy para empezar una racha.</string>
+    <string name="racha_estado_hecho">¡Estás al día! Vuelve mañana para seguir sumando.</string>
+    <string name="racha_estado_libre">Hoy no hay entregas pendientes: tu racha sigue viva.</string>
+    <string name="racha_estado_riesgo">Tu racha está en riesgo: entrega lo pendiente antes de medianoche.</string>
+    <string name="racha_estado_empezar">Mantén tus entregas al día para empezar una racha.</string>
     <string name="racha_siguiente_meta">Siguiente meta: %1$s</string>
     <string name="racha_dia_cumplido">%1$s, cumplido</string>
     <string name="racha_empezaste">¡Empezaste una racha!</string>
@@ -512,7 +513,7 @@
     <string name="continuar">Continuar</string>
     <string name="racha_iniciales">LU,MA,MI,JU,VI,SA,DO</string>
     <string name="racha_no_pierdas">🔥 No pierdas tu racha de %1$s</string>
-    <string name="racha_aviso_texto">Completa una tarea antes de medianoche para mantenerla.</string>
+    <string name="racha_aviso_texto">Entrega lo pendiente antes de medianoche para mantenerla.</string>
     <string name="canal_racha">Racha</string>
     <string name="canal_racha_desc">Te avisa por la tarde si tu racha está a punto de perderse</string>
     <string name="canal_tareas">Recordatorios de tareas</string>
@@ -542,7 +543,7 @@
     <string name="guia_4_titulo">Notas y horario</string>
     <string name="guia_4_texto">En Notas escribes apuntes con títulos, listas, código e imágenes. En Horario añades tus clases y ves las tareas de cada una.</string>
     <string name="guia_5_titulo">Tu racha</string>
-    <string name="guia_5_texto">Completa al menos una tarea al día para mantener tu racha. Por la tarde te avisamos si está a punto de perderse.</string>
+    <string name="guia_5_texto">Mantén tus entregas al día para sumar racha: un día con clase cuenta si completas o añades una tarea, y los días libres no la rompen. Por la tarde te avisamos si está a punto de perderse.</string>
     <string name="saltar">Saltar</string>
     <string name="pagina_n_de">Página %1$d de %2$d</string>
     <string name="empezar">Empezar</string>

@@ -161,7 +161,7 @@ fun Raiz(
  */
 @Composable
 private fun CelebrarRacha(app: KiwuApp, ajustes: AjustesUi) {
-    val fechas by app.repo.fechasCompletado.collectAsStateWithLifecycle(null)
+    val fechas by app.repo.entradaRacha.collectAsStateWithLifecycle(null)
     var celebrando by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(fechas, ajustes.rachaCelebrada, ajustes.rachaVisible) {
         val f = fechas ?: return@LaunchedEffect

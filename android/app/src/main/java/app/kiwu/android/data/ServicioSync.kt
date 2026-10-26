@@ -57,16 +57,22 @@ class ServicioSync(private val app: KiwuApp) {
                 if (cuenta.sesion != null) sincronizar()
             }
         }
-        peticiones.trySend(Unit) // al abrir la app
+        // Al abrir la app ya sincroniza alPrimerPlano: pedirlo aquí también gastaría una consulta vacía.
     }
 
-    /** La app pasó a primer plano: se mira si hay novedades cada minuto. Con la app oculta no se gasta cuota ni batería. */
+    /**
+     * La app pasó a primer plano: se mira si hay novedades al abrir y después cada minuto; si nadie más cambió nada la espera
+     * se duplica hasta [ESPERA_MAX_MS] (cada consulta, aunque vuelva vacía, cuenta como una lectura de la cuota diaria). Con la
+     * app oculta no se gasta cuota ni batería.
+     */
     fun alPrimerPlano() {
         if (!cuenta.disponible || sondeo?.isActive == true) return
         sondeo = app.alcance.launch {
+            var espera = ESPERA_MIN_MS
             while (true) {
-                if (cuenta.sesion != null) sincronizar()
-                delay(60_000)
+                val novedades = cuenta.sesion != null && sincronizar()
+                espera = if (novedades) ESPERA_MIN_MS else minOf(espera * 2, ESPERA_MAX_MS)
+                delay(espera)
             }
         }
     }
@@ -76,8 +82,9 @@ class ServicioSync(private val app: KiwuApp) {
         sondeo = null
     }
 
-    suspend fun sincronizar() {
-        if (cuenta.sesion == null || !cierre.tryLock()) return
+    /** Devuelve si bajó algo nuevo de otro dispositivo (lo usa el sondeo para espaciar las consultas). */
+    suspend fun sincronizar(): Boolean {
+        if (cuenta.sesion == null || !cierre.tryLock()) return false
         try {
             _estado.update { it.copy(sincronizando = true, error = null) }
             val r = MotorSync(nube, almacen, reloj).sincronizar()
@@ -87,6 +94,7 @@ class ServicioSync(private val app: KiwuApp) {
                     limiteDiario = r.limiteDiario, pendientes = almacen.pendientesTotal(),
                 )
             }
+            return r.bajadas > 0
         } catch (e: ErrorCuenta) {
             _estado.update { it.copy(error = e) }
         } catch (e: Exception) {
@@ -95,6 +103,12 @@ class ServicioSync(private val app: KiwuApp) {
             _estado.update { it.copy(sincronizando = false, correo = cuenta.sesion?.correo) }
             cierre.unlock()
         }
+        return false
+    }
+
+    private companion object {
+        const val ESPERA_MIN_MS = 60_000L
+        const val ESPERA_MAX_MS = 300_000L
     }
 
     private suspend fun alIniciarSesion() {

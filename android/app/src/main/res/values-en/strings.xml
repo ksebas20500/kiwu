@@ -205,7 +205,7 @@
     <string name="ajustes_sin_segundo">No second reminder</string>
     <string name="antes_de">%1$s before</string>
     <string name="ajustes_aviso_racha">Streak reminder</string>
-    <string name="ajustes_aviso_racha_texto">At 8:00 PM, if you haven\'t completed any task today</string>
+    <string name="ajustes_aviso_racha_texto">At 8:00 PM, if you still have tasks due or overdue today</string>
     <string name="ajustes_notif_on">Notifications are on.</string>
     <string name="ajustes_notif_off">Notifications are off: you won\'t get reminders.</string>
     <string name="ajustes_abrir_notif">Open notification settings</string>
@@ -467,7 +467,7 @@
 
     <!-- Racha, guía, avisos y piezas -->
     <string name="racha_hoy_cuenta">%1$s streak, today already counts</string>
-    <string name="racha_mantener">%1$s streak, complete a task today to keep it</string>
+    <string name="racha_mantener">%1$s streak, hand in what\'s pending today to keep it</string>
     <string name="racha_sin">No streak yet</string>
     <string name="racha_empieza">Start your streak</string>
     <string name="racha_hoy_falta">Today\'s missing</string>
@@ -478,14 +478,15 @@
     <string name="racha_mejor">Best streak</string>
     <string name="racha_dias_cumplidos">Days done</string>
     <string name="racha_tareas_hechas">Tasks done</string>
-    <string name="racha_ayuda_1">• A day counts if you complete at least one task.</string>
-    <string name="racha_ayuda_2">• If you haven\'t completed anything today, the streak stays alive until midnight: the flame turns gray with a “!”.</string>
-    <string name="racha_ayuda_3">• Events don\'t count, and unchecking the only task of the day removes that day.</string>
+    <string name="racha_ayuda_1">• A day with a due date counts if everything is handed in. A day with classes counts if you complete or add a task that day.</string>
+    <string name="racha_ayuda_2">• Days with no due dates or activity neither add to nor break the streak.</string>
+    <string name="racha_ayuda_3">• If you still have tasks due today, the streak stays alive until midnight: the flame turns gray with a “!”. Tasks without a date and events don\'t count.</string>
     <string name="racha_ayuda_4">• At 8:00 PM we remind you if the streak is about to be lost (change it in Settings → Reminders).</string>
     <string name="entendido">Got it</string>
-    <string name="racha_estado_hecho">Today counts! Come back tomorrow to keep going.</string>
-    <string name="racha_estado_riesgo">Your streak is at risk: complete a task before midnight.</string>
-    <string name="racha_estado_empezar">Complete a task today to start a streak.</string>
+    <string name="racha_estado_hecho">You\'re up to date! Come back tomorrow to keep going.</string>
+    <string name="racha_estado_libre">Nothing due today: your streak is still alive.</string>
+    <string name="racha_estado_riesgo">Your streak is at risk: hand in what\'s pending before midnight.</string>
+    <string name="racha_estado_empezar">Keep your due dates up to date to start a streak.</string>
     <string name="racha_siguiente_meta">Next goal: %1$s</string>
     <string name="racha_dia_cumplido">%1$s, done</string>
     <string name="racha_empezaste">You started a streak!</string>
@@ -494,7 +495,7 @@
     <string name="continuar">Continue</string>
     <string name="racha_iniciales">MO,TU,WE,TH,FR,SA,SU</string>
     <string name="racha_no_pierdas">🔥 Don\'t lose your %1$s streak</string>
-    <string name="racha_aviso_texto">Complete a task before midnight to keep it.</string>
+    <string name="racha_aviso_texto">Hand in what\'s pending before midnight to keep it.</string>
     <string name="canal_racha">Streak</string>
     <string name="canal_racha_desc">Reminds you in the evening if your streak is about to be lost</string>
     <string name="canal_tareas">Task reminders</string>
@@ -524,7 +525,7 @@
     <string name="guia_4_titulo">Notes and schedule</string>
     <string name="guia_4_texto">In Notes you write notes with headings, lists, code and images. In Schedule you add your classes and see each one\'s tasks.</string>
     <string name="guia_5_titulo">Your streak</string>
-    <string name="guia_5_texto">Complete at least one task a day to keep your streak. In the evening we remind you if it\'s about to be lost.</string>
+    <string name="guia_5_texto">Keep your due dates up to date to build a streak: a day with classes counts if you complete or add a task, and days off don\'t break it. In the evening we remind you if it\'s about to be lost.</string>
     <string name="saltar">Skip</string>
     <string name="pagina_n_de">Page %1$d of %2$d</string>
     <string name="empezar">Start</string>

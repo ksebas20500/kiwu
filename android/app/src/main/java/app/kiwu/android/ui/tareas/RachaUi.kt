@@ -93,6 +93,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kiwu.android.KiwuApp
+import app.kiwu.android.domain.EntradaRacha
 import app.kiwu.android.domain.Racha
 import app.kiwu.android.domain.Rachas
 import kotlinx.coroutines.delay
@@ -138,7 +139,7 @@ internal fun FilaRacha(r: Racha, alClic: () -> Unit) {
 @Composable
 fun InsigniaRacha(app: KiwuApp, alClic: () -> Unit) {
     val visible by remember(app) { app.ajustes.flujo.map { it.rachaVisible } }.collectAsStateWithLifecycle(false)
-    val fechas by app.repo.fechasCompletado.collectAsStateWithLifecycle(null)
+    val fechas by app.repo.entradaRacha.collectAsStateWithLifecycle(null)
     val f = fechas
     if (!visible || f == null) return
     val r = remember(f) { Rachas.calcular(f, System.currentTimeMillis()) }
@@ -265,7 +266,7 @@ private fun CirculoDia(dia: LocalDate, hoy: LocalDate, hecho: Boolean, relleno: 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RachaScreen(app: KiwuApp, alVolver: () -> Unit) {
-    val fechas by app.repo.fechasCompletado.collectAsStateWithLifecycle(emptyList())
+    val fechas by app.repo.entradaRacha.collectAsStateWithLifecycle(EntradaRacha())
     val ahora = remember(fechas) { System.currentTimeMillis() }
     val r = remember(fechas, ahora) { Rachas.calcular(fechas, ahora) }
     val hoy = remember(ahora) { LocalDate.now() }
@@ -323,6 +324,7 @@ private fun AvisoEstado(r: Racha) {
     val (texto, destacado) = when {
         r.hoyCumplido -> stringResource(R.string.racha_estado_hecho) to false
         r.enRiesgo -> stringResource(R.string.racha_estado_riesgo) to true
+        r.actual > 0 -> stringResource(R.string.racha_estado_libre) to false
         else -> stringResource(R.string.racha_estado_empezar) to false
     }
     Surface(

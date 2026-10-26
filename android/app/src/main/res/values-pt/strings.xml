@@ -209,7 +209,7 @@
     <string name="ajustes_sin_segundo">Sem segundo aviso</string>
     <string name="antes_de">%1$s antes</string>
     <string name="ajustes_aviso_racha">Aviso da sequência</string>
-    <string name="ajustes_aviso_racha_texto">Às 20:00, se você ainda não concluiu nenhuma tarefa hoje</string>
+    <string name="ajustes_aviso_racha_texto">Às 20:00, se ainda houver tarefas para entregar ou atrasadas hoje</string>
     <string name="ajustes_notif_on">As notificações estão ativadas.</string>
     <string name="ajustes_notif_off">As notificações estão desativadas: você não receberá avisos.</string>
     <string name="ajustes_abrir_notif">Abrir configurações de notificações</string>
@@ -481,7 +481,7 @@
 
     <!-- Racha, guía, avisos y piezas -->
     <string name="racha_hoy_cuenta">Sequência de %1$s, hoje já conta</string>
-    <string name="racha_mantener">Sequência de %1$s, conclua uma tarefa hoje para mantê-la</string>
+    <string name="racha_mantener">Sequência de %1$s, entregue o pendente hoje para mantê-la</string>
     <string name="racha_sin">Ainda sem sequência</string>
     <string name="racha_empieza">Comece sua sequência</string>
     <string name="racha_hoy_falta">Falta hoje</string>
@@ -492,14 +492,15 @@
     <string name="racha_mejor">Melhor sequência</string>
     <string name="racha_dias_cumplidos">Dias cumpridos</string>
     <string name="racha_tareas_hechas">Tarefas feitas</string>
-    <string name="racha_ayuda_1">• Um dia conta se você concluir pelo menos uma tarefa.</string>
-    <string name="racha_ayuda_2">• Se você ainda não concluiu nada hoje, a sequência continua até a meia-noite: a chama fica cinza com um «!».</string>
-    <string name="racha_ayuda_3">• Eventos não contam, e desmarcar a única tarefa do dia remove esse dia.</string>
+    <string name="racha_ayuda_1">• Um dia com entrega conta se tudo estiver entregue. Um dia com aula conta se nesse dia você concluir ou adicionar uma tarefa.</string>
+    <string name="racha_ayuda_2">• Dias sem entregas nem atividade não somam nem quebram a sequência.</string>
+    <string name="racha_ayuda_3">• Se ainda houver tarefas para entregar hoje, a sequência continua até a meia-noite: a chama fica cinza com um «!». Tarefas sem data e eventos não contam.</string>
     <string name="racha_ayuda_4">• Às 20:00 avisamos se a sequência estiver prestes a ser perdida (altere em Configurações → Avisos).</string>
     <string name="entendido">Entendi</string>
-    <string name="racha_estado_hecho">Hoje já conta! Volte amanhã para continuar somando.</string>
-    <string name="racha_estado_riesgo">Sua sequência está em risco: conclua uma tarefa antes da meia-noite.</string>
-    <string name="racha_estado_empezar">Conclua uma tarefa hoje para começar uma sequência.</string>
+    <string name="racha_estado_hecho">Você está em dia! Volte amanhã para continuar somando.</string>
+    <string name="racha_estado_libre">Nada para entregar hoje: sua sequência continua viva.</string>
+    <string name="racha_estado_riesgo">Sua sequência está em risco: entregue o pendente antes da meia-noite.</string>
+    <string name="racha_estado_empezar">Mantenha suas entregas em dia para começar uma sequência.</string>
     <string name="racha_siguiente_meta">Próxima meta: %1$s</string>
     <string name="racha_dia_cumplido">%1$s, cumprido</string>
     <string name="racha_empezaste">Você começou uma sequência!</string>
@@ -508,7 +509,7 @@
     <string name="continuar">Continuar</string>
     <string name="racha_iniciales">SEG,TER,QUA,QUI,SEX,SÁB,DOM</string>
     <string name="racha_no_pierdas">🔥 Não perca sua sequência de %1$s</string>
-    <string name="racha_aviso_texto">Conclua uma tarefa antes da meia-noite para mantê-la.</string>
+    <string name="racha_aviso_texto">Entregue o pendente antes da meia-noite para mantê-la.</string>
     <string name="canal_racha">Sequência</string>
     <string name="canal_racha_desc">Avisa à tarde se sua sequência estiver prestes a ser perdida</string>
     <string name="canal_tareas">Lembretes de tarefas</string>
@@ -538,7 +539,7 @@
     <string name="guia_4_titulo">Notas e horário</string>
     <string name="guia_4_texto">Em Notas você escreve anotações com títulos, listas, código e imagens. Em Horário você adiciona suas aulas e vê as tarefas de cada uma.</string>
     <string name="guia_5_titulo">Sua sequência</string>
-    <string name="guia_5_texto">Conclua pelo menos uma tarefa por dia para manter sua sequência. À tarde avisamos se ela estiver prestes a ser perdida.</string>
+    <string name="guia_5_texto">Mantenha suas entregas em dia para somar sequência: um dia com aula conta se você concluir ou adicionar uma tarefa, e dias livres não a quebram. À tarde avisamos se ela estiver prestes a ser perdida.</string>
     <string name="saltar">Pular</string>
     <string name="pagina_n_de">Página %1$d de %2$d</string>
     <string name="empezar">Começar</string>

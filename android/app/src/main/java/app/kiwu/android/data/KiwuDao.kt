@@ -18,6 +18,7 @@ import app.kiwu.android.domain.Cuaderno
 import app.kiwu.android.domain.Deber
 import app.kiwu.android.domain.Falta
 import app.kiwu.android.domain.Horario
+import app.kiwu.android.domain.TareaRacha
 import app.kiwu.android.domain.GrupoLista
 import app.kiwu.android.domain.Materia
 import app.kiwu.android.domain.Pagina
@@ -130,14 +131,14 @@ abstract class KiwuDao {
     abstract suspend fun marcarAvisado(id: String, cuando: Long)
 
     /**
-     * Cuándo se completó cada tarea, para la racha. A propósito **incluye las eliminadas** (borrar una tarea hecha no rompe
-     * la racha) y deja fuera los eventos, que no se completan.
+     * Lo que la racha necesita de cada tarea. A propósito **incluye las eliminadas** (hay que saber cuándo dejaron de estar
+     * pendientes) y deja fuera los eventos, que no se completan.
      */
-    @Query("SELECT fecha_completado FROM deber WHERE completado = 1 AND fecha_completado IS NOT NULL AND materia_id != 'eventos'")
-    abstract fun fechasCompletado(): Flow<List<Long>>
+    @Query("SELECT fecha_entrega, completado, fecha_completado, eliminada, creada FROM deber WHERE materia_id != 'eventos'")
+    abstract fun tareasRacha(): Flow<List<TareaRacha>>
 
-    @Query("SELECT fecha_completado FROM deber WHERE completado = 1 AND fecha_completado IS NOT NULL AND materia_id != 'eventos'")
-    abstract suspend fun fechasCompletadoAhora(): List<Long>
+    @Query("SELECT fecha_entrega, completado, fecha_completado, eliminada, creada FROM deber WHERE materia_id != 'eventos'")
+    abstract suspend fun tareasRachaAhora(): List<TareaRacha>
 
     /** Si ya hay algo guardado (listas, cuadernos u horarios, aunque estén borrados): entonces no es una instalación nueva. */
     @Query("SELECT EXISTS(SELECT 1 FROM materia) OR EXISTS(SELECT 1 FROM cuaderno) OR EXISTS(SELECT 1 FROM horario)")
@@ -218,6 +219,13 @@ abstract class KiwuDao {
 
     @Query("SELECT * FROM clase WHERE eliminada IS NULL")
     abstract suspend fun clasesAhora(): List<Clase>
+
+    /** Días de la semana (1 = lunes … 7) con alguna clase: los días exigentes de la racha. */
+    @Query("SELECT DISTINCT dia_semana FROM clase WHERE eliminada IS NULL")
+    abstract fun diasConClase(): Flow<List<Int>>
+
+    @Query("SELECT DISTINCT dia_semana FROM clase WHERE eliminada IS NULL")
+    abstract suspend fun diasConClaseAhora(): List<Int>
 
     @Query("SELECT * FROM clase WHERE id = :id AND eliminada IS NULL")
     abstract suspend fun clase(id: String): Clase?

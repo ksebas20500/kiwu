@@ -84,7 +84,7 @@ class KiwuApp : Application() {
         alcance.launch { ajustes.flujo.map { it.rachaAviso }.distinctUntilChanged().collect { programadorRacha.reconciliar(it) } }
         // Si se completa una tarea después del aviso de la racha, el aviso sobra.
         alcance.launch {
-            repo.fechasCompletado.collect { if (Rachas.calcular(it, System.currentTimeMillis()).hoyCumplido) AvisosRacha.quitar(this@KiwuApp) }
+            repo.entradaRacha.collect { if (!Rachas.calcular(it, System.currentTimeMillis()).enRiesgo) AvisosRacha.quitar(this@KiwuApp) }
         }
     }
 
