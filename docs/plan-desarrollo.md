@@ -90,8 +90,8 @@ Ordenadas por retorno / esfuerzo.
 | Opción | Pros | Contras | Veredicto |
 | --- | --- | --- | --- |
 | **CloudKit / iCloud** | Gratis, sin servidor, ya anotado como pendiente | **No existe en Android ni Linux** (solo API web limitada) | Descartada como núcleo; útil solo como extra Apple |
-| **Firebase (Auth + Firestore)** | Offline, SDK Swift y Kotlin, ya usan Firebase Hosting | Sin cliente de escritorio para Python; modelo de documentos poco adecuado a datos relacionales; dependencia de proveedor; precios por lectura | Viable, 2.ª opción |
-| **Supabase (Postgres + Auth + Realtime)** | SQL relacional, *Row Level Security* para compartir listas, REST/WebSocket usable desde Swift, Kotlin **y Python**, autoalojable, plan gratuito | Hay que escribir la capa de sincronización | **Recomendada** |
+| **Firebase (Auth + Firestore)** | Offline, SDK Swift y Kotlin, ya usan Firebase Hosting | Sin cliente de escritorio para Python; modelo de documentos poco adecuado a datos relacionales; dependencia de proveedor; precios por lectura | **Elegida el 25 oct 2026** (plan Spark): el cliente de Python usa la API REST y las filas con UUID se guardan como documentos planos |
+| **Supabase (Postgres + Auth + Realtime)** | SQL relacional, *Row Level Security* para compartir listas, REST/WebSocket usable desde Swift, Kotlin **y Python**, autoalojable, plan gratuito | Hay que escribir la capa de sincronización; el plan gratuito **se pausa tras 1 semana sin uso** y no hace copias | Descartada el 25 oct 2026 |
 | **Servidor propio** | Control total | Más operación y seguridad a cargo de una sola persona | Descartada al inicio |
 | **CRDT (Automerge/Yjs) sobre almacenamiento simple** | Fusión sin conflictos, ideal para notas | Complejidad y tamaño; bindings desiguales en Swift/Kotlin/Python | Solo para el texto de las notas, en una fase posterior |
 
@@ -239,7 +239,7 @@ iOS/iPadOS (reutiliza SwiftUI), fusión por bloque / CRDT en notas, cifrado de e
 | Renombrar tarde | Alto | Puerta de verificación de marca **antes** de la Fase 5 |
 
 **Decisiones que necesito de ti:**
-1. ¿Supabase como backend (recomendado) o prefieres Firebase?
+1. ~~¿Supabase o Firebase?~~ Resuelta el 25 oct 2026: **Firebase, plan Spark** (ver [plan-sincronizacion.md](plan-sincronizacion.md) §4).
 2. ¿Compartir tareas con **otras personas** entra en la v1 de sync, o solo sincronizar tus propios dispositivos? (Cambia el alcance de la Fase 4.)
 3. ¿Mantienes el foco universitario o abres el producto a cualquier usuario? (Afecta nombre, vocabulario y mercado.)
 4. ¿Hay presupuesto para Apple Developer (99 USD/año) y Google Play (25 USD, pago único)? Sin ellos no hay notarización ni tiendas.

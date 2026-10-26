@@ -3,3 +3,8 @@
 # macOS:    sdk.dir=/Users/tu-usuario/Library/Android/sdk
 # Linux:    sdk.dir=/home/tu-usuario/Android/Sdk
 sdk.dir=/ruta/al/sdk
+# Cuenta y sincronización (opcional): Firebase > Configuración del proyecto > General. Sin esto la app funciona, solo sin cuenta.
+firebase.apiKey=
+firebase.projectId=
+# ID de cliente web de Google (Firebase → Authentication → Google → Configuración del SDK web). Activa «Continuar con Google».
+google.webClientId=

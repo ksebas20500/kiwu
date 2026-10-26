@@ -4,15 +4,27 @@ title: Política de privacidad de Kiwu
 
 # Política de privacidad de Kiwu
 
-Última actualización: 24 de octubre de 2026
+Última actualización: 25 de octubre de 2026
 
 Kiwu es una aplicación gratuita de tareas, notas y horario para estudiantes, creada por Kevin Sebastián Medina Nava (Ksebas Labs). Esta política explica qué datos usa la aplicación para Android y cómo.
 
 ## Tus datos de Kiwu se quedan en tu teléfono
 
-Tus listas, tareas, notas, clases del horario, archivos adjuntos y ajustes se guardan **solo en tu dispositivo**. Kiwu no tiene cuentas de usuario ni servidor propio, y no recibimos, vemos ni almacenamos ninguno de esos datos. No usamos analíticas ni herramientas de seguimiento propias.
+Tus listas, tareas, notas, clases del horario, archivos adjuntos y ajustes se guardan **en tu dispositivo**. Kiwu funciona sin cuenta y, si no creas una, no recibimos, vemos ni almacenamos ninguno de esos datos. No usamos analíticas ni herramientas de seguimiento propias.
 
-Si exportas una copia de seguridad (archivo `.kiwu.json`), el archivo lo guardas tú donde elijas; no se envía a ningún sitio.
+Si exportas una copia de seguridad (archivo `.kiwu.json`), el archivo lo guardas tú donde elijas.
+
+## Cuenta y sincronización (opcional)
+
+Si lo decides, puedes crear una cuenta (con correo y contraseña o con Google) para ver los mismos datos en tus dispositivos. La cuenta y la sincronización usan **Google Firebase** (Authentication y Cloud Firestore):
+
+- Se guardan tu correo y, en la nube, el **texto** de tus listas, tareas, notas, horarios y clases. **Las imágenes y los archivos adjuntos no se suben.** Las faltas de clase tampoco.
+- Cada cuenta solo puede leer y escribir sus propios datos (reglas de seguridad de Firestore). Nosotros no usamos esos datos para nada más.
+- Puedes cerrar sesión cuando quieras (lo de tu dispositivo no se borra) y, en Ajustes → Cuenta, **borrar tu cuenta y todos tus datos de la nube**.
+
+## Copia de seguridad en Google Drive (opcional)
+
+Con «Guardar en Drive», Kiwu guarda un archivo de copia de seguridad (con las imágenes de las notas) en tu propio Google Drive. Kiwu solo puede ver y modificar ese archivo, no el resto de tu Drive. Los datos están en tu cuenta de Google; nosotros no tenemos acceso a ellos.
 
 ## Publicidad (Google AdMob)
 
@@ -33,6 +45,7 @@ El pago lo gestiona **Google Play**. Kiwu no recibe ni guarda tus datos de pago.
 Kiwu usa Internet únicamente para:
 
 - mostrar los anuncios (Google AdMob) y gestionar la compra (Google Play),
+- iniciar sesión y sincronizar (Google Firebase) o guardar y restaurar copias (Google Drive), solo si tú lo usas,
 - consultar a Google Play si hay una versión nueva de la app y descargarla cuando aceptas, y
 - descargar la vista previa de un enlace cuando lo pegas en una nota.
 

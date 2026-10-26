@@ -58,6 +58,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        (application as KiwuApp).sync.alPrimerPlano()
+    }
+
+    override fun onStop() {
+        (application as KiwuApp).sync.alSegundoPlano()
+        super.onStop()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         leer(intent)

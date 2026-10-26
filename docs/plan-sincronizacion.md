@@ -25,7 +25,7 @@ La regla: **se sincroniza lo que la persona escribió; no lo que cada pantalla d
 | Cuadernos y páginas: título, icono, favorita, contenido por bloques | Vista de tareas (lista/tablero), tamaño de ventana, filtros y pestañas abiertas |
 | Contenido de la nota: tipos de bloque, texto, formato en línea con **nombres** de color («rojo», «azul») | Atajos de teclado (macOS/Linux) |
 | Clases del horario (día, inicio, fin, materia, aula) | Carpeta vinculada a una lista y sus rutas/bookmarks (son del dispositivo) |
-| Imágenes y archivos adjuntos (como blobs, ver 4.4) | Colores pastel de las tareas: se calculan localmente a partir del id, así cada plataforma los pinta con su paleta |
+| Imágenes y archivos adjuntos (**nunca se sincronizan**, solo el nombre del archivo) · Colores pastel de las tareas: se calculan localmente a partir del id, así cada plataforma los pinta con su paleta |
 | Marcas de borrado | Estado de avisos ya mostrados (`recordado`) y alarmas programadas: son locales |
 
 Consecuencias de diseño:
@@ -43,7 +43,7 @@ Consecuencias de diseño:
 4. **Cambios, no copias.** Cola de salida (*outbox*) con **compactación**: varias ediciones seguidas de la misma fila se envían como una. Descarga incremental con cursor (`desde`), nunca la base entera después de la primera vez.
 5. **Lotes y compresión.** Hasta 200 filas por petición, comprimidas (gzip). Reintentos con espera exponencial (1 s, 2 s, 4 s… hasta 15 min) y sin reintentar si no hay red.
 6. **Disparadores sensatos.** Tras un cambio (con 3 s de espera para agrupar), al abrir la app, al volver al primer plano y cada 15 min como máximo en segundo plano. Conexión en vivo (*realtime*) solo con la app visible, para no gastar batería.
-7. **Imágenes aparte.** Los adjuntos no viajan dentro del JSON de la nota (hoy `imageData` va incrustado en base64). Se suben una vez a almacenamiento por hash de contenido y la nota guarda solo la referencia; en el otro dispositivo se descargan al abrir la nota y se guardan en una caché con tope de tamaño. Es el requisito previo más importante para que una nota no pese megabytes en cada sincronización.
+7. **Sin imágenes ni archivos.** Solo viaja texto. Antes de enviar una nota se quitan los bloques de imagen, el `imageData`, las vistas previas de enlace en base64 y las rutas del dispositivo (`Documento.paraSincronizar()` en `domain/Sincronizacion.kt`). Una nota sincronizada pesa unos pocos KB.
 8. **Transacciones cortas.** Aplicar lo recibido se hace en una sola transacción por lote, sin bloquear las lecturas de la interfaz (SQLite en modo WAL en Linux; Room ya lo hace en Android).
 9. **Presupuestos medibles** (se comprueban en las pruebas de cada fase):
 
@@ -57,37 +57,39 @@ Consecuencias de diseño:
 
 ## 4. Diseño técnico
 
-> **Decisión (13 oct 2026):** se usa **Supabase con el plan gratuito**; por ahora no se necesitan más procesos ni gasto. La sección 4.0 recoge lo que ese plan exige.
+> **Decisión (25 oct 2026):** se usa **Firebase con el plan Spark (gratis, sin tarjeta)**: Authentication + Cloud Firestore. Sustituye a la decisión del 13 oct (Supabase gratis), porque ese plan **se pausa tras una semana sin uso** y no tiene copias. Spark no se pausa y nunca cobra: al agotar la cuota, Firestore rechaza las peticiones hasta el día siguiente. El protocolo, los conflictos y las fases no cambian; solo el servidor.
 
-### 4.0 Plan gratuito de Supabase: límites y cómo se cubren
+### 4.0 Plan Spark de Firebase: límites y cómo se cubren
 
-Límites del plan gratuito, leídos en [supabase.com/pricing](https://supabase.com/pricing) el 13 oct 2026 (conviene releerlos antes de lanzar):
+Cuotas aproximadas del plan Spark (**releerlas en [firebase.google.com/pricing](https://firebase.google.com/pricing) antes de lanzar**; no se han verificado aquí):
 
-| Límite | Valor | Qué implica para Kiwu | Medida |
+| Límite | Valor aproximado | Qué implica para Kiwu | Medida |
 | --- | --- | --- | --- |
-| Base de datos | 500 MB por proyecto | Texto de tareas y notas ocupa muy poco: 5 000 tareas y 500 notas sin imágenes son unos pocos MB | Imágenes fuera de la base; vigilar el tamaño con una consulta mensual |
-| Almacenamiento de archivos | 1 GB | Aquí irían las imágenes y los adjuntos de todas las personas | Reducir las imágenes antes de subirlas (como ya se hace con el fondo: máximo 1 600 px), tope de 5 MB por archivo y de 100 MB por cuenta, sin duplicados por hash |
-| Salida de datos (*egress*) | 5 GB al mes | Cada sincronización descarga solo lo nuevo | Sincronización incremental, compresión y descarga de imágenes bajo demanda |
-| Usuarios activos | 50 000 al mes | Sobra para empezar | — |
-| **Pausa por inactividad** | **El proyecto se pausa tras 1 semana sin uso** | Si nadie lo usa en una semana (en pruebas, vacaciones), el servidor se apaga y la primera sincronización falla | Una tarea programada gratuita (GitHub Actions, cada 3 días) que hace una consulta sencilla; y la app muestra «servidor en pausa, reintentando» en vez de un error |
-| **Sin copias de seguridad automáticas** | No incluidas | Un error del servidor o una migración mala puede perder datos | Copia semanal automática de la base (`pg_dump`) guardada en un repositorio privado o disco propio, y **la copia local de cada dispositivo sigue siendo la principal**: la nube nunca es el único sitio con los datos |
-| Proyectos activos | 2 | Uno de pruebas y uno de producción | Dos proyectos: `kiwu-dev` y `kiwu-prod` |
+| Almacenamiento de Firestore | 1 GiB por proyecto | Solo viaja texto (tareas, listas, notas, horario), que ocupa muy poco | **Las imágenes y los archivos nunca se sincronizan** (decisión del 25 oct 2026): `Documento.paraSincronizar()` los quita |
+| Escrituras | 20 000 al día **por proyecto** | Una primera subida de 5 000 tareas gasta un cuarto del día | Outbox compactada; primera subida en lotes repartidos; reintento al día siguiente |
+| Lecturas | 50 000 al día por proyecto | Cada fila descargada cuenta; una consulta vacía cuenta 1 | `pull` incremental con cursor; sondeo cada 15 min como mínimo; sin escuchas en vivo salvo con la app visible |
+| Salida de datos | 10 GiB al mes | Sobra con sincronización incremental | Compresión y descarga de imágenes bajo demanda |
+| Firebase Storage | No disponible sin plan Blaze | No hace falta: no se suben archivos | — |
+| **Copias de seguridad** | La exportación gestionada exige Blaze | Un error puede perder datos del servidor | **La copia local de cada dispositivo es la principal** (`.kiwu.json`); la nube nunca es el único sitio con los datos |
+| Cuota diaria agotada | Error `RESOURCE_EXHAUSTED`, sin cobro | La sincronización se detiene unas horas | La app sigue 100 % local y avisa «límite diario del servidor, reintentando mañana» |
 
-Si el uso crece, el paso siguiente es el plan de pago de Supabase (copias diarias, sin pausa); el protocolo no cambia.
+La cuota es **del proyecto, no de cada persona**: con decenas de cuentas nuevas el mismo día se agota. Ese es el momento de pasar a Blaze (con alerta de gasto); el protocolo no cambia. Cloud SQL, AlloyDB, Spanner, Bigtable y Memorystore se descartan: no tienen capa gratuita permanente.
 
 ### 4.1 Servidor
 
-Supabase (Postgres, Auth, Storage, Realtime), como ya se recomendó. Alternativa: Firebase, descartada por no tener cliente para Python/Linux y por su modelo de documentos. Decisión pendiente de confirmar (ver 7).
+Firebase: **Authentication** y **Cloud Firestore** en el proyecto que ya aloja `kiwu.web.app`. Los tres clientes usan la **API REST** (Identity Toolkit y Firestore), así Python/Linux no necesita SDK; Android y macOS pueden usar el SDK solo para el inicio de sesión con Google o Apple y pasar el token al cliente REST.
 
-Tablas (todas con `usuario_id`, `actualizada` reloj híbrido, `eliminada`, `dispositivo`, `seq` incremental global por usuario):
+Una colección por persona: `usuarios/{uid}/filas/{tabla}_{id}`. Cada documento lleva:
 
-- `materia`, `deber`, `cuaderno`, `pagina`, `clase` (horario), `blob` (adjuntos).
-- Seguridad: *Row Level Security* en todas; cada persona solo ve sus filas. Sin claves de servicio en los clientes.
+- `tabla` (`materia`, `deber`, `cuaderno`, `pagina`, `clase`, `falta`…), `datos` (los campos de la fila), `campos` (reloj híbrido de cada campo), `eliminada`, `dispositivo`.
+- `servidor`: marca puesta por el servidor (`REQUEST_TIME`); es el cursor del `pull`.
+
+Seguridad en `firestore.rules`, en lugar de RLS: solo `request.auth.uid == uid` lee y escribe su rama, con validación de las claves permitidas y del tamaño. Sin claves de servicio en los clientes.
 
 ### 4.2 Protocolo
 
-- `push(cambios[])`: cada cambio lleva `tabla`, `id` (UUID, el mismo que hoy), `campos` modificados con su marca de tiempo híbrida y `eliminada`. El servidor es **idempotente**: reenviar el mismo lote no cambia nada.
-- `pull(desde)`: devuelve las filas con `seq > desde` y el nuevo cursor.
+- `push(cambios[])`: cada cambio lleva `tabla`, `id` (UUID, el mismo que hoy), `campos` modificados con su marca de tiempo híbrida y `eliminada`. Se envía con `commit` por lotes (hasta 200 escrituras); para el último-escritor-gana por campo se lee y escribe en una transacción que solo cambia los campos más recientes. Es **idempotente**: reenviar el mismo lote no cambia nada.
+- `pull(desde)`: consulta `servidor > desde`, ordenada por `servidor`, en lotes de 200, y devuelve el nuevo cursor.
 - Versión de protocolo en cada petición, para que un cliente antiguo reciba un «actualiza la app» y no datos a medias.
 
 ### 4.3 Resolución de conflictos
@@ -105,17 +107,17 @@ El reloj híbrido (hora + contador + id del dispositivo) evita que un teléfono 
 
 | Plataforma | Cambios previos | Cliente de sincronización |
 | --- | --- | --- |
-| **Android** (Room) | Migración 2→3: columnas de reloj y dispositivo, tabla `outbox`, tabla `estado_sync`; adjuntos a archivos con hash | Kotlin + `WorkManager`; cliente HTTP ligero |
-| **Linux** (SQLite) | Migración 2→3 equivalente; adjuntos a archivos | Python (`httpx`/`urllib`) en hilo propio |
+| **Android** (Room) | Migración 2→3: columnas de reloj y dispositivo, tabla `outbox`, tabla `estado_sync`; sin cambios en adjuntos | Kotlin + `WorkManager`; cliente HTTP ligero |
+| **Linux** (SQLite) | Migración 2→3 equivalente | Python (`httpx`/`urllib`) en hilo propio |
 | **macOS** (Core Data) | **Borrado lógico todavía sin hacer** (`eliminada` en Core Data) y migración ligera; requiere Xcode | Swift con `URLSession`; tarea en segundo plano |
 
 El esquema local de Android y Linux ya tiene UUID estables y borrado lógico; macOS es el único que necesita ese paso antes de poder sincronizar.
 
 ### 4.5 Cuenta
 
-- Pantalla «Cuenta» en Ajustes: iniciar sesión (correo con enlace; Google en Android; Apple en macOS/iOS) o seguir sin cuenta.
+- Pantalla «Cuenta» en Ajustes: iniciar sesión (correo y contraseña en los tres, porque el enlace por correo es incómodo en Linux; Google en Android; Apple en macOS) o seguir sin cuenta.
 - Primera activación: se suben los datos locales con sus UUID (sin duplicados) y se descargan los del servidor; si ambos lados tienen datos, se **combinan** por UUID y se muestra el resumen antes de aplicar.
-- Cerrar sesión no borra nada local. Borrar la cuenta borra los datos del servidor (requisito de Apple y Google).
+- Cerrar sesión no borra nada local. Borrar la cuenta borra los datos del servidor (requisito de Apple y Google): sin Cloud Functions en Spark, el propio cliente borra sus documentos por lotes y después el usuario.
 - Tokens en Android Keystore / Keychain / Secret Service.
 
 ## 5. Fases, pruebas y criterios de cierre
@@ -123,12 +125,12 @@ El esquema local de Android y Linux ya tiene UUID estables y borrado lógico; ma
 | Fase | Contenido | Criterio de cierre |
 | --- | --- | --- |
 | **S0. Requisitos previos** | Adjuntos fuera del JSON de la nota; borrado lógico en macOS; modelo del horario definido; reloj híbrido y orden fraccionario | Las fixtures de `docs/contrato/` se leen igual en las tres plataformas; ninguna nota supera 100 KB por imágenes |
-| **S1. Servidor** | Esquema, RLS, `push`/`pull`, límites y pruebas con una base local de desarrollo | Dos clientes de prueba se sincronizan; reenviar un lote no duplica |
+| **S1. Servidor** | Colección `filas`, `firestore.rules`, `push`/`pull`, límites y pruebas con el Firebase Emulator Suite | Dos clientes de prueba se sincronizan; reenviar un lote no duplica |
 | **S2. Protocolo común** | Vectores de prueba en `docs/contrato/sync/` (conflictos de campo, borrado vs edición, nota con dos ediciones, campos desconocidos) que pasan las tres implementaciones | Misma salida en Kotlin, Python y Swift |
 | **S3. Android** | Outbox, cliente, `WorkManager`, pantalla Cuenta | Presupuestos de la sección 3; la interfaz no pierde fotogramas durante una sincronización |
 | **S4. Linux** | Igual en Python | Mismos presupuestos |
 | **S5. macOS** | Igual en Swift | Mismos presupuestos; probado en un Mac |
-| **S6. Notas e imágenes** | Fusión por bloque, copia de conflicto, caché de adjuntos | Edición simultánea de dos bloques distintos en dos dispositivos no pierde texto |
+| **S6. Notas** | Fusión por bloque, copia de conflicto | Edición simultánea de dos bloques distintos en dos dispositivos no pierde texto |
 | **S7. Compartir (opcional)** | Listas compartidas con roles | Ver plan-desarrollo, fase 4 |
 
 Pruebas transversales:
@@ -151,11 +153,28 @@ Estimación orientativa para una persona: S0 2 semanas, S1–S2 3 semanas, S3 3 
 
 **Cerradas**
 
-1. Servidor: **Supabase**, con el **plan gratuito** (ver 4.0). Firebase queda descartado.
-2. Coste: ninguno por ahora; se revisa si hay uso amplio.
+1. Servidor: **Firebase (Auth + Firestore) en plan Spark**, sin tarjeta (ver 4.0). Sustituye a Supabase, que se pausa por inactividad.
+2. Coste: ninguno; se pasa a Blaze solo si la cuota diaria se queda corta.
+3. Alcance de la primera versión: **solo sincronización propia**; compartir listas y la racha con amigos van después.
 
 **Abiertas**
 
 1. Si «compartir» entra en la primera versión de la cuenta o después.
 2. Qué hacer con las imágenes ya incrustadas en notas existentes: migrarlas al primer arranque tras actualizar.
-3. Marca y dominio antes de abrir cuentas a público (ver [marca-nombres.md](marca-nombres.md)): cambiar el nombre después de tener cuentas es más caro. El proyecto de Supabase se crea con el nombre definitivo.
+3. Marca y dominio antes de abrir cuentas a público (ver [marca-nombres.md](marca-nombres.md)): cambiar el nombre después de tener cuentas es más caro. El proyecto de Firebase se renombra o se crea con el nombre definitivo.
+
+## 8. Estado de la implementación en Android (25 oct 2026)
+
+Hecho y probado en un emulador con Firebase real (Spark): cuenta por correo y contraseña, subida de lo que ya había, descarga de lo que escribe otro dispositivo (en menos de un minuto con la app abierta), borrado de cuenta con datos y reglas de Firestore que rechazan a otros usuarios.
+
+- **Simplificación de la primera versión:** gana **la fila completa** del último que la editó (`actualizada`), no cada campo. Una cola de SQLite llenada por *triggers* (`SyncSql`) marca qué filas cambiaron; no se tocó `KiwuDao`. `FusionSync` (por campo) queda escrito y probado para cuando se quiera pasar a campos.
+- **Orden:** el motor (`MotorSync`) **baja primero y sube después**, para que un dispositivo que estuvo sin conexión no pise lo más reciente.
+- **Cuándo sincroniza:** unos 3 s después de un cambio, al abrir la app y cada minuto mientras está a la vista. Con la app oculta no consulta.
+- **No viaja:** imágenes, archivos, rutas del dispositivo (`materia.carpeta`), avisos ya mostrados (`deber.recordado`) ni las **faltas de clase** (no tienen marca de tiempo ni borrado lógico todavía).
+- **Límites conocidos:** cada escritura propia vuelve en la siguiente descarga (1 lectura de cuota por cambio); entre bajar y subir hay una ventana corta en la que otro dispositivo podría escribir; la sesión se guarda en `SharedPreferences` privadas (falta Keystore); sin inicio con Google todavía; el orden fraccionario de tareas queda pendiente.
+- **Configuración:** `firebase.apiKey` y `firebase.projectId` en `android/local.properties` (ver `local.properties.example`). Sin ellos la app compila y funciona sin cuenta.
+
+### Google y Drive (Android)
+
+- **Entrar con Google:** Credential Manager entrega un token de Google y Firebase lo canjea (`accounts:signInWithIdp`). Necesita `google.webClientId` en `android/local.properties` y, en Firebase, la app Android registrada con la huella SHA-1 de la clave con que se firma (la de depuración para probar, la de Play para publicar).
+- **Copias en Drive, no en Firebase:** el mismo archivo `.kiwu.json` de la copia manual se guarda como un único archivo visible en «Mi unidad» (alcance `drive.file`: Kiwu solo ve lo que él creó). Funciona con cualquier cuenta de Google del teléfono, haya o no sesión de Kiwu. Requiere activar la API de Google Drive en el proyecto de Google Cloud y, mientras la pantalla de consentimiento esté en «pruebas», añadir las cuentas como usuarios de prueba.
