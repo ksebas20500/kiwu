@@ -264,7 +264,7 @@ private fun TarjetaBase(d: Deber, estado: TareasEstado, color: ColorPastel?, vm:
             if (conMenu) {
                 Box {
                     IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.tarea_opciones)) }
-                    MenuTarea(menu, { menu = false }, vm.reglas.columnaDe(d), { vm.mover(d.id, it) }, { vm.eliminarTarea(d.id) })
+                    MenuTarea(menu, { menu = false }, { vm.eliminarTarea(d.id) })
                 }
             }
         }

@@ -126,7 +126,7 @@ fun CalendarioScreen(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String
                     FilaTarea(
                         d, estado.nombres[d.materiaId], estado.ahora, vm.reglas,
                         alAbrir = { alAbrir(d.id) }, alMarcar = { vm.marcar(d.id, it) },
-                        alMover = { vm.mover(d.id, it) }, alEliminar = { vm.eliminarTarea(d.id) },
+                        alEliminar = { vm.eliminarTarea(d.id) },
                     )
                 }
             }

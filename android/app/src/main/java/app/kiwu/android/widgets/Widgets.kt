@@ -97,16 +97,24 @@ fun intencionNuevaTarea(contexto: Context, lista: String?, hoy: Boolean): Intent
         putExtra(NuevaTareaActivity.EXTRA_HOY, hoy)
     }
 
+/** Intención para abrir la hoja de un día del widget de calendario (lo pendiente y añadir una tarea), sin abrir la app. */
+fun intencionDiaCalendario(contexto: Context, dia: java.time.LocalDate): Intent =
+    Intent(contexto, DiaCalendarioActivity::class.java).apply {
+        data = android.net.Uri.parse("kiwu://widget/dia/${dia.toEpochDay()}")
+        putExtra(DiaCalendarioActivity.EXTRA_DIA, dia.toEpochDay())
+    }
+
 /**
  * Refresco de los widgets: cuando cambian los datos de la app (cualquier lista, tarea, nota, clase o ajuste) y cuando
  * toca por una alarma (cambio de clase o medianoche).
  */
 object Widgets {
-    /** Vuelve a dibujar los tres widgets a partir de la base de datos. */
+    /** Vuelve a dibujar los widgets a partir de la base de datos. */
     suspend fun refrescar(contexto: Context) {
         DeberesWidget().updateAll(contexto)
         HorarioWidget().updateAll(contexto)
         NotasWidget().updateAll(contexto)
+        CalendarioWidget().updateAll(contexto)
     }
 
     /**

@@ -61,7 +61,8 @@ fun GuiaScreen(alTerminar: () -> Unit) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(Modifier.widthIn(max = 420.dp).padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text(p.emoji, fontSize = 72.sp)
-                    Text(stringResource(p.titulo), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+                    // Sin Surface que fije el color del contenido, el título salía negro: invisible sobre el fondo del modo oscuro.
+                    Text(stringResource(p.titulo), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground, textAlign = TextAlign.Center)
                     Text(stringResource(p.texto), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                 }
             }

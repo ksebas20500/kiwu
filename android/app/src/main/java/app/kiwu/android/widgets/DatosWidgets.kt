@@ -19,6 +19,7 @@ import app.kiwu.android.domain.esEvento
 import app.kiwu.android.ui.horario.ColoresClase
 import app.kiwu.android.ui.ColorPastel
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Locale
 import java.time.format.DateTimeFormatter
@@ -89,6 +90,14 @@ data class DatosNotas(
  * Lo que muestran los widgets, calculado a partir de los datos de la app. Son funciones puras (sin Android) para poder
  * probarlas en JVM, igual que `Reglas` y `ReglasHorario`.
  */
+/** Una tarea o un evento pendiente en una casilla del calendario. */
+data class ChipCalendario(val id: String, val titulo: String, val vencida: Boolean, val esEvento: Boolean)
+
+data class DiaCalendario(val fecha: LocalDate, val delMes: Boolean, val esHoy: Boolean, val chips: List<ChipCalendario>)
+
+/** El mes que se dibuja: [mes] es su primer día y [semanas] las filas de lunes a domingo. */
+data class DatosCalendario(val mes: LocalDate, val semanas: List<List<DiaCalendario>>)
+
 object DatosWidgets {
 
     // --- deberes ---------------------------------------------------------------------------------
@@ -247,5 +256,36 @@ object DatosWidgets {
         if (limpio.length <= limite) return limpio
         val corte = limpio.substring(0, limite).substringBeforeLast(' ', limpio.substring(0, limite))
         return "$corte…"
+    }
+
+    // --- calendario ------------------------------------------------------------------------------
+
+    /**
+     * El mes de [mes] con lo pendiente de cada día: las tareas sin completar y los eventos con fecha de entrega, de todas las
+     * listas, ordenados por hora. Las tareas borradas ya no llegan aquí (`deberes` solo trae las vigentes).
+     */
+    fun calendario(deberes: List<Deber>, mes: LocalDate, ahora: Long, zona: ZoneId = ZoneId.systemDefault()): DatosCalendario {
+        val reglas = Reglas(zona)
+        val primero = mes.withDayOfMonth(1)
+        val hoy = Instant.ofEpochMilli(ahora).atZone(zona).toLocalDate()
+        val porDia = deberes
+            .filter { it.fechaEntrega != null && (it.esEvento || !it.completado) }
+            .sortedBy { it.fechaEntrega }
+            .groupBy { Instant.ofEpochMilli(it.fechaEntrega!!).atZone(zona).toLocalDate() }
+        val ultimo = primero.withDayOfMonth(primero.lengthOfMonth())
+        var inicio = primero.minusDays((primero.dayOfWeek.value - 1).toLong())
+        val semanas = buildList {
+            while (!inicio.isAfter(ultimo)) {
+                add((0L..6L).map { n ->
+                    val dia = inicio.plusDays(n)
+                    DiaCalendario(
+                        fecha = dia, delMes = dia.month == primero.month, esHoy = dia == hoy,
+                        chips = porDia[dia].orEmpty().map { ChipCalendario(it.id, it.titulo, !it.esEvento && reglas.estaVencido(it, ahora), it.esEvento) },
+                    )
+                })
+                inicio = inicio.plusDays(7)
+            }
+        }
+        return DatosCalendario(primero, semanas)
     }
 }

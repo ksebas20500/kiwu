@@ -48,7 +48,20 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_notas" />
         </receiver>
+        <receiver android:name=".widgets.CalendarioWidgetReceiver" android:exported="false" android:label="@string/widget_calendario">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_calendario" />
+        </receiver>
         <receiver android:name=".widgets.WidgetAlarmaReceiver" android:exported="false" />
+        <activity
+            android:name=".widgets.DiaCalendarioActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Kiwu.Flotante" />
         <activity
             android:name=".widgets.NuevaTareaActivity"
             android:exported="false"

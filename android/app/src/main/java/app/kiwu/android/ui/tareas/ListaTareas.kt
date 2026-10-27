@@ -53,7 +53,7 @@ fun ListaTareas(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String) -> 
                     FilaTarea(
                         d, if (mostrarLista) estado.nombres[d.materiaId] else null, estado.ahora, vm.reglas,
                         alAbrir = { alAbrir(d.id) }, alMarcar = { vm.marcar(d.id, it) },
-                        alMover = { vm.mover(d.id, it) }, alEliminar = { vm.eliminarTarea(d.id) },
+                        alEliminar = { vm.eliminarTarea(d.id) },
                     )
                 }
                 if (estado.completados.isNotEmpty()) {
@@ -76,7 +76,7 @@ fun ListaTareas(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String) -> 
                             FilaTarea(
                                 d, if (mostrarLista) estado.nombres[d.materiaId] else null, estado.ahora, vm.reglas,
                                 alAbrir = { alAbrir(d.id) }, alMarcar = { vm.marcar(d.id, it) },
-                                alMover = { vm.mover(d.id, it) }, alEliminar = { vm.eliminarTarea(d.id) },
+                                alEliminar = { vm.eliminarTarea(d.id) },
                             )
                         }
                     }
