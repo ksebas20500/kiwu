@@ -7,6 +7,9 @@
     <string name="widget_horario_descripcion">The current and next class, and today\'s classes with their pending tasks.</string>
     <string name="widget_notas">Quick note</string>
     <string name="widget_notas_descripcion">Create a note with one tap and see the latest ones from a notebook.</string>
+    <string name="widget_calendario">Calendar</string>
+    <string name="widget_calendario_descripcion">The month with the pending tasks and events from all your lists. Tap a day to see what is on it and add a task; tap the month name to jump back to today.</string>
+    <string name="dia_sin_pendientes">Nothing pending this day</string>
     <string name="widget_configuracion">Set up Kiwu widget</string>
 
     <!-- Fechas e idioma -->
@@ -326,7 +329,6 @@
     <string name="elegir_hora">Choose time…</string>
     <string name="todo_el_dia_sin_hora">All day (no time)</string>
     <string name="editado_n">Edited %1$s</string>
-    <string name="mover_a_n">Move to “%1$s”</string>
     <string name="evento">Event</string>
     <string name="en_curso">In progress</string>
     <string name="tarea_opciones">Task options</string>
@@ -504,6 +506,7 @@
     <string name="canal_horario_desc">Reminders before your classes and activities start</string>
     <string name="completar">Complete</string>
     <string name="posponer_1h">Snooze 1 h</string>
+    <string name="posponer_manana">Snooze until tomorrow</string>
     <string name="aviso_evento_ya">Just started</string>
     <string name="aviso_evento_hace">Started %1$d min ago</string>
     <string name="aviso_tarea_ya">Just became due</string>

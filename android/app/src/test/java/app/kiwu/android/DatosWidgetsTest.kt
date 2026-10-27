@@ -269,4 +269,29 @@ class DatosWidgetsTest {
         assertEquals(false, datos.hayCuadernos)
         assertTrue(datos.notas.isEmpty())
     }
+
+    @Test
+    fun elCalendarioMuestraLoPendienteDeTodasLasListasYLosEventos() {
+        val deberes = listOf(
+            deber("a", "q", "Informe", ms(LocalDate.of(2026, 10, 28), 18)),
+            deber("b", "m", "Quiz", ms(LocalDate.of(2026, 10, 28), 9)),
+            deber("c", "q", "Hecho", ms(LocalDate.of(2026, 10, 28), 10), completado = true),
+            deber("d", ID_EVENTOS, "Charla", ms(LocalDate.of(2026, 10, 30), 0)),
+            deber("e", "q", "Sin fecha"),
+            deber("f", "q", "Vencida", ms(LocalDate.of(2026, 10, 5), 18)),
+        )
+        val datos = DatosWidgets.calendario(deberes, LocalDate.of(2026, 10, 15), ahora, zona)
+        assertEquals(LocalDate.of(2026, 10, 1), datos.mes)
+        // Octubre de 2026 empieza en jueves y acaba en sábado: cinco semanas, de lunes 28 de septiembre a domingo 1 de noviembre.
+        assertEquals(5, datos.semanas.size)
+        assertTrue(datos.semanas.all { it.size == 7 && it.first().fecha.dayOfWeek.value == 1 })
+        assertEquals(LocalDate.of(2026, 9, 28), datos.semanas.first().first().fecha)
+        val dias = datos.semanas.flatten().associateBy { it.fecha }
+        // Pendientes del 28 ordenadas por hora; la completada no sale.
+        assertEquals(listOf("Quiz", "Informe"), dias.getValue(LocalDate.of(2026, 10, 28)).chips.map { it.titulo })
+        assertTrue(dias.getValue(LocalDate.of(2026, 10, 30)).chips.single().esEvento)
+        assertTrue(dias.getValue(LocalDate.of(2026, 10, 5)).chips.single().vencida)
+        assertTrue(dias.getValue(LocalDate.of(2026, 10, 19)).esHoy)
+        assertEquals(false, dias.getValue(LocalDate.of(2026, 9, 29)).delMes)
+    }
 }

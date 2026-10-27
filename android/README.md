@@ -2,7 +2,7 @@
 
 App nativa de Android (Kotlin, Jetpack Compose, Room). Mismas funciones que la de escritorio, con widgets de pantalla de inicio. Para ver qué hace Kiwu, consulta el [README principal](../README.md); la ruta de desarrollo está en [docs/android-plan.md](../docs/android-plan.md).
 
-Versión actual: **0.5.1** · Android 8.0 (API 26) o superior.
+Versión actual: **0.5.2** · Android 8.0 (API 26) o superior.
 
 ## Qué incluye
 
@@ -17,7 +17,7 @@ Versión actual: **0.5.1** · Android 8.0 (API 26) o superior.
 | **Guía de inicio** | Al abrir la app por primera vez: unas pantallas de bienvenida y la lista de ejemplo «Empieza aquí»; se puede repetir desde Ajustes → Acerca de |
 | **Recordatorios** | Notificaciones con las acciones *Completar* y *Posponer 1 h*; se reprograman al reiniciar el teléfono |
 | **Ajustes** | Ordenados por secciones (Apariencia, Idioma, Menú de Tareas, Avisos, Copia de seguridad, Acerca de): tema claro/oscuro/sistema, color, fondo de imagen con velo, aspecto y orden del menú, segundo aviso y copia de seguridad `.kiwu.json` (el mismo formato que Linux) |
-| **Widgets** | Tres widgets de pantalla de inicio: **Deberes** (pendientes por fecha, con casilla para completar y botón «+» para añadir una tarea sin abrir la app), **Horario** («Ahora / Siguiente» y clases de hoy con sus tareas urgentes) y **Nota rápida** (crea una nota y muestra las recientes). Se configuran al añadirlos: todas, una lista/carpeta, un horario o un cuaderno |
+| **Widgets** | Cuatro widgets de pantalla de inicio: **Deberes** (pendientes por fecha, con casilla para completar y botón «+» para añadir una tarea sin abrir la app), **Horario** («Ahora / Siguiente» y clases de hoy con sus tareas urgentes) **Nota rápida** (crea una nota y muestra las recientes) y **Calendario** (el mes con lo pendiente de todas las listas; al tocar un día ves lo que hay, puedes completar tareas y añadir una sin abrir la app). Los otros se configuran al añadirlos: todas, una lista/carpeta, un horario o un cuaderno |
 
 | **Faltas de clase** | Máximo de faltas por materia, chip «Faltas: N» en la hoja de la clase, contador «quedan N» en el horario y en el widget, faltas justificadas que no cuentan, aviso al llegar al máximo y «Vaciar faltas» al cambiar de semestre |
 | **Idiomas** | Español, inglés y portugués. En Android 13 o superior sigue el idioma del teléfono y se cambia en el ajuste de idioma de Android para Kiwu; en Android 8 a 12 se elige en Ajustes → Idioma |

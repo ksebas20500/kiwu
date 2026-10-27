@@ -54,6 +54,26 @@ Kiwu es gratis y muestra un banner pequeño en las listas de Tareas y Notas, nun
 
 Se pegan en Play Console → la versión → «Notas de la versión», una por idioma.
 
+### 0.5.2 (versionCode 15)
+
+```
+<es-419>
+• Nuevo widget de Calendario: el mes con tus tareas y eventos pendientes. Toca un día para ver lo que hay, completar tareas y añadir una sin abrir la app.
+• Aviso con botón «Posponer a mañana»: vuelve a sonar al despertar, el día de la entrega.
+• Corregido el menú de las tareas y los colores de la guía en modo oscuro.
+</es-419>
+<en-US>
+• New Calendar widget: the month with your pending tasks and events. Tap a day to see what is on it, complete tasks and add one without opening the app.
+• Reminder with a "Snooze until tomorrow" button: it rings again when you wake up, on the due date.
+• Fixed the task menu and the onboarding colors in dark mode.
+</en-US>
+<pt-BR>
+• Novo widget de Calendário: o mês com suas tarefas e eventos pendentes. Toque em um dia para ver o que há, concluir tarefas e adicionar uma sem abrir o app.
+• Lembrete com botão "Adiar para amanhã": toca de novo quando você acordar, no dia da entrega.
+• Corrigidos o menu das tarefas e as cores da introdução no modo escuro.
+</pt-BR>
+```
+
 ### 0.5.1 (versionCode 14)
 
 ```

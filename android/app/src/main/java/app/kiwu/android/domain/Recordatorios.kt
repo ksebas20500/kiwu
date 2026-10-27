@@ -43,6 +43,22 @@ object Recordatorios {
         return maxOf(aviso, ahora + 2_000)
     }
 
+    /** A qué hora suena un aviso pospuesto «a mañana»: la mañana siguiente, cuando la persona ya está despierta. */
+    val HORA_MANANA: LocalTime = LocalTime.of(8, 0)
+
+    /**
+     * Cuándo vuelve a sonar un aviso pospuesto a mañana: mañana a las 8:00, o 30 minutos antes de la entrega si esta cae
+     * mañana antes de esa hora (así no llega tarde). Una entrega de hoy o de mañana a medianoche usa las 8:00 de mañana.
+     */
+    fun mananaPospuesto(d: Deber, ahora: Long, zona: ZoneId = ZoneId.systemDefault()): Long {
+        val manana = Instant.ofEpochMilli(ahora).atZone(zona).toLocalDate().plusDays(1)
+        val aLas8 = manana.atTime(HORA_MANANA).atZone(zona).toInstant().toEpochMilli()
+        val inicioManana = manana.atStartOfDay(zona).toInstant().toEpochMilli()
+        val entrega = referencia(d, zona)
+        val antes = entrega?.minus(30 * 60_000L)
+        return if (entrega != null && antes != null && entrega < aLas8 && antes >= inicioManana) antes else aLas8
+    }
+
     /** Tareas cuyo aviso ya llegó y todavía no se ha notificado. */
     fun pendientesDeAviso(deberes: List<Deber>, ahora: Long): List<Deber> =
         deberes.filter { d ->

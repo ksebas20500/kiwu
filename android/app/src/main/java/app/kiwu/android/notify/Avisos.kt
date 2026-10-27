@@ -32,6 +32,7 @@ object Avisos {
     const val ACCION_AVISAR = "app.kiwu.android.AVISAR"
     const val ACCION_COMPLETAR = "app.kiwu.android.COMPLETAR"
     const val ACCION_POSPONER = "app.kiwu.android.POSPONER"
+    const val ACCION_POSPONER_MANANA = "app.kiwu.android.POSPONER_MANANA"
     const val EXTRA_ID = "id"
     const val EXTRA_REAVISO = "reaviso"
     const val EXTRA_SEGUNDO = "segundo"
@@ -84,6 +85,7 @@ object Avisos {
             .setContentIntent(abrir)
             .addAction(0, t.getString(R.string.completar), difusion(contexto, ACCION_COMPLETAR, d.id))
             .addAction(0, t.getString(R.string.posponer_1h), difusion(contexto, ACCION_POSPONER, d.id))
+            .addAction(0, t.getString(R.string.posponer_manana), difusion(contexto, ACCION_POSPONER_MANANA, d.id))
             .build()
         return try {
             NotificationManagerCompat.from(contexto).notify(identificador(d.id), notificacion)
@@ -96,6 +98,20 @@ object Avisos {
     fun quitar(contexto: Context, id: String) = NotificationManagerCompat.from(contexto).cancel(identificador(id))
 
     fun alarmaAvisar(contexto: Context, id: String, reaviso: Boolean = false, segundo: Boolean = false) = difusion(contexto, ACCION_AVISAR, id, reaviso, segundo)
+}
+
+/**
+ * Avisos pospuestos «a mañana» y la hora a la que deben volver a sonar. La alarma del sistema se pierde al reiniciar el
+ * teléfono y un aviso pospuesto puede esperar casi un día, así que además se guarda aquí y se reprograma al arrancar.
+ */
+internal object Pospuestos {
+    private fun prefs(c: Context) = c.applicationContext.getSharedPreferences("avisos_pospuestos", Context.MODE_PRIVATE)
+
+    fun guardar(c: Context, id: String, cuando: Long) = prefs(c).edit().putLong(id, cuando).apply()
+
+    fun quitar(c: Context, id: String) = prefs(c).edit().remove(id).apply()
+
+    fun todos(c: Context): Map<String, Long> = prefs(c).all.mapNotNull { (k, v) -> (v as? Long)?.let { k to it } }.toMap()
 }
 
 /** Mantiene las alarmas del sistema al día con las tareas: una por tarea con aviso pendiente. */
@@ -122,6 +138,11 @@ class ProgramadorAvisos(private val contexto: Context) {
         for (id in programadasSegundo - vigentesSegundo) alarmas.cancel(Avisos.alarmaAvisar(contexto, id, segundo = true))
         programadas.clear(); programadas += vigentes
         programadasSegundo.clear(); programadasSegundo += vigentesSegundo
+        // Los avisos pospuestos a mañana siguen vivos aunque se haya reiniciado el teléfono; si la tarea ya no hace falta, se olvidan.
+        for ((id, cuando) in Pospuestos.todos(contexto)) {
+            val d = deberes.firstOrNull { it.id == id }
+            if (d == null || d.completado || cuando <= ahora) Pospuestos.quitar(contexto, id) else programar(id, cuando, reaviso = true)
+        }
     }
 
     fun programar(id: String, cuando: Long, reaviso: Boolean = false, segundo: Boolean = false) {
@@ -143,6 +164,7 @@ class AlarmaReceiver : BroadcastReceiver() {
         val id = intent.getStringExtra(Avisos.EXTRA_ID) ?: return
         val reaviso = intent.getBooleanExtra(Avisos.EXTRA_REAVISO, false) || intent.getBooleanExtra(Avisos.EXTRA_SEGUNDO, false)
         val segundo = intent.getBooleanExtra(Avisos.EXTRA_SEGUNDO, false)
+        if (reaviso) Pospuestos.quitar(contexto, id)
         val app = contexto.applicationContext as KiwuApp
         val pendiente = goAsync()
         alcanceReceptores.launch {
@@ -162,7 +184,7 @@ class AlarmaReceiver : BroadcastReceiver() {
     }
 }
 
-/** Botones del aviso: «Completar» y «Posponer». */
+/** Botones del aviso: «Completar», «Posponer 1 h» y «Posponer a mañana». */
 class AccionReceiver : BroadcastReceiver() {
     override fun onReceive(contexto: Context, intent: Intent) {
         val id = intent.getStringExtra(Avisos.EXTRA_ID) ?: return
@@ -173,7 +195,15 @@ class AccionReceiver : BroadcastReceiver() {
                 Avisos.quitar(contexto, id)
                 when (intent.action) {
                     Avisos.ACCION_COMPLETAR -> app.repo.marcar(id, true)
-                    Avisos.ACCION_POSPONER -> ProgramadorAvisos(contexto).programar(id, System.currentTimeMillis() + Avisos.POSPONER_MS, reaviso = true)
+                    Avisos.ACCION_POSPONER -> {
+                        Pospuestos.quitar(contexto, id)
+                        ProgramadorAvisos(contexto).programar(id, System.currentTimeMillis() + Avisos.POSPONER_MS, reaviso = true)
+                    }
+                    Avisos.ACCION_POSPONER_MANANA -> app.repo.deber(id)?.let { d ->
+                        val cuando = Recordatorios.mananaPospuesto(d, System.currentTimeMillis())
+                        Pospuestos.guardar(contexto, id, cuando)
+                        ProgramadorAvisos(contexto).programar(id, cuando, reaviso = true)
+                    }
                 }
             } finally {
                 pendiente.finish()

@@ -75,22 +75,15 @@ fun ChipFecha(d: Deber, ahora: Long, reglas: Reglas) {
     Chip(fechaCorta(entrega, ahora), fondo = color.copy(alpha = 0.12f), color = color)
 }
 
-/** Menú de una tarea: mover entre columnas del tablero y eliminar. */
+/** Menú de una tarea: solo eliminar (mover de columna se hace arrastrando en el tablero o desde el detalle). */
 @Composable
 fun MenuTarea(
     abierto: Boolean,
     alCerrar: () -> Unit,
-    columnaActual: Columna,
-    alMover: (Columna) -> Unit,
     alEliminar: () -> Unit,
     esEvento: Boolean = false,
 ) {
     DropdownMenu(expanded = abierto, onDismissRequest = alCerrar) {
-        if (!esEvento) for (c in Columna.entries) {
-            if (c != columnaActual) {
-                DropdownMenuItem(text = { Text(stringResource(R.string.mover_a_n, c.titulo)) }, onClick = { alCerrar(); alMover(c) })
-            }
-        }
         DropdownMenuItem(
             text = { Text(stringResource(if (esEvento) R.string.evento_eliminar else R.string.tarea_eliminar), color = MaterialTheme.colorScheme.error) },
             onClick = { alCerrar(); alEliminar() },
@@ -107,8 +100,7 @@ fun FilaTarea(
     reglas: Reglas,
     alAbrir: () -> Unit,
     alMarcar: (Boolean) -> Unit,
-    alMover: (Columna) -> Unit,
-    alEliminar: () -> Unit,
+        alEliminar: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
     val columna = reglas.columnaDe(d)
@@ -148,7 +140,7 @@ fun FilaTarea(
         }
         Box {
             IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.tarea_opciones)) }
-            MenuTarea(menu, { menu = false }, columna, alMover, alEliminar, esEvento = d.esEvento)
+            MenuTarea(menu, { menu = false }, alEliminar, esEvento = d.esEvento)
         }
     }
 }

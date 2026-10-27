@@ -10,6 +10,9 @@
 
     <string name="widget_notas">Nota rápida</string>
     <string name="widget_notas_descripcion">Crea una nota con un toque y mira las más recientes de un cuaderno.</string>
+    <string name="widget_calendario">Calendario</string>
+    <string name="widget_calendario_descripcion">El mes con las tareas y eventos pendientes de todas tus listas. Toca un día para ver lo que hay y añadir una tarea; toca el nombre del mes para volver a hoy.</string>
+    <string name="dia_sin_pendientes">Nada pendiente este día</string>
 
     <string name="widget_configuracion">Configurar widget de Kiwu</string>
 
@@ -341,7 +344,6 @@
     <string name="elegir_hora">Elegir hora…</string>
     <string name="todo_el_dia_sin_hora">Todo el día (sin hora)</string>
     <string name="editado_n">Editado %1$s</string>
-    <string name="mover_a_n">Mover a «%1$s»</string>
     <string name="evento">Evento</string>
     <string name="en_curso">En curso</string>
     <string name="tarea_opciones">Opciones de la tarea</string>
@@ -522,6 +524,7 @@
     <string name="canal_horario_desc">Avisos antes de que empiecen tus clases y actividades</string>
     <string name="completar">Completar</string>
     <string name="posponer_1h">Posponer 1 h</string>
+    <string name="posponer_manana">Posponer a mañana</string>
     <string name="aviso_evento_ya">Acaba de empezar</string>
     <string name="aviso_evento_hace">Empezó hace %1$d min</string>
     <string name="aviso_tarea_ya">Acaba de vencer</string>
