@@ -61,6 +61,10 @@ import androidx.compose.ui.res.stringResource
 
 private val VerdeHoy = Color(0xFF2E7D32)
 
+/** Los eventos van siempre de azul claro pastel (acuarela suave), con su texto azul grisáceo, en la app y en el widget. */
+val AzulEvento = Color(0xFFCFE5F7)
+val AzulEventoTexto = Color(0xFF3B6486)
+
 /** Chip con la fecha de entrega: rojo si venció, verde si es hoy. */
 @Composable
 fun ChipFecha(d: Deber, ahora: Long, reglas: Reglas) {
@@ -72,7 +76,7 @@ fun ChipFecha(d: Deber, ahora: Long, reglas: Reglas) {
         hoy -> VerdeHoy
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
-    Chip(fechaCorta(entrega, ahora), fondo = color.copy(alpha = 0.12f), color = color)
+    Chip(fechaCorta(entrega, ahora, completo = true), fondo = color.copy(alpha = 0.12f), color = color)
 }
 
 /** Menú de una tarea: solo eliminar (mover de columna se hace arrastrando en el tablero o desde el detalle). */
@@ -111,7 +115,7 @@ fun FilaTarea(
         if (d.esEvento) {
             // Un evento no se completa: en lugar del círculo lleva el icono de calendario.
             Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Event, stringResource(R.string.evento), tint = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Filled.Event, stringResource(R.string.evento), tint = AzulEventoTexto)
             }
         } else {
             Checkbox(checked = d.completado, onCheckedChange = alMarcar)
@@ -187,7 +191,7 @@ fun CampoNuevaTarea(
         if (diaFijo != null) {
             hora?.let { (h, m) -> Box(Modifier.padding(start = 12.dp, top = 8.dp).clickable { hora = null }) { Chip("%02d:%02d  ✕".format(h, m)) } }
         } else {
-            fecha?.let { f -> Box(Modifier.padding(start = 12.dp, top = 8.dp).clickable { fecha = null }) { Chip(fechaCorta(f, System.currentTimeMillis()) + "  ✕") } }
+            fecha?.let { f -> Box(Modifier.padding(start = 12.dp, top = 8.dp).clickable { fecha = null }) { Chip(fechaCorta(f, System.currentTimeMillis(), completo = true) + "  ✕") } }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             val puesta = if (diaFijo != null) hora != null else fecha != null

@@ -22,7 +22,18 @@ object Fechas {
     private fun local(ms: Long, zona: ZoneId): LocalDateTime = Instant.ofEpochMilli(ms).atZone(zona).toLocalDateTime()
 
     /** «Hoy 18:00», «Mañana 09:30», «mié 30 sep» (en la lista de tareas). Las palabras llegan ya traducidas. */
-    fun corta(ms: Long, ahora: Long, zona: ZoneId = ZoneId.systemDefault(), hoyTexto: String, mananaTexto: String, ayerTexto: String): String {
+    /** Con el año solo si no es el actual: «jueves 19 de septiembre», «viernes 20 de agosto de 2027». */
+    private fun larga(f: LocalDateTime, hoy: LocalDate): String {
+        val anio = f.year != hoy.year
+        val patron = when (locale.language) {
+            "es" -> "EEEE d 'de' MMMM" + if (anio) " 'de' yyyy" else ""
+            "pt" -> "EEEE, d 'de' MMMM" + if (anio) " 'de' yyyy" else ""
+            else -> "EEEE, MMMM d" + if (anio) ", yyyy" else ""
+        }
+        return DateTimeFormatter.ofPattern(patron, locale).format(f)
+    }
+
+    fun corta(ms: Long, ahora: Long, zona: ZoneId = ZoneId.systemDefault(), hoyTexto: String, mananaTexto: String, ayerTexto: String, completo: Boolean = false): String {
         val f = local(ms, zona)
         val hoy = local(ahora, zona).toLocalDate()
         val conHora = f.hour != 0 || f.minute != 0
@@ -31,7 +42,7 @@ object Fechas {
             hoy -> "$hoyTexto$sufijo"
             hoy.plusDays(1) -> "$mananaTexto$sufijo"
             hoy.minusDays(1) -> "$ayerTexto$sufijo"
-            else -> (if (f.year == hoy.year) diaMes else diaMesAnio).format(f) + sufijo
+            else -> (if (completo) larga(f, hoy) else (if (f.year == hoy.year) diaMes else diaMesAnio).format(f)) + sufijo
         }
     }
 
@@ -60,11 +71,12 @@ object Fechas {
 
 /** [Fechas.corta] con «Hoy / Mañana / Ayer» en el idioma de la app. */
 @androidx.compose.runtime.Composable
-fun fechaCorta(ms: Long, ahora: Long, zona: ZoneId = ZoneId.systemDefault()): String = Fechas.corta(
+fun fechaCorta(ms: Long, ahora: Long, zona: ZoneId = ZoneId.systemDefault(), completo: Boolean = false): String = Fechas.corta(
     ms, ahora, zona,
     androidx.compose.ui.res.stringResource(app.kiwu.android.R.string.fecha_hoy),
     androidx.compose.ui.res.stringResource(app.kiwu.android.R.string.fecha_manana),
     androidx.compose.ui.res.stringResource(app.kiwu.android.R.string.fecha_ayer),
+    completo,
 )
 
 /** El día de la semana dentro de una frase: «el lunes» → «lunes» en español y portugués, «Monday» en inglés. */

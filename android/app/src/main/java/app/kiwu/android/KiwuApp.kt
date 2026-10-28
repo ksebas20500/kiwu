@@ -28,7 +28,11 @@ import kotlinx.coroutines.launch
 /** Contenedor de dependencias de la app (sin framework de inyección: son solo dos objetos). */
 class KiwuApp : Application() {
     val db by lazy { KiwuDb.obtener(this) }
-    val repo by lazy { Repositorio(db.dao()) }
+    private val prefsRacha by lazy { getSharedPreferences("racha", MODE_PRIVATE) }
+    val repo by lazy {
+        val banco = prefsRacha.getStringSet("banco", emptySet()).orEmpty().mapNotNull { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }.toSet()
+        Repositorio(db.dao(), bancoRacha = kotlinx.coroutines.flow.MutableStateFlow(banco))
+    }
     val ajustes by lazy { AjustesStore(this) }
     val compras by lazy { Compras(this) }
     val actualizaciones by lazy { Actualizaciones(this) }
@@ -84,7 +88,15 @@ class KiwuApp : Application() {
         alcance.launch { ajustes.flujo.map { it.rachaAviso }.distinctUntilChanged().collect { programadorRacha.reconciliar(it) } }
         // Si se completa una tarea después del aviso de la racha, el aviso sobra.
         alcance.launch {
-            repo.entradaRacha.collect { if (!Rachas.calcular(it, System.currentTimeMillis()).enRiesgo) AvisosRacha.quitar(this@KiwuApp) }
+            repo.entradaRacha.collect {
+                val r = Rachas.calcular(it, System.currentTimeMillis())
+                if (!r.enRiesgo) AvisosRacha.quitar(this@KiwuApp)
+                // Los días cumplidos se guardan: la racha solo sube con los días y baja si hoy se desmarca algo.
+                if (r.dias != it.banco) {
+                    repo.bancoRacha.value = r.dias
+                    prefsRacha.edit().putStringSet("banco", r.dias.map(java.time.LocalDate::toString).toSet()).apply()
+                }
+            }
         }
     }
 

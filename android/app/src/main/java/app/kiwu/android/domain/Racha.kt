@@ -34,14 +34,20 @@ data class TareaRacha(
 )
 
 /** Lo que necesita el cálculo: las tareas y los días de la semana (1 = lunes … 7) que tienen clase. */
-data class EntradaRacha(val tareas: List<TareaRacha> = emptyList(), val diasConClase: Set<Int> = emptySet())
+data class EntradaRacha(
+    val tareas: List<TareaRacha> = emptyList(),
+    val diasConClase: Set<Int> = emptySet(),
+    /** Días que ya contaron como cumplidos (ver [Rachas.calcular]): desmarcar una tarea vieja no los quita. */
+    val banco: Set<LocalDate> = emptySet(),
+)
 
 /**
  * Cálculo de la racha «al día». Un día **se rompe** si al terminarlo queda una tarea con entrega ese día o antes sin
  * resolver (completada o borrada); es **exigente** si hay una entrega ese día o si hay clase ese día de la semana **y**
  * hubo actividad (se completó o se añadió una tarea); el resto son días **neutros**: no suman ni rompen. Así crear un
  * horario no cumple ni acredita días por sí solo. Las tareas sin fecha y los eventos no cuentan para vencer. No se
- * guarda nada aparte: sale del historial.
+ * guarda nada aparte: sale del historial, salvo el [EntradaRacha.banco]: un día que ya contó como cumplido no se pierde
+ * porque luego se desmarque una tarea suya o se complete pasada la medianoche. La racha solo baja por lo de hoy.
  *
  * shortcut: los días con clase salen del horario actual (el modelo no guarda desde cuándo vale cada clase) y basta una
  * tarea trivial, completada o añadida, para que un día de clase cuente. Endurecer (p. ej. solo «completada») si se abusa.
@@ -58,7 +64,7 @@ object Rachas {
         val actividad = HashSet<LocalDate>()
         var pendientes = 0
         var completadas = 0
-        var inicio = hoy
+        var inicio = minOf(hoy, entrada.banco.minOrNull() ?: hoy)
         for (t in entrada.tareas) {
             if (t.completado && t.completada != null) completadas++
             inicio = minOf(inicio, dia(t.creada))
@@ -66,6 +72,7 @@ object Rachas {
             if (t.completado && t.completada != null) actividad += dia(t.completada)
             val entrega = t.entrega?.let(::dia) ?: continue
             if (entrega.isAfter(hoy)) continue
+            if (entrega.isBefore(hoy) && entrega in entrada.banco) continue // día ya cumplido: tocar la tarea ahora no lo deshace
             val borrada = t.eliminada?.let(::dia)
             if (borrada != null && !borrada.isAfter(entrega)) continue // borrada a tiempo: nunca se exigió
             // Cuándo dejó de estar pendiente; una tarea marcada sin fecha de completado se da por entregada a tiempo.
@@ -82,8 +89,8 @@ object Rachas {
         var tramo = 0
         var d = inicio
         while (d.isBefore(hoy)) { // los días ya cerrados
-            if (d in rotos) tramo = 0
-            else if (d in entregas || (d.dayOfWeek.value in entrada.diasConClase && d in actividad)) {
+            if (d !in entrada.banco && d in rotos) tramo = 0
+            else if (d in entrada.banco || d in entregas || (d.dayOfWeek.value in entrada.diasConClase && d in actividad)) {
                 tramo++
                 mejor = maxOf(mejor, tramo)
                 dias += d

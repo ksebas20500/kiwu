@@ -23,12 +23,22 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import app.kiwu.android.domain.ID_EVENTOS
+import app.kiwu.android.ui.tareas.AzulEvento
+import app.kiwu.android.ui.tareas.AzulEventoTexto
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -113,9 +123,17 @@ class DiaCalendarioActivity : ComponentActivity() {
                                     }
                                 }
                             }
+                            // «Evento» crea un evento azul (sin lista, sin casilla) en lugar de una tarea.
+                            var evento by remember { mutableStateOf(false) }
+                            FilterChip(
+                                selected = evento, onClick = { evento = !evento }, label = { Text(stringResource(R.string.evento)) },
+                                modifier = Modifier.padding(start = 16.dp, top = 4.dp),
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = AzulEvento, selectedLabelColor = AzulEventoTexto),
+                            )
                             CampoNuevaTarea(
                                 materias = materias, fija = null, diaFijo = dia,
-                                alCrear = { titulo, materiaId, fecha ->
+                                alCrear = { titulo, lista, fecha ->
+                                    val materiaId = if (evento) ID_EVENTOS else lista
                                     // Sin hora elegida, la tarea vence ese día a las 18:00, como en el calendario de la app.
                                     val entrega = fecha ?: dia.atTime(LocalTime.of(18, 0)).atZone(zona).toInstant().toEpochMilli()
                                     app.alcance.launch { app.repo.crearDeber(titulo, materiaId, entrega) }
@@ -140,7 +158,7 @@ private fun FilaDia(d: Deber, lista: String?, zona: ZoneId, alCompletar: () -> U
     val detalle = listOfNotNull(lista, hora?.let { Fechas.hora(d.fechaEntrega!!, zona) }).joinToString(" · ")
     Row(Modifier.fillMaxWidth().clickable(onClick = alAbrir).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         // Los eventos no se completan: en su lugar va un hueco del mismo ancho para que el texto quede alineado.
-        if (d.esEvento) Spacer(Modifier.size(48.dp)) else Checkbox(checked = false, onCheckedChange = { alCompletar() })
+        if (d.esEvento) Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Event, null, tint = AzulEventoTexto) } else Checkbox(checked = false, onCheckedChange = { alCompletar() })
         Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
             Text(d.titulo, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (detalle.isNotBlank()) Text(detalle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)

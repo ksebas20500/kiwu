@@ -35,6 +35,36 @@ class RachaTest {
     private fun racha(vararg tareas: TareaRacha, clases: Set<Int> = emptySet()) =
         Rachas.calcular(EntradaRacha(tareas.toList(), clases), ahora, zona)
 
+    private fun dia(d: Long) = LocalDate.of(2026, 9, 30).plusDays(d)
+
+    @Test
+    fun desmarcarUnaTareaVieja_noBajaLaRachaPorLosDiasYaCumplidos() {
+        val banco = setOf(dia(-3), dia(-2), dia(-1))
+        // Tres entregas ya cumplidas; las tres se desmarcaron después (sin fecha de completado).
+        val tareas = listOf(tarea(entrega = -3), tarea(entrega = -2), tarea(entrega = -1))
+        val r = Rachas.calcular(EntradaRacha(tareas, emptySet(), banco), ahora, zona)
+        assertEquals(3, r.actual)
+        assertEquals(0, r.pendientes) // lo viejo desmarcado no bloquea hoy
+    }
+
+    @Test
+    fun completarPasadaLaMedianoche_noQuitaElDiaYaCumplido() {
+        // Entrega ayer, completada hoy a las 00:15: sin banco ayer se rompe; con banco sigue contando.
+        val t = TareaRacha(en(-1, 23, 30), true, en(0, 0, 15), null, en(-10))
+        assertEquals(0, Rachas.calcular(EntradaRacha(listOf(t)), ahora, zona).actual)
+        assertEquals(1, Rachas.calcular(EntradaRacha(listOf(t), emptySet(), setOf(dia(-1))), ahora, zona).actual)
+    }
+
+    @Test
+    fun desmarcarUnaDeHoy_bajaLaRachaDeHoy() {
+        val hecha = tarea(entrega = 0, hecha = 0)
+        assertEquals(1, Rachas.calcular(EntradaRacha(listOf(hecha)), ahora, zona).actual)
+        val desmarcada = tarea(entrega = 0)
+        val r = Rachas.calcular(EntradaRacha(listOf(desmarcada), emptySet(), setOf(dia(0))), ahora, zona)
+        assertEquals(0, r.actual)
+        assertFalse(dia(0) in r.dias) // hoy sale del banco
+    }
+
     @Test
     fun sinTareasNiClasesNoHayRacha() {
         val r = racha()

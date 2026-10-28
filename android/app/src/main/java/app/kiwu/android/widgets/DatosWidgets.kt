@@ -150,17 +150,17 @@ object DatosWidgets {
         }
     }
 
-    /** Fecha de entrega en palabras: «Vencida», «Hoy», «Mañana», el día de la semana o «3 oct». */
+    /** Fecha de entrega en palabras: «Vencida · 3 oct», «Hoy», «Mañana» o «Vie 9 oct». */
     fun textoFecha(ms: Long?, ahora: Long, textos: TextosWidget, zona: ZoneId = ZoneId.systemDefault()): String {
         if (ms == null) return textos.sinFecha
         val hoy = Instant.ofEpochMilli(ahora).atZone(zona).toLocalDate()
         val fecha = Instant.ofEpochMilli(ms).atZone(zona).toLocalDate()
+        val diaMes = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault()).format(fecha).removeSuffix(".")
         return when {
-            fecha.isBefore(hoy) -> textos.vencida
+            fecha.isBefore(hoy) -> "${textos.vencida} · $diaMes"
             fecha == hoy -> textos.hoy
             fecha == hoy.plusDays(1) -> textos.manana
-            fecha.isBefore(hoy.plusDays(7)) -> app.kiwu.android.ui.Fechas.diaCorto(fecha.dayOfWeek.value)
-            else -> DateTimeFormatter.ofPattern("d MMM", Locale.getDefault()).format(fecha).removeSuffix(".")
+            else -> "${app.kiwu.android.ui.Fechas.diaCorto(fecha.dayOfWeek.value)} $diaMes"
         }
     }
 

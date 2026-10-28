@@ -42,8 +42,8 @@ android {
         applicationId = "app.kiwu.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 16
-        versionName = "0.5.3"
+        versionCode = 17
+        versionName = "0.5.4"
         buildConfigField("String", "FIREBASE_API_KEY", "\"${propiedadesLocales.getProperty("firebase.apiKey", "")}\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${propiedadesLocales.getProperty("google.webClientId", "")}\"")
         buildConfigField("String", "FIREBASE_PROJECT_ID", "\"${propiedadesLocales.getProperty("firebase.projectId", "")}\"")
