@@ -38,6 +38,8 @@ class ColoresWidget(
     val acento: ColorProvider,
     val sobreAcento: ColorProvider,
     val rojo: ColorProvider,
+    /** Baldosa de cada día del calendario: un tono sobre el fondo para separar los días. */
+    val celda: ColorProvider,
 )
 
 /** Lee el tema de la app (claro, oscuro o el del sistema) para que el widget se vea como la app. */
@@ -62,6 +64,7 @@ suspend fun coloresDelWidget(contexto: Context): ColoresWidget {
         acento = ColorProvider(esquema.primary),
         sobreAcento = ColorProvider(esquema.onPrimary),
         rojo = ColorProvider(if (oscuro) Color(0xFFFF8A80) else Color(0xFFD32F2F)),
+        celda = ColorProvider(esquema.onSurface.copy(alpha = if (oscuro) 0.10f else 0.05f)),
     )
 }
 

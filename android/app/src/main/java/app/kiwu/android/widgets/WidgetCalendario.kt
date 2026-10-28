@@ -141,8 +141,10 @@ private fun Flecha(signo: String, descripcion: String, delta: Int, colores: Colo
 @Composable
 private fun androidx.glance.layout.RowScope.CasillaDia(dia: DiaCalendario, maximo: Int, colores: ColoresWidget) {
     val contexto = LocalContext.current
+    Box(GlanceModifier.defaultWeight().fillMaxHeight().padding(1.5.dp)) {
     Column(
-        GlanceModifier.defaultWeight().fillMaxHeight().padding(1.dp).clickable(actionStartActivity(intencionDiaCalendario(contexto, dia.fecha))),
+        GlanceModifier.fillMaxSize().cornerRadius(6.dp).let { if (dia.delMes) it.background(colores.celda) else it }
+            .clickable(actionStartActivity(intencionDiaCalendario(contexto, dia.fecha))),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
@@ -177,5 +179,6 @@ private fun androidx.glance.layout.RowScope.CasillaDia(dia: DiaCalendario, maxim
                 if (dia.chips.size > maximo) Text("+${dia.chips.size - maximo}", style = TextStyle(fontSize = 8.sp, color = colores.secundario))
             }
         }
+    }
     }
 }
