@@ -61,6 +61,19 @@ Pasos de una versión:
 3. En `kiwu-play/android`: `./gradlew testDebugUnitTest lintDebug bundleRelease` y copiar `app/build/outputs/bundle/release/app-release.aab` a `Documents/kiwu-aab/kiwu-X.Y.Z-codigoN.aab`.
 4. Subir el AAB en Play Console (prueba cerrada) con la nota de novedades de `docs/play-store.md` (rama de Play) y hacer el commit del merge.
 
+### Anuncios reales (AdMob)
+
+Los IDs reales no van en el repositorio: están en `~/kiwu-claves/admob.properties` (o en la carpeta de `KIWU_CLAVES`), junto a `keystore.properties`:
+
+```
+appId=ca-app-pub-6922015805223220~9431045068
+banner=ca-app-pub-6922015805223220/4342157887
+```
+
+- Solo el build **release** (`bundleRelease`) los usa; depuración y minificado llevan siempre los anuncios de prueba de Google. Sin el archivo, también salen anuncios de prueba. Nunca pulses anuncios reales con tu propia cuenta.
+- `docs/app-ads.txt` (editor de AdMob: `pub-6922015805223220`) debe servirse en la **raíz** del dominio que figura como sitio web en Play Console, es decir `https://kiwu.web.app/app-ads.txt`, y no en una subcarpeta. La web vive en el repo `ksebas20500/kiwu-web` (Astro + Firebase Hosting): la copia está en `public/app-ads.txt` y se despliega con `npm run build && firebase deploy --only hosting`. Si cambia una, cambia la otra. Luego, en AdMob → *App settings* → *app-ads.txt*, comprobar que se detecta (puede tardar hasta 24 h).
+- La app aparece como «Requires review» hasta que esté publicada en Play y enlazada en *App settings*.
+
 ## Para la futura web estática
 
 La página de descargas puede leer `https://api.github.com/repos/ksebas20500/kiwu/releases`, agrupar por prefijo de etiqueta (`v`/`macos-v` → macOS, `linux-v` → Linux) y enlazar al archivo de cada versión. Para un botón de «última versión»:
