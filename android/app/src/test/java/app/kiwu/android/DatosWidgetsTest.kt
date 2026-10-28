@@ -125,11 +125,11 @@ class DatosWidgetsTest {
     @Test
     fun fechaEnPalabras() {
         assertEquals("Sin fecha", DatosWidgets.textoFecha(null, ahora, textos, zona))
-        assertEquals("Vencida", DatosWidgets.textoFecha(ms(lunes.minusDays(1)), ahora, textos, zona))
+        assertTrue(DatosWidgets.textoFecha(ms(lunes.minusDays(1)), ahora, textos, zona).startsWith("Vencida · ${lunes.minusDays(1).dayOfMonth} "))
         assertEquals("Hoy", DatosWidgets.textoFecha(ms(lunes), ahora, textos, zona))
         assertEquals("Mañana", DatosWidgets.textoFecha(ms(lunes.plusDays(1)), ahora, textos, zona))
-        assertEquals("Jue", DatosWidgets.textoFecha(ms(lunes.plusDays(3)), ahora, textos, zona))
-        assertEquals("3 nov", DatosWidgets.textoFecha(ms(LocalDate.of(2026, 11, 3)), ahora, textos, zona))
+        assertEquals("Jue ${lunes.plusDays(3).dayOfMonth}", DatosWidgets.textoFecha(ms(lunes.plusDays(3)), ahora, textos, zona).substringBeforeLast(' '))
+        assertEquals("Mar 3 nov", DatosWidgets.textoFecha(ms(LocalDate.of(2026, 11, 3)), ahora, textos, zona))
     }
 
     @Test

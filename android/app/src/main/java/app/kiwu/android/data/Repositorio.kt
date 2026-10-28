@@ -30,6 +30,8 @@ class Repositorio(
     private val dao: KiwuDao,
     val reglas: Reglas = Reglas(),
     private val reloj: () -> Long = System::currentTimeMillis,
+    /** Días que ya contaron para la racha; la app lo guarda en disco (ver `EntradaRacha.banco`). */
+    val bancoRacha: kotlinx.coroutines.flow.MutableStateFlow<Set<LocalDate>> = kotlinx.coroutines.flow.MutableStateFlow(emptySet()),
 ) {
     /** Las listas que se ven y se eligen; la lista especial de eventos queda aparte. */
     val materias: Flow<List<Materia>> = dao.materias().map { l -> l.filter { it.id != ID_EVENTOS } }
@@ -42,11 +44,11 @@ class Repositorio(
     val faltas: Flow<List<Falta>> = dao.faltas()
 
     /** Las tareas (también las borradas; sin eventos) y los días con clase: de aquí sale la racha. */
-    val entradaRacha: Flow<EntradaRacha> = combine(dao.tareasRacha(), dao.diasConClase()) { t, d -> EntradaRacha(t, d.toSet()) }
+    val entradaRacha: Flow<EntradaRacha> = combine(dao.tareasRacha(), dao.diasConClase(), bancoRacha) { t, d, b -> EntradaRacha(t, d.toSet(), b) }
 
     fun ahora(): Long = reloj()
 
-    suspend fun entradaRachaAhora(): EntradaRacha = EntradaRacha(dao.tareasRachaAhora(), dao.diasConClaseAhora().toSet())
+    suspend fun entradaRachaAhora(): EntradaRacha = EntradaRacha(dao.tareasRachaAhora(), dao.diasConClaseAhora().toSet(), bancoRacha.value)
 
     suspend fun hayDatos(): Boolean = dao.hayDatos()
 

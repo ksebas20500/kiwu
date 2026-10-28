@@ -165,10 +165,10 @@ private fun androidx.glance.layout.RowScope.CasillaDia(dia: DiaCalendario, maxim
                 for (chip in dia.chips.take(maximo)) {
                     val fondo = when {
                         chip.vencida -> colores.rojo
-                        chip.esEvento -> colores.secundario
+                        chip.esEvento -> ColorProvider(app.kiwu.android.ui.tareas.AzulEvento)
                         else -> colores.acento
                     }
-                    val texto = if (chip.vencida) ColorProvider(Color.White) else if (chip.esEvento) colores.fondo else colores.sobreAcento
+                    val texto = if (chip.vencida) ColorProvider(Color.White) else if (chip.esEvento) ColorProvider(app.kiwu.android.ui.tareas.AzulEventoTexto) else colores.sobreAcento
                     Text(
                         chip.titulo,
                         GlanceModifier.fillMaxWidth().padding(top = 1.dp).cornerRadius(3.dp).background(fondo),

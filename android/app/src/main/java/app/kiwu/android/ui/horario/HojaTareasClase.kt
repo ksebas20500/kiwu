@@ -216,7 +216,7 @@ private fun FilaTarea(d: Deber, ahora: Long, hecha: Boolean, marcar: (String, Bo
             )
             d.fechaEntrega?.let { f ->
                 val vencida = !hecha && f < ahora
-                Text(fechaCorta(f, ahora), fontSize = 12.sp, color = if (vencida) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(fechaCorta(f, ahora, completo = true), fontSize = 12.sp, color = if (vencida) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
