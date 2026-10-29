@@ -106,10 +106,61 @@ class MigracionTest {
         db.query("SELECT COUNT(*) FROM falta").use { it.moveToFirst(); assertEquals(1, it.getInt(0)) }
     }
 
+    /** La versión 5 pasa a la 6: las tareas que ya había quedan sin repetición. */
+    @Test
+    fun deLaVersion5ALa6DejaLasTareasSinRepeticion() {
+        ayudante.createDatabase("migracion5", 5).apply {
+            execSQL("INSERT INTO materia (id, nombre, icono, orden, carpeta, grupo_id, emoji, creada, actualizada, eliminada) VALUES ('M1', 'Mate', 'book', 0, NULL, NULL, NULL, 1, 1, NULL)")
+            execSQL("INSERT INTO deber (id, materia_id, titulo, completado, estado, fecha_entrega, recordatorio_horas, fecha_completado, nota, creada, actualizada, recordado, eliminada) VALUES ('D1', 'M1', 'Informe', 0, 0, NULL, 24, NULL, '', 1, 1, NULL, NULL)")
+            close()
+        }
+        val db = ayudante.runMigrationsAndValidate("migracion5", 6, true, KiwuDb.MIGRACION_5_6)
+        db.query("SELECT titulo, repite FROM deber").use { it.moveToFirst(); assertEquals("Informe", it.getString(0)); assertEquals(0, it.getInt(1)) }
+    }
+
+    /** La versión 6 pasa a la 7: las tareas quedan sin prioridad, etiquetas ni pasos. */
+    @Test
+    fun deLaVersion6ALa7DejaLasTareasSinPrioridadNiPasos() {
+        ayudante.createDatabase("migracion6", 6).apply {
+            execSQL("INSERT INTO materia (id, nombre, icono, orden, carpeta, grupo_id, emoji, creada, actualizada, eliminada) VALUES ('M1', 'Mate', 'book', 0, NULL, NULL, NULL, 1, 1, NULL)")
+            execSQL("INSERT INTO deber (id, materia_id, titulo, completado, estado, fecha_entrega, recordatorio_horas, repite, fecha_completado, nota, creada, actualizada, recordado, eliminada) VALUES ('D1', 'M1', 'Informe', 0, 0, NULL, 24, 0, NULL, '', 1, 1, NULL, NULL)")
+            close()
+        }
+        val db = ayudante.runMigrationsAndValidate("migracion6", 7, true, KiwuDb.MIGRACION_6_7)
+        db.query("SELECT titulo, prioridad, etiquetas, pasos FROM deber").use {
+            it.moveToFirst(); assertEquals("Informe", it.getString(0)); assertEquals(0, it.getInt(1)); assertEquals("", it.getString(2)); assertEquals("", it.getString(3))
+        }
+    }
+
+    /** La versión 7 pasa a la 8: las tareas no son examen y las listas no tienen notas. */
+    @Test
+    fun deLaVersion7ALa8DejaLasTareasSinExamenNiNotas() {
+        ayudante.createDatabase("migracion7", 7).apply {
+            execSQL("INSERT INTO materia (id, nombre, icono, orden, carpeta, grupo_id, emoji, creada, actualizada, eliminada) VALUES ('M1', 'Mate', 'book', 0, NULL, NULL, NULL, 1, 1, NULL)")
+            execSQL("INSERT INTO deber (id, materia_id, titulo, completado, estado, fecha_entrega, recordatorio_horas, repite, prioridad, etiquetas, pasos, fecha_completado, nota, creada, actualizada, recordado, eliminada) VALUES ('D1', 'M1', 'Informe', 0, 0, NULL, 24, 0, 0, '', '', NULL, '', 1, 1, NULL, NULL)")
+            close()
+        }
+        val db = ayudante.runMigrationsAndValidate("migracion7", 8, true, KiwuDb.MIGRACION_7_8)
+        db.query("SELECT examen FROM deber").use { it.moveToFirst(); assertEquals(0, it.getInt(0)) }
+        db.query("SELECT calificaciones FROM materia").use { it.moveToFirst(); assertEquals("", it.getString(0)) }
+    }
+
+    /** La versión 8 pasa a la 9: las notas que ya había quedan sin tarjetas. */
+    @Test
+    fun deLaVersion8ALa9DejaLasNotasSinTarjetas() {
+        ayudante.createDatabase("migracion8", 8).apply {
+            execSQL("INSERT INTO cuaderno (id, nombre, icono, orden, creada, actualizada, eliminada) VALUES ('C1', 'Uni', '📓', 0, 1, 1, NULL)")
+            execSQL("INSERT INTO pagina (id, cuaderno_id, titulo, icono, contenido, texto_plano, favorita, creada, actualizada, eliminada) VALUES ('P1', 'C1', 'Apuntes', '', '', '', 0, 1, 1, NULL)")
+            close()
+        }
+        val db = ayudante.runMigrationsAndValidate("migracion8", 9, true, KiwuDb.MIGRACION_8_9)
+        db.query("SELECT titulo, tarjetas FROM pagina").use { it.moveToFirst(); assertEquals("Apuntes", it.getString(0)); assertEquals("", it.getString(1)) }
+    }
+
     /** De la primera versión a la última pasando por todas las migraciones. */
     @Test
-    fun deLaVersion1ALa5EnUnSoloPaso() {
-        ayudante.createDatabase("migracion15", 1).apply { close() }
-        ayudante.runMigrationsAndValidate("migracion15", 5, true, KiwuDb.MIGRACION_1_2, KiwuDb.MIGRACION_2_3, KiwuDb.MIGRACION_3_4, KiwuDb.MIGRACION_4_5)
+    fun deLaVersion1ALa9EnUnSoloPaso() {
+        ayudante.createDatabase("migracion19", 1).apply { close() }
+        ayudante.runMigrationsAndValidate("migracion19", 9, true, KiwuDb.MIGRACION_1_2, KiwuDb.MIGRACION_2_3, KiwuDb.MIGRACION_3_4, KiwuDb.MIGRACION_4_5, KiwuDb.MIGRACION_5_6, KiwuDb.MIGRACION_6_7, KiwuDb.MIGRACION_7_8, KiwuDb.MIGRACION_8_9)
     }
 }

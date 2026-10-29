@@ -294,4 +294,17 @@ class DatosWidgetsTest {
         assertTrue(dias.getValue(LocalDate.of(2026, 10, 19)).esHoy)
         assertEquals(false, dias.getValue(LocalDate.of(2026, 9, 29)).delMes)
     }
+    @Test
+    fun calendarioMuestraLosEventosDeGoogleDespuesDeLasTareas() {
+        val externos = listOf(
+            app.kiwu.android.domain.EventoExterno(7, "Reunión", ms(LocalDate.of(2026, 10, 28), 8), false),
+            // De todo el día: viene en UTC y cuenta en su día de UTC, aunque la zona local esté detrás.
+            app.kiwu.android.domain.EventoExterno(8, "Feriado", LocalDate.of(2026, 10, 29).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli(), true),
+        )
+        val datos = DatosWidgets.calendario(listOf(deber("a", "q", "Informe", ms(LocalDate.of(2026, 10, 28), 18))), LocalDate.of(2026, 10, 15), ahora, zona, externos)
+        val dias = datos.semanas.flatten().associateBy { it.fecha }
+        assertEquals(listOf("Informe", "Reunión"), dias.getValue(LocalDate.of(2026, 10, 28)).chips.map { it.titulo })
+        assertTrue(dias.getValue(LocalDate.of(2026, 10, 28)).chips.last().esEvento)
+        assertEquals(listOf("Feriado"), dias.getValue(LocalDate.of(2026, 10, 29)).chips.map { it.titulo })
+    }
 }

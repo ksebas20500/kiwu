@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
@@ -50,6 +51,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kiwu.android.KiwuApp
 import app.kiwu.android.R
 import app.kiwu.android.data.AjustesUi
+import app.kiwu.android.data.CalendarioTelefono
+import app.kiwu.android.data.TareasGoogle
+import app.kiwu.android.domain.EventoExterno
 import app.kiwu.android.domain.Deber
 import app.kiwu.android.domain.esEvento
 import app.kiwu.android.ui.Fechas
@@ -87,6 +91,10 @@ class DiaCalendarioActivity : ComponentActivity() {
                 val materias by app.repo.materias.collectAsStateWithLifecycle(emptyList())
                 val deberes by app.repo.deberes.collectAsStateWithLifecycle(emptyList())
                 val zona = ZoneId.systemDefault()
+                val externos = remember(dia, ajustes.calendarioGoogle, ajustes.tareasGoogle) {
+                    (if (ajustes.calendarioGoogle) CalendarioTelefono.eventos(this@DiaCalendarioActivity, dia, dia, zona) else emptyList()) +
+                        (if (ajustes.tareasGoogle) TareasGoogle.leer(this@DiaCalendarioActivity).filter { it.dia(zona) == dia } else emptyList())
+                }
                 val delDia = remember(deberes, dia) {
                     deberes.filter { d ->
                         d.fechaEntrega != null && (d.esEvento || !d.completado) &&
@@ -106,13 +114,14 @@ class DiaCalendarioActivity : ComponentActivity() {
                     ) {
                         Column(Modifier.navigationBarsPadding().imePadding()) {
                             Text(Fechas.diaLargo(dia), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 4.dp))
-                            if (delDia.isEmpty()) {
+                            if (delDia.isEmpty() && externos.isEmpty()) {
                                 Text(
                                     stringResource(R.string.dia_sin_pendientes), color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
                                 )
                             } else {
                                 LazyColumn(Modifier.heightIn(max = 240.dp)) {
+                                    items(externos, key = { "g:${it.id}:${it.inicio}" }) { e -> FilaExterna(e, zona) }
                                     items(delDia, key = { it.id }) { d ->
                                         val lista = materias.firstOrNull { it.id == d.materiaId }?.nombre
                                         FilaDia(
@@ -162,6 +171,21 @@ private fun FilaDia(d: Deber, lista: String?, zona: ZoneId, alCompletar: () -> U
         Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
             Text(d.titulo, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (detalle.isNotBlank()) Text(detalle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+/** Un evento de Google Calendar: solo se ve (se edita en Google Calendar). */
+@androidx.compose.runtime.Composable
+private fun FilaExterna(e: EventoExterno, zona: ZoneId) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) { Icon(if (e.tarea) Icons.Filled.CheckCircle else Icons.Filled.Event, null, tint = AzulEventoTexto) }
+        Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
+            Text(e.titulo, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                listOfNotNull(stringResource(if (e.tarea) R.string.google_tareas else R.string.google_calendar), if (e.todoElDia) null else Fechas.hora(e.inicio, zona)).joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+            )
         }
     }
 }

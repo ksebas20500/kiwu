@@ -79,6 +79,8 @@ class KiwuApp : Application() {
             kotlinx.coroutines.flow.combine(repo.deberes, ajustes.flujo.map { it.segundoAvisoMin }.distinctUntilChanged()) { deberes, segundo -> deberes to segundo }
                 .collect { (deberes, segundo) -> programador.reconciliar(deberes, segundo) }
         }
+        // Los hábitos (tareas que se repiten) vuelven a empezar cada día.
+        alcance.launch { repo.deberes.collect { repo.reiniciarRepetidas() } }
         val programadorClases = ProgramadorClases(this)
         alcance.launch { repo.clases.collect { programadorClases.reconciliar(it) } }
         AvisosRacha.crearCanal(this)

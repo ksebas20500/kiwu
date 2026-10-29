@@ -1,5 +1,6 @@
 package app.kiwu.android.ui.tareas
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -76,7 +77,7 @@ fun ChipFecha(d: Deber, ahora: Long, reglas: Reglas) {
         hoy -> VerdeHoy
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
-    Chip(fechaCorta(entrega, ahora, completo = true), fondo = color.copy(alpha = 0.12f), color = color)
+    Chip(fechaCorta(entrega, ahora), fondo = color.copy(alpha = 0.12f), color = color)
 }
 
 /** Menú de una tarea: solo eliminar (mover de columna se hace arrastrando en el tablero o desde el detalle). */
@@ -115,7 +116,9 @@ fun FilaTarea(
         if (d.esEvento) {
             // Un evento no se completa: en lugar del círculo lleva el icono de calendario.
             Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Event, stringResource(R.string.evento), tint = AzulEventoTexto)
+                Box(Modifier.size(30.dp).background(AzulEvento, androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Event, stringResource(R.string.evento), Modifier.size(18.dp), tint = AzulEventoTexto)
+                }
             }
         } else {
             Checkbox(checked = d.completado, onCheckedChange = alMarcar)
@@ -129,15 +132,32 @@ fun FilaTarea(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (d.completado) 0.5f else 1f),
                 style = MaterialTheme.typography.bodyLarge,
             )
-            val hayExtras = d.fechaEntrega != null || nombreLista != null || columna == Columna.EN_CURSO
+            val hayExtras = d.fechaEntrega != null || nombreLista != null || columna == Columna.EN_CURSO || d.repite != 0 ||
+                d.prioridad != 0 || d.etiquetas.isNotEmpty() || d.pasos.isNotEmpty() || d.examen
             if (hayExtras) {
                 Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (columna == Columna.EN_CURSO) {
                         Chip(stringResource(R.string.en_curso), MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
                     }
+                    if (d.examen && !d.completado && d.fechaEntrega != null) {
+                        val dias = app.kiwu.android.domain.Examenes.diasRestantes(d.fechaEntrega, ahora)
+                        Chip(
+                            when {
+                                dias < 0 -> stringResource(R.string.examen)
+                                dias == 0L -> stringResource(R.string.examen_hoy)
+                                dias == 1L -> stringResource(R.string.examen_manana)
+                                else -> stringResource(R.string.examen_dias, dias.toInt())
+                            },
+                            fondo = MaterialTheme.colorScheme.tertiaryContainer, color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        )
+                    } else if (d.examen) Chip(stringResource(R.string.examen))
+                    if (d.prioridad != 0) colorPrioridad(d.prioridad).let { Chip(textoPrioridad(d.prioridad), fondo = it.copy(alpha = 0.12f), color = it) }
+                    app.kiwu.android.domain.Pasos.progreso(d.pasos)?.let { Chip("☑ $it") }
+                    for (e in app.kiwu.android.domain.Etiquetas.leer(d.etiquetas).take(2)) Chip("#$e")
+                    if (d.repite != 0) Chip("↻ " + textoRepeticion(d.repite))
                     ChipFecha(d, ahora, reglas)
                     if (nombreLista != null) {
-                        Text(nombreLista, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                        Chip(nombreLista, fondo = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f), color = MaterialTheme.colorScheme.onSecondaryContainer)
                     }
                 }
             }
@@ -184,7 +204,8 @@ fun CampoNuevaTarea(
     Surface(
         modifier = modifier.fillMaxWidth().imePadding().padding(horizontal = 12.dp, vertical = 8.dp),
         shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 6.dp,
     ) {
         Column {
         // La fecha elegida va en su propia línea: en una fila con el campo le quitaba el ancho y el recuadro crecía a lo alto.

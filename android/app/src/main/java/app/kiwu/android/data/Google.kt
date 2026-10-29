@@ -18,7 +18,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-private suspend fun <T> Task<T>.esperar(): T = suspendCancellableCoroutine { c ->
+internal suspend fun <T> Task<T>.esperar(): T = suspendCancellableCoroutine { c ->
     addOnSuccessListener { c.resume(it) }
     addOnFailureListener { c.resumeWithException(it) }
 }

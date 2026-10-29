@@ -57,7 +57,7 @@ import androidx.compose.ui.res.stringResource
 /** Una página de nota: icono, título y editor por bloques. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PaginaScreen(vm: PaginaViewModel, adjuntos: OrigenAdjuntos, alVolver: () -> Unit) {
+fun PaginaScreen(vm: PaginaViewModel, adjuntos: OrigenAdjuntos, alVolver: () -> Unit, alTarjetas: () -> Unit = {}) {
     val pagina by vm.pagina.collectAsStateWithLifecycle()
     val titulo by vm.titulo.collectAsStateWithLifecycle()
     val icono by vm.icono.collectAsStateWithLifecycle()
@@ -86,6 +86,7 @@ fun PaginaScreen(vm: PaginaViewModel, adjuntos: OrigenAdjuntos, alVolver: () -> 
                     Box {
                         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.mas_opciones)) }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            DropdownMenuItem(text = { Text(stringResource(R.string.repasar_tarjetas)) }, onClick = { menu = false; alTarjetas() })
                             if (cuadernos.size > 1) DropdownMenuItem(text = { Text(stringResource(R.string.mover_otro_cuaderno)) }, onClick = { menu = false; mover = true })
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.nota_eliminar), color = MaterialTheme.colorScheme.error) },

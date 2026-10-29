@@ -37,7 +37,7 @@ object Fechas {
         val f = local(ms, zona)
         val hoy = local(ahora, zona).toLocalDate()
         val conHora = f.hour != 0 || f.minute != 0
-        val sufijo = if (conHora) " " + hora.format(f) else ""
+        val sufijo = if (conHora) ", " + hora.format(f) else ""
         return when (f.toLocalDate()) {
             hoy -> "$hoyTexto$sufijo"
             hoy.plusDays(1) -> "$mananaTexto$sufijo"

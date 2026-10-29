@@ -14,6 +14,10 @@ import app.kiwu.android.domain.nuevoId
 import app.kiwu.android.domain.Materia
 import app.kiwu.android.domain.Pagina
 import app.kiwu.android.domain.Reglas
+import app.kiwu.android.domain.Repeticion
+import app.kiwu.android.domain.Etiquetas
+import app.kiwu.android.domain.Paso
+import app.kiwu.android.domain.Pasos
 import app.kiwu.android.domain.ReglasHorario
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -198,6 +202,58 @@ class Repositorio(
         return d.copy(recordatorioHoras = horas, recordado = null, actualizada = reloj()).also { dao.guardarDeber(it) }
     }
 
+    suspend fun cambiarTarjetas(paginaId: String, tarjetas: List<app.kiwu.android.domain.Tarjeta>) {
+        val p = dao.pagina(paginaId) ?: return
+        dao.guardarPagina(p.copy(tarjetas = app.kiwu.android.domain.Tarjetas.escribir(tarjetas), actualizada = reloj()))
+    }
+
+    suspend fun cambiarExamen(id: String, examen: Boolean): Deber? = editar(id) { it.copy(examen = examen) }
+
+    suspend fun cambiarCalificaciones(materiaId: String, notas: List<app.kiwu.android.domain.Calificacion>) {
+        val m = dao.materia(materiaId) ?: return
+        dao.guardarMateria(m.copy(calificaciones = app.kiwu.android.domain.Calificaciones.escribir(notas), actualizada = reloj()))
+    }
+
+    suspend fun cambiarPrioridad(id: String, prioridad: Int): Deber? = editar(id) { it.copy(prioridad = prioridad.coerceIn(0, 3)) }
+
+    suspend fun cambiarEtiquetas(id: String, etiquetas: List<String>): Deber? = editar(id) { it.copy(etiquetas = Etiquetas.escribir(etiquetas)) }
+
+    suspend fun cambiarPasos(id: String, pasos: List<Paso>): Deber? = editar(id) { it.copy(pasos = Pasos.escribir(pasos)) }
+
+    private suspend fun editar(id: String, cambio: (Deber) -> Deber): Deber? {
+        val d = dao.deber(id) ?: return null
+        return cambio(d).copy(actualizada = reloj()).also { dao.guardarDeber(it) }
+    }
+
+    suspend fun cambiarRepeticion(id: String, mascara: Int): Deber? {
+        val d = dao.deber(id) ?: return null
+        return d.copy(repite = mascara, actualizada = reloj()).also { dao.guardarDeber(it) }
+    }
+
+    /**
+     * Los hábitos de hoy vuelven a empezar: la tarea repetitiva que se completó antes de hoy se desmarca, y su fecha de
+     * entrega pasa a hoy (misma hora). Es idempotente: se llama al abrir la app, al cambiar los datos y a medianoche.
+     */
+    suspend fun reiniciarRepetidas() {
+        val t = reloj()
+        val zona = java.time.ZoneId.systemDefault()
+        val hoy = java.time.Instant.ofEpochMilli(t).atZone(zona).toLocalDate()
+        val inicio = hoy.atStartOfDay(zona).toInstant().toEpochMilli()
+        for (d in dao.deberes().first()) {
+            if (d.repite == 0 || !Repeticion.toca(d.repite, hoy.dayOfWeek.value)) continue
+            val reabrir = d.completado && (d.fechaCompletado ?: 0L) < inicio
+            val mover = d.fechaEntrega != null && d.fechaEntrega < inicio
+            if (!reabrir && !mover) continue
+            val entrega = d.fechaEntrega?.let { java.time.Instant.ofEpochMilli(it).atZone(zona).toLocalTime().atDate(hoy).atZone(zona).toInstant().toEpochMilli() }
+            dao.guardarDeber(
+                d.copy(
+                    completado = false, fechaCompletado = null, estado = if (reabrir) 0 else d.estado, recordado = null,
+                    fechaEntrega = entrega, actualizada = t,
+                ),
+            )
+        }
+    }
+
     suspend fun marcar(id: String, completado: Boolean): Deber? {
         val d = dao.deber(id) ?: return null
         return reglas.marcar(d, completado, reloj()).also { dao.guardarDeber(it) }
@@ -219,6 +275,12 @@ class Repositorio(
     }
 
     suspend fun eliminarDeber(id: String) = dao.eliminarDeber(id, reloj())
+
+    // --- papelera (lo borrado de forma lógica se puede devolver) ---
+    val deberesEliminados: Flow<List<Deber>> = dao.deberesEliminados()
+    val paginasEliminadas: Flow<List<ResumenPagina>> = dao.paginasEliminadas()
+    suspend fun restaurarDeber(id: String) = dao.restaurarDeber(id, reloj())
+    suspend fun restaurarPagina(id: String) = dao.restaurarPagina(id, reloj())
 
     suspend fun deberesAhora(): List<Deber> = dao.deberesAhora()
 

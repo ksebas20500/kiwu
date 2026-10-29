@@ -127,17 +127,24 @@ abstract class KiwuDao {
     @Query("UPDATE deber SET eliminada = :ahora, actualizada = :ahora WHERE id = :id AND eliminada IS NULL")
     abstract suspend fun eliminarDeber(id: String, ahora: Long)
 
+    /** Papelera: lo borrado cuya lista sigue existiendo (si se borró la lista entera, no se puede devolver suelto). */
+    @Query("SELECT * FROM deber WHERE eliminada IS NOT NULL AND materia_id IN (SELECT id FROM materia WHERE eliminada IS NULL) ORDER BY eliminada DESC LIMIT 100")
+    abstract fun deberesEliminados(): Flow<List<Deber>>
+
+    @Query("UPDATE deber SET eliminada = NULL, actualizada = :ahora WHERE id = :id AND eliminada IS NOT NULL")
+    abstract suspend fun restaurarDeber(id: String, ahora: Long)
+
     @Query("UPDATE deber SET recordado = :cuando WHERE id = :id AND eliminada IS NULL")
     abstract suspend fun marcarAvisado(id: String, cuando: Long)
 
     /**
      * Lo que la racha necesita de cada tarea. A propósito **incluye las eliminadas** (hay que saber cuándo dejaron de estar
-     * pendientes) y deja fuera los eventos, que no se completan.
+     * pendientes) y deja fuera los eventos, que no se completan, y los hábitos (tareas que se repiten), que no cuentan para la racha.
      */
-    @Query("SELECT fecha_entrega, completado, fecha_completado, eliminada, creada FROM deber WHERE materia_id != 'eventos'")
+    @Query("SELECT fecha_entrega, completado, fecha_completado, eliminada, creada FROM deber WHERE materia_id != 'eventos' AND repite = 0")
     abstract fun tareasRacha(): Flow<List<TareaRacha>>
 
-    @Query("SELECT fecha_entrega, completado, fecha_completado, eliminada, creada FROM deber WHERE materia_id != 'eventos'")
+    @Query("SELECT fecha_entrega, completado, fecha_completado, eliminada, creada FROM deber WHERE materia_id != 'eventos' AND repite = 0")
     abstract suspend fun tareasRachaAhora(): List<TareaRacha>
 
     /** Si ya hay algo guardado (listas, cuadernos u horarios, aunque estén borrados): entonces no es una instalación nueva. */
@@ -187,6 +194,15 @@ abstract class KiwuDao {
 
     @Query("UPDATE pagina SET eliminada = :ahora, actualizada = :ahora WHERE id = :id AND eliminada IS NULL")
     abstract suspend fun eliminarPagina(id: String, ahora: Long)
+
+    @Query(
+        "SELECT id, cuaderno_id, titulo, icono, favorita, texto_plano, creada, actualizada FROM pagina " +
+            "WHERE eliminada IS NOT NULL AND cuaderno_id IN (SELECT id FROM cuaderno WHERE eliminada IS NULL) ORDER BY eliminada DESC LIMIT 100",
+    )
+    abstract fun paginasEliminadas(): Flow<List<ResumenPagina>>
+
+    @Query("UPDATE pagina SET eliminada = NULL, actualizada = :ahora WHERE id = :id AND eliminada IS NOT NULL")
+    abstract suspend fun restaurarPagina(id: String, ahora: Long)
 
     // --- horarios y clases ----------------------------------------------------------------------
 
@@ -306,7 +322,7 @@ abstract class KiwuDao {
 
 @Database(
     entities = [Materia::class, Deber::class, Cuaderno::class, Pagina::class, Horario::class, Clase::class, GrupoLista::class, Falta::class],
-    version = 5,
+    version = 9,
     exportSchema = true,
 )
 abstract class KiwuDb : RoomDatabase() {
@@ -354,9 +370,40 @@ abstract class KiwuDb : RoomDatabase() {
             }
         }
 
+        /** v5 → v6: tareas repetitivas (hábitos). Columna con los días en que se repite; 0 en las que ya había. */
+        val MIGRACION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `deber` ADD COLUMN `repite` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /** v6 → v7: prioridad, etiquetas y pasos (subtareas) en las tareas. Las que ya había quedan sin nada de eso. */
+        val MIGRACION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `deber` ADD COLUMN `prioridad` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `deber` ADD COLUMN `etiquetas` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `deber` ADD COLUMN `pasos` TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
+        /** v7 → v8: examen (tarea) y calificaciones (lista). Las tareas y listas que ya había quedan sin ello. */
+        val MIGRACION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `deber` ADD COLUMN `examen` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `materia` ADD COLUMN `calificaciones` TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
+        /** v8 → v9: tarjetas de repaso guardadas en cada nota. Las notas que ya había quedan sin tarjetas. */
+        val MIGRACION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `pagina` ADD COLUMN `tarjetas` TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         fun obtener(contexto: Context): KiwuDb = instancia ?: synchronized(this) {
             instancia ?: Room.databaseBuilder(contexto.applicationContext, KiwuDb::class.java, "kiwu.db")
-                .addMigrations(MIGRACION_1_2, MIGRACION_2_3, MIGRACION_3_4, MIGRACION_4_5)
+                .addMigrations(MIGRACION_1_2, MIGRACION_2_3, MIGRACION_3_4, MIGRACION_4_5, MIGRACION_5_6, MIGRACION_6_7, MIGRACION_7_8, MIGRACION_8_9)
                 // Las tablas y triggers de sincronización no son entidades de Room: se instalan en cada apertura.
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) = SyncSql.instalar(db)

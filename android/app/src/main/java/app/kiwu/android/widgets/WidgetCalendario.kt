@@ -4,6 +4,10 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import app.kiwu.android.domain.EventoExterno
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,6 +29,8 @@ import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.state.updateAppWidgetState
+import app.kiwu.android.data.CalendarioTelefono
+import app.kiwu.android.data.TareasGoogle
 import androidx.glance.background
 import androidx.glance.currentState
 import androidx.glance.layout.Alignment
@@ -60,17 +66,29 @@ class CalendarioWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val repo = (context.applicationContext as KiwuApp).repo
+        val app = context.applicationContext as KiwuApp
+        val repo = app.repo
         // Primer dibujo con lo ya leído; después se sigue la base de datos en vivo (ver `DeberesWidget`).
         val deberes0 = repo.deberes.first()
         val colores = coloresDelWidget(context)
         TextosWidget.de(context)
+        val aj0 = app.ajustes.flujo.first()
         provideContent {
             val deberes by repo.deberes.collectAsState(deberes0)
+            val ajustes by app.ajustes.flujo.collectAsState(aj0)
             val desplazamiento = currentState<Preferences>()[ClaveMesCalendario] ?: 0
             val ahora = System.currentTimeMillis()
             val hoy = Instant.ofEpochMilli(ahora).atZone(ZoneId.systemDefault()).toLocalDate()
-            val datos = DatosWidgets.calendario(deberes, hoy.withDayOfMonth(1).plusMonths(desplazamiento.toLong()), ahora)
+            val mes = hoy.withDayOfMonth(1).plusMonths(desplazamiento.toLong())
+            // Eventos de Google Calendar: se vuelven a leer al cambiar de mes, de ajuste o de datos (Glance no repite `provideGlance`).
+            val externos by produceState(emptyList<EventoExterno>(), mes, ajustes.calendarioGoogle, ajustes.tareasGoogle, deberes) {
+                value = withContext(Dispatchers.IO) {
+                    val eventos = if (ajustes.calendarioGoogle) CalendarioTelefono.eventos(context, mes.minusDays(7), mes.plusMonths(1).plusDays(7)) else emptyList()
+                    if (ajustes.tareasGoogle && TareasGoogle.vieja(context)) TareasGoogle.actualizar(context)
+                    eventos + if (ajustes.tareasGoogle) TareasGoogle.leer(context) else emptyList()
+                }
+            }
+            val datos = DatosWidgets.calendario(deberes, mes, ahora, externos = externos)
             ContenidoCalendario(datos, colores)
         }
     }

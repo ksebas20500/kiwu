@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.ViewKanban
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
@@ -85,6 +86,8 @@ fun TareasScreen(
     alAbrirMenu: () -> Unit,
     archivos: @Composable (Materia) -> Unit,
     insigniaRacha: @Composable () -> Unit = {},
+    accionesExtra: @Composable () -> Unit = {},
+    alCalificaciones: (String) -> Unit = {},
 ) {
     val estado by vm.estado.collectAsStateWithLifecycle()
     // El tablero solo tiene sentido en pantallas anchas: en el teléfono siempre se ve la lista.
@@ -96,9 +99,17 @@ fun TareasScreen(
         topBar = {
             TopAppBar(
                 title = { Text(tituloDe(estado.elemento, estado.materiaActual, estado.grupoActual)) },
-                navigationIcon = { IconButton(onClick = alAbrirMenu) { Icon(Icons.Filled.Menu, stringResource(R.string.abrir_menu)) } },
+                navigationIcon = {
+                    androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        IconButton(onClick = alAbrirMenu) { Icon(Icons.Filled.Menu, stringResource(R.string.abrir_menu)) }
+                        insigniaRacha()
+                    }
+                },
                 actions = {
-                    insigniaRacha()
+                    accionesExtra()
+                    estado.materiaActual?.takeIf { !estado.enEventos }?.let { m ->
+                        IconButton(onClick = { alCalificaciones(m.id) }) { Icon(Icons.Filled.School, stringResource(R.string.calificaciones)) }
+                    }
                     if (estado.elemento != Elemento.Calendario && anchaParaTablero && !estado.enEventos) {
                         val tablero = verTablero
                         IconButton(onClick = { vm.cambiarVista(if (tablero) "lista" else "tablero") }) {

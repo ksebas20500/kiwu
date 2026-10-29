@@ -222,7 +222,7 @@ private fun BloqueTextoUi(ed: EstadoEditor, b: BloqueEd, numero: Int?) {
                         b.kind == TiposBloque.DESTACADO -> stringResource(R.string.bloque_destacado)
                         else -> ""
                     }
-                    if (pista.isNotEmpty()) Text(pista, style = estilo, color = colorTexto.copy(alpha = 0.35f), modifier = Modifier.padding(start = 0.dp))
+                    if (pista.isNotEmpty()) Text(pista, style = estilo, color = colorTexto.copy(alpha = 0.6f), modifier = Modifier.padding(start = 0.dp))
                 }
                 BasicTextField(
                     value = b.contenido.campo,

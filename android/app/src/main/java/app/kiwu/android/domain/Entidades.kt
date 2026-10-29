@@ -24,6 +24,8 @@ data class Materia(
     @ColumnInfo(name = "grupo_id") val grupoId: String? = null,
     /** Emoji propio de la lista (opcional; null = el icono de lista de siempre). */
     val emoji: String? = null,
+    /** Notas de la materia como JSON (ver [Calificaciones]); vacío si no hay. */
+    @ColumnInfo(defaultValue = "''") val calificaciones: String = "",
     val creada: Long,
     val actualizada: Long,
     val eliminada: Long? = null,
@@ -61,6 +63,16 @@ data class Deber(
     val estado: Int = 0,
     @ColumnInfo(name = "fecha_entrega") val fechaEntrega: Long? = null,
     @ColumnInfo(name = "recordatorio_horas") val recordatorioHoras: Int = 24,
+    /** Días de la semana en que se repite, como bits (lunes = 1 … domingo = 64); 0 = no se repite. Ver [Repeticion]. */
+    @ColumnInfo(defaultValue = "0") val repite: Int = 0,
+    /** 0 ninguna, 1 baja, 2 media, 3 alta (ver [Prioridad]). */
+    @ColumnInfo(defaultValue = "0") val prioridad: Int = 0,
+    /** Etiquetas separadas por coma (ver [Etiquetas]). */
+    @ColumnInfo(defaultValue = "''") val etiquetas: String = "",
+    /** Pasos o subtareas, como JSON (ver [Pasos]); vacío si no hay. */
+    @ColumnInfo(defaultValue = "''") val pasos: String = "",
+    /** Si es un examen: la lista y el widget cuentan los días que faltan. */
+    @ColumnInfo(defaultValue = "0") val examen: Boolean = false,
     @ColumnInfo(name = "fecha_completado") val fechaCompletado: Long? = null,
     /** Nota de la tarea: JSON de bloques (ver `Documento`). */
     val nota: String = DOCUMENTO_VACIO,
@@ -104,7 +116,20 @@ data class Pagina(
     val contenido: String = DOCUMENTO_VACIO,
     @ColumnInfo(name = "texto_plano") val textoPlano: String = "",
     val favorita: Boolean = false,
+    /** Tarjetas de repaso de la nota como JSON (ver [Tarjetas]); vacío si no hay. */
+    @ColumnInfo(defaultValue = "''") val tarjetas: String = "",
     val creada: Long,
     val actualizada: Long,
     val eliminada: Long? = null,
 )
+
+/** Las repeticiones que ofrece la app (máscara de días: lunes = 1 … domingo = 64). */
+object Repeticion {
+    const val NINGUNA = 0
+    const val TODOS_LOS_DIAS = 127
+    const val LUNES_A_VIERNES = 31
+    const val FINES_DE_SEMANA = 96
+
+    /** Si una tarea con esta máscara toca el día [diaSemana] (1 = lunes … 7). */
+    fun toca(mascara: Int, diaSemana: Int): Boolean = (mascara shr (diaSemana - 1)) and 1 == 1
+}

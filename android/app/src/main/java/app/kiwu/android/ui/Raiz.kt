@@ -12,6 +12,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Timer
+import app.kiwu.android.ui.estudio.CalificacionesScreen
+import app.kiwu.android.ui.estudio.TarjetasScreen
+import app.kiwu.android.ui.estudio.TemporizadorScreen
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -125,7 +130,8 @@ fun Raiz(
                 composable("principal") {
                     Principal(
                         app, alAbrirTarea = { nav.navigate("tarea/$it") }, alAbrirPagina = { nav.navigate("pagina/$it") }, alAjustes = { nav.navigate("ajustes") },
-                        alRacha = { nav.navigate("racha") },
+                        alRacha = { nav.navigate("racha") }, alBuscar = { nav.navigate("buscar") },
+                        alTemporizador = { nav.navigate("temporizador") }, alCalificaciones = { nav.navigate("calificaciones/$it") },
                         abrirLista = abrirLista, alAbrirLista = { abrirLista = null },
                         seccionInicial = seccion, alAtenderSeccion = alAtender,
                     )
@@ -145,7 +151,17 @@ fun Raiz(
                         key = "pagina-$id",
                         factory = viewModelFactory { initializer { PaginaViewModel(app.repo, app.alcance, id) } },
                     )
-                    PaginaScreen(vm, adjuntos, alVolver = { nav.volver() })
+                    PaginaScreen(vm, adjuntos, alVolver = { nav.volver() }, alTarjetas = { nav.navigate("tarjetas/$id") })
+                }
+                composable("buscar") { BuscarScreen(app, alVolver = { nav.volver() }, alAbrirTarea = { nav.navigate("tarea/$it") }, alAbrirPagina = { nav.navigate("pagina/$it") }) }
+                composable("temporizador") { TemporizadorScreen(alVolver = { nav.volver() }) }
+                composable("calificaciones/{id}") { entrada ->
+                    val id = entrada.arguments?.getString("id") ?: return@composable
+                    CalificacionesScreen(app, id, alVolver = { nav.volver() })
+                }
+                composable("tarjetas/{id}") { entrada ->
+                    val id = entrada.arguments?.getString("id") ?: return@composable
+                    TarjetasScreen(app, id, alVolver = { nav.volver() })
                 }
                 composable("racha") { RachaScreen(app, alVolver = { nav.volver() }) }
             }
@@ -191,7 +207,7 @@ private fun androidx.navigation.NavController.volver() {
 @Composable
 private fun Principal(
     app: KiwuApp, alAbrirTarea: (String) -> Unit, alAbrirPagina: (String) -> Unit, alAjustes: () -> Unit,
-    alRacha: () -> Unit = {},
+    alRacha: () -> Unit = {}, alBuscar: () -> Unit = {}, alTemporizador: () -> Unit = {}, alCalificaciones: (String) -> Unit = {},
     abrirLista: String? = null, alAbrirLista: () -> Unit = {},
     seccionInicial: String? = null, alAtenderSeccion: () -> Unit = {},
 ) {
@@ -231,10 +247,15 @@ private fun Principal(
         // Las pantallas de dentro ya gestionan la barra de estado; la barra inferior gestiona la de navegación.
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(selected = modulo == "tareas", onClick = { modulo = "tareas" }, icon = { Icon(Icons.Filled.CheckCircle, null) }, label = { Text(androidx.compose.ui.res.stringResource(R.string.tareas)) })
-                NavigationBarItem(selected = modulo == "notas", onClick = { modulo = "notas" }, icon = { Icon(Icons.Filled.Description, null) }, label = { Text(androidx.compose.ui.res.stringResource(R.string.notas)) })
-                NavigationBarItem(selected = modulo == "horario", onClick = { modulo = "horario" }, icon = { Icon(Icons.Filled.Schedule, null) }, label = { Text(androidx.compose.ui.res.stringResource(R.string.horario)) })
+            NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+                val colores = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                )
+                NavigationBarItem(colors = colores, selected = modulo == "tareas", onClick = { modulo = "tareas" }, icon = { Icon(Icons.Filled.CheckCircle, null) }, label = { Text(androidx.compose.ui.res.stringResource(R.string.tareas)) })
+                NavigationBarItem(colors = colores, selected = modulo == "notas", onClick = { modulo = "notas" }, icon = { Icon(Icons.Filled.Description, null) }, label = { Text(androidx.compose.ui.res.stringResource(R.string.notas)) })
+                NavigationBarItem(colors = colores, selected = modulo == "horario", onClick = { modulo = "horario" }, icon = { Icon(Icons.Filled.Schedule, null) }, label = { Text(androidx.compose.ui.res.stringResource(R.string.horario)) })
             }
         },
     ) { relleno ->
@@ -253,7 +274,7 @@ private fun Principal(
                 label = "modulo",
             ) { destino ->
                 when (destino) {
-                    "notas" -> NotasScreen(notasVm, alAbrirPagina, abrirMenu, insigniaRacha = { InsigniaRacha(app, alRacha) })
+                    "notas" -> NotasScreen(notasVm, alAbrirPagina, abrirMenu, insigniaRacha = { InsigniaRacha(app, alRacha) }, accionesExtra = { IconoTemporizador(alTemporizador) })
                     "horario" -> HorarioScreen(
                         horarioVm, abrirMenu, alAbrirTarea,
                         // «Abrir la lista completa»: cambia a la pestaña Tareas, ya en esa lista.
@@ -262,6 +283,8 @@ private fun Principal(
                     else -> TareasScreen(
                         tareasVm, alAbrirTarea, abrirMenu, archivos = { m -> ArchivosScreen(m) { carpeta -> tareasVm.vincularCarpeta(m.id, carpeta) } },
                         insigniaRacha = { InsigniaRacha(app, alRacha) },
+                        accionesExtra = { IconoTemporizador(alTemporizador); IconoBuscar(alBuscar) },
+                        alCalificaciones = alCalificaciones,
                     )
                 }
             }
@@ -311,3 +334,11 @@ private fun IconosDeBarras(oscuro: Boolean) {
         actividad.enableEdgeToEdge(statusBarStyle = estilo, navigationBarStyle = estilo)
     }
 }
+
+@Composable
+private fun IconoTemporizador(alTemporizador: () -> Unit) =
+    androidx.compose.material3.IconButton(onClick = alTemporizador) { Icon(Icons.Filled.Timer, androidx.compose.ui.res.stringResource(R.string.temporizador)) }
+
+@Composable
+private fun IconoBuscar(alBuscar: () -> Unit) =
+    androidx.compose.material3.IconButton(onClick = alBuscar) { Icon(Icons.Filled.Search, androidx.compose.ui.res.stringResource(R.string.buscar)) }
