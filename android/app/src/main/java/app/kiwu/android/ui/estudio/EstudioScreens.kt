@@ -12,7 +12,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.ui.text.style.TextOverflow
+import app.kiwu.android.domain.Documento
+import app.kiwu.android.domain.GeneradorTarjetas
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -140,24 +146,64 @@ fun CalificacionesScreen(app: KiwuApp, materiaId: String, alVolver: () -> Unit) 
     }
 }
 
-/** Tarjetas de repaso de una nota: las creas con una pregunta y su respuesta, y las repasas una a una. */
+/**
+ * Tarjetas de repaso de una nota: las escritas como bloque «Tarjeta» en el apunte más las guardadas aquí (a mano o
+ * generadas desde el apunte), y el repaso una a una.
+ */
 @Composable
 fun TarjetasScreen(app: KiwuApp, paginaId: String, alVolver: () -> Unit) {
     val alcance = rememberCoroutineScope()
     var tarjetas by remember { mutableStateOf<List<Tarjeta>?>(null) }
+    var apunte by remember { mutableStateOf<Documento?>(null) }
     var cola by remember { mutableStateOf<List<Tarjeta>?>(null) } // null = no se está repasando
+    var propuestas by remember { mutableStateOf<List<Tarjeta>?>(null) } // null = no se está generando
+    var elegidas by remember { mutableStateOf(emptySet<Int>()) }
     var vista by remember { mutableStateOf(false) }
     var pregunta by remember { mutableStateOf("") }
     var respuesta by remember { mutableStateOf("") }
-    LaunchedEffect(paginaId) { tarjetas = Tarjetas.leer(app.repo.pagina(paginaId)?.tarjetas.orEmpty()) }
+    LaunchedEffect(paginaId) {
+        val p = app.repo.pagina(paginaId)
+        tarjetas = Tarjetas.leer(p?.tarjetas.orEmpty())
+        apunte = Documento.deJson(p?.contenido)
+    }
     fun guardar(l: List<Tarjeta>) { tarjetas = l; alcance.launch { app.repo.cambiarTarjetas(paginaId, l) } }
     val lista = tarjetas.orEmpty()
-    Pantalla(stringResource(R.string.tarjetas), { if (cola != null) cola = null else alVolver() }) { relleno ->
+    val delApunte = remember(apunte) { apunte?.let(GeneradorTarjetas::delApunte).orEmpty() }
+    val todas = delApunte + lista
+    Pantalla(stringResource(R.string.tarjetas), { if (cola != null) cola = null else if (propuestas != null) propuestas = null else alVolver() }) { relleno ->
         val actual = cola?.firstOrNull()
-        Column(Modifier.padding(relleno).fillMaxSize().padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            Modifier.padding(relleno).fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             when {
+                propuestas != null -> {
+                    val ps = propuestas!!
+                    if (ps.isEmpty()) {
+                        Text(stringResource(R.string.tarjetas_generar_nada), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Button(onClick = { propuestas = null }) { Text(stringResource(R.string.tarjetas_volver)) }
+                    } else {
+                        Text(androidx.compose.ui.res.pluralStringResource(R.plurals.tarjetas_propuestas, ps.size, ps.size),style = MaterialTheme.typography.titleMedium)
+                        for ((i, t) in ps.withIndex()) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(checked = i in elegidas, onCheckedChange = { elegidas = if (it) elegidas + i else elegidas - i })
+                                Column(Modifier.weight(1f)) {
+                                    Text(t.pregunta, style = MaterialTheme.typography.bodyLarge)
+                                    Text(t.respuesta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            OutlinedButton(onClick = { propuestas = null }) { Text(stringResource(R.string.cancelar)) }
+                            Button(
+                                onClick = { guardar(lista + ps.filterIndexed { i, _ -> i in elegidas }); propuestas = null },
+                                enabled = elegidas.isNotEmpty(),
+                            ) { Text(stringResource(R.string.tarjetas_anadir_n, elegidas.size)) }
+                        }
+                    }
+                }
                 cola != null && actual == null -> {
-                    Text(stringResource(R.string.tarjetas_terminado, lista.size), style = MaterialTheme.typography.titleLarge)
+                    Text(stringResource(R.string.tarjetas_terminado, todas.size), style = MaterialTheme.typography.titleLarge)
                     Button(onClick = { cola = null }) { Text(stringResource(R.string.tarjetas_volver)) }
                 }
                 cola != null && actual != null -> {
@@ -175,7 +221,24 @@ fun TarjetasScreen(app: KiwuApp, paginaId: String, alVolver: () -> Unit) {
                 }
                 else -> {
                     Text(stringResource(R.string.tarjetas_intro), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Button(onClick = { cola = lista; vista = false }, enabled = lista.isNotEmpty()) { Text(stringResource(R.string.tarjetas_empezar, lista.size)) }
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Button(onClick = { cola = todas; vista = false }, enabled = todas.isNotEmpty()) { Text(stringResource(R.string.tarjetas_empezar, todas.size)) }
+                        OutlinedButton(
+                            onClick = {
+                                val ps = GeneradorTarjetas.proponer(apunte ?: Documento.vacio(), lista)
+                                propuestas = ps
+                                elegidas = ps.indices.toSet()
+                            },
+                            enabled = apunte != null,
+                        ) { Text(stringResource(R.string.tarjetas_generar)) }
+                    }
+                    for (t in delApunte) {
+                        Column {
+                            Text(stringResource(R.string.tarjeta_en_apunte), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                            Text(t.pregunta, style = MaterialTheme.typography.bodyLarge)
+                            Text(t.respuesta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                     for ((i, t) in lista.withIndex()) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {

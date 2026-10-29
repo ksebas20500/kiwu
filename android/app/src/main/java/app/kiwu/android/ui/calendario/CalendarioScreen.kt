@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -77,6 +78,8 @@ fun CalendarioScreen(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String
             .groupBy { Instant.ofEpochMilli(it.fechaEntrega!!).atZone(zona).toLocalDate() }
     }
 
+    // El campo de añadir flota encima, pegado al teclado: dentro de la columna, el alto fijo de la rejilla lo aplastaba.
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(Fechas.mes(primeroDelMes), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).padding(start = 8.dp))
@@ -118,7 +121,8 @@ fun CalendarioScreen(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String
                     .replaceFirstChar { it.uppercase() },
                 style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
             )
-            LazyColumn(Modifier.weight(1f)) {
+            // Hueco abajo para que la última tarea no quede tapada por el campo de añadir.
+            LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(bottom = 88.dp)) {
                 if (delDia.isEmpty()) {
                     item { Text(stringResource(R.string.sin_entregas_dia), Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
@@ -130,8 +134,12 @@ fun CalendarioScreen(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String
                     )
                 }
             }
-            CampoNuevaTarea(estado.materias + app.kiwu.android.ui.tareas.ListaEventos, null, alCrear = { t, m, f -> vm.crearTareaEnDia(t, m, diaSel, f) }, marcador = stringResource(R.string.anadir_tarea_dia), diaFijo = diaSel)
         }
+    }
+    CampoNuevaTarea(
+        estado.materias + app.kiwu.android.ui.tareas.ListaEventos, null, alCrear = { t, m, f -> vm.crearTareaEnDia(t, m, diaSel, f) },
+        modifier = Modifier.align(Alignment.BottomCenter), marcador = stringResource(R.string.anadir_tarea_dia), diaFijo = diaSel,
+    )
     }
 }
 

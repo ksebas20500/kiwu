@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Style
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -190,7 +191,7 @@ internal fun BloqueCodigoUi(ed: EstadoEditor, b: BloqueEd) {
             Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 12.dp)) {
                 BasicTextField(
                     value = b.contenido.campo,
-                    onValueChange = { ed.alEscribir(b, it) },
+                    onValueChange = { escribir(ed, b, it) },
                     textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 19.sp, color = colorDe(null, oscuro)),
                     cursorBrush = SolidColor(colorDe(null, oscuro)),
                     visualTransformation = transformacion,
@@ -198,6 +199,64 @@ internal fun BloqueCodigoUi(ed: EstadoEditor, b: BloqueEd) {
                     modifier = Modifier.fillMaxWidth().focusRequester(foco).onFocusChanged {
                         if (it.isFocused) ed.enfocado = b.id else if (ed.enfocado == b.id) ed.enfocado = null
                     },
+                )
+            }
+        }
+    }
+}
+
+// --- tarjeta de repaso -------------------------------------------------------------------------
+
+@Composable
+internal fun BloqueTarjetaUi(ed: EstadoEditor, b: BloqueEd) {
+    val foco = remember { FocusRequester() }
+    val focoRespuesta = remember { FocusRequester() }
+    PedirFoco(ed, b, foco)
+    // Intro en la pregunta pide el foco de la respuesta.
+    val peticion = ed.peticionFoco
+    LaunchedEffect(peticion) {
+        if (peticion == null || peticion.id != idRespuesta(b)) return@LaunchedEffect
+        androidx.compose.runtime.withFrameNanos { }
+        runCatching { focoRespuesta.requestFocus() }
+        if (ed.peticionFoco === peticion) ed.peticionFoco = null
+    }
+    val color = MaterialTheme.colorScheme.onSurface
+    val tenue = color.copy(alpha = 0.5f)
+    val alEnfocar = Modifier.onFocusChanged { if (it.isFocused) ed.enfocado = b.id else if (ed.enfocado == b.id) ed.enfocado = null }
+    Surface(
+        Modifier.fillMaxWidth().padding(vertical = 4.dp), shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+    ) {
+        Column(Modifier.padding(start = 12.dp, end = 4.dp, bottom = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Style, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                Text(
+                    stringResource(R.string.bloque_tarjeta), Modifier.weight(1f).padding(start = 6.dp),
+                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
+                )
+                MenuBloque(ed, b)
+            }
+            Box(Modifier.padding(end = 8.dp)) {
+                if (b.texto.isEmpty()) Text(stringResource(R.string.pregunta), color = tenue, fontSize = 17.sp)
+                BasicTextField(
+                    value = b.contenido.campo,
+                    onValueChange = { escribir(ed, b, it) },
+                    textStyle = TextStyle(fontSize = 17.sp, lineHeight = 24.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, color = color),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Default),
+                    modifier = Modifier.fillMaxWidth().focusRequester(foco).then(alEnfocar),
+                )
+            }
+            HorizontalDivider(Modifier.padding(vertical = 8.dp, horizontal = 0.dp).padding(end = 8.dp), color = tenue.copy(alpha = 0.2f))
+            Box(Modifier.padding(end = 8.dp)) {
+                if (b.respuesta.isEmpty()) Text(stringResource(R.string.respuesta), color = tenue, fontSize = 16.sp)
+                BasicTextField(
+                    value = b.respuesta,
+                    onValueChange = { b.respuesta = it; ed.marcarCambio() },
+                    textStyle = TextStyle(fontSize = 16.sp, lineHeight = 23.sp, color = color),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    modifier = Modifier.fillMaxWidth().focusRequester(focoRespuesta).then(alEnfocar),
                 )
             }
         }

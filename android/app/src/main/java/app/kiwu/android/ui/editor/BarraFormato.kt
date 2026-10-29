@@ -13,11 +13,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatColorText
-import androidx.compose.material.icons.filled.FormatIndentDecrease
-import androidx.compose.material.icons.filled.FormatIndentIncrease
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatStrikethrough
 import androidx.compose.material.icons.filled.FormatUnderlined
@@ -67,7 +64,8 @@ internal fun ManejarAcciones(ed: EstadoEditor, adjuntos: OrigenAdjuntos) {
     val alcance = rememberCoroutineScope()
     val accion = ed.accionPendiente
     LaunchedEffect(accion) {
-        if (accion == null) return@LaunchedEffect
+        // «Repasar» lo resuelve la pantalla de la nota (necesita navegar).
+        if (accion == null || accion.tipo == ACCION_REPASAR) return@LaunchedEffect
         ed.accionPendiente = null
         when (accion.tipo) {
             TiposBloque.IMAGEN -> adjuntos.elegirImagen { uri ->
@@ -132,13 +130,10 @@ fun BarraFormato(ed: EstadoEditor, adjuntos: OrigenAdjuntos, modifier: Modifier 
                 Boton(Icons.Filled.FormatItalic, stringResource(R.string.cursiva), ed.activo(b, "i")) { ed.alternarFormato("i") }
                 Boton(Icons.Filled.FormatUnderlined, stringResource(R.string.subrayado), ed.activo(b, "u")) { ed.alternarFormato("u") }
                 Boton(Icons.Filled.FormatStrikethrough, stringResource(R.string.tachado), ed.activo(b, "s")) { ed.alternarFormato("s") }
-                Boton(Icons.Filled.Code, stringResource(R.string.codigo_en_linea), ed.activo(b, "code")) { ed.alternarFormato("code") }
                 MenuColores(Icons.Filled.FormatColorText, stringResource(R.string.color_texto), false, ed)
                 MenuColores(Icons.Filled.Highlight, stringResource(R.string.resaltado), true, ed)
                 Boton(Icons.Filled.Link, stringResource(R.string.enlace), ed.enlaceBajoCursor(b) != null) { dialogoEnlace = true }
                 ed.enlaceBajoCursor(b)?.let { url -> TextButton(onClick = { adjuntos.abrirUrl(url) }) { Text(stringResource(R.string.abrir)) } }
-                Boton(Icons.Filled.FormatIndentDecrease, stringResource(R.string.menos_sangria)) { ed.cambiarSangria(b, -1) }
-                Boton(Icons.Filled.FormatIndentIncrease, stringResource(R.string.mas_sangria)) { ed.cambiarSangria(b, 1) }
             }
             Box {
                 Boton(Icons.Filled.Add, stringResource(R.string.insertar)) { menuInsertar = true }

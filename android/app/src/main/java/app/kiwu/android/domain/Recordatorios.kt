@@ -75,7 +75,10 @@ object Recordatorios {
         if (resto < 0) {
             val minutos = (-resto / 60_000).toInt()
             if (minutos < 1) return r.getString(if (ev) R.string.aviso_evento_ya else R.string.aviso_tarea_ya)
-            return r.getString(if (ev) R.string.aviso_evento_hace else R.string.aviso_tarea_hace, minutos)
+            if (minutos < 60) return r.getString(if (ev) R.string.aviso_evento_hace else R.string.aviso_tarea_hace, minutos)
+            val horas = minutos / 60
+            if (horas >= 24) return r.getQuantityString(if (ev) R.plurals.aviso_evento_hace_d else R.plurals.aviso_tarea_hace_d, horas / 24, horas / 24)
+            return r.getQuantityString(if (ev) R.plurals.aviso_evento_hace_h else R.plurals.aviso_tarea_hace_h, horas, horas)
         }
         val horas = resto.toDouble() / HORA_MS
         if (horas < 1) return r.getString(if (ev) R.string.aviso_evento_min else R.string.aviso_tarea_min, maxOf(1, (resto / 60_000).toInt()))

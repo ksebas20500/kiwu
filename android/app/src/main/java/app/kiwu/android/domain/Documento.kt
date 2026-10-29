@@ -34,8 +34,11 @@ object TiposBloque {
     const val DIVISOR = "divider"
     const val ENLACE = "embed"
 
+    /** Tarjeta de repaso: `text` es la pregunta y `answer` la respuesta. */
+    const val TARJETA = "flashcard"
+
     val todos = listOf(
-        PARRAFO, TITULO, SUBTITULO, VINETAS, NUMERADA, TAREAS, CITA, DESTACADO, CODIGO, IMAGEN, ARCHIVO, DIVISOR, ENLACE,
+        PARRAFO, TITULO, SUBTITULO, VINETAS, NUMERADA, TAREAS, CITA, DESTACADO, CODIGO, IMAGEN, ARCHIVO, DIVISOR, ENLACE, TARJETA,
     )
 
     /** Nombre de cada tipo en el idioma de la app (recursos de texto). */
@@ -53,6 +56,7 @@ object TiposBloque {
         ARCHIVO to R.string.bloque_archivo,
         DIVISOR to R.string.bloque_divisor,
         ENLACE to R.string.bloque_enlace,
+        TARJETA to R.string.bloque_tarjeta,
     )
 
     /** Bloques cuyo contenido es texto editable con formato. */
@@ -157,6 +161,8 @@ data class Bloque(
     val fileName: String? = null,
     /** Dirección del archivo o la imagen adjunta en este dispositivo (en Android, un `content://`). */
     val path: String? = null,
+    /** Respuesta de una tarjeta de repaso. */
+    val answer: String? = null,
     /** Campos desconocidos, para no perderlos al reescribir. */
     val extra: JsonObject = JsonObject(emptyMap()),
 ) {
@@ -175,10 +181,12 @@ data class Bloque(
         bookmark?.let { put("bookmark", it) }
         fileName?.let { put("fileName", it) }
         path?.let { put("path", it) }
+        answer?.let { put("answer", it) }
     }
 
     fun textoPlano(): String = when (kind) {
         TiposBloque.ARCHIVO -> fileName ?: ""
+        TiposBloque.TARJETA -> listOf(text, answer.orEmpty()).filter { it.isNotEmpty() }.joinToString("\n")
         TiposBloque.ENLACE -> preview?.texto("titulo")?.takeIf { it.isNotEmpty() } ?: url ?: ""
         else -> text
     }
@@ -186,7 +194,7 @@ data class Bloque(
     companion object {
         private val conocidas = setOf(
             "id", "kind", "text", "runs", "indent", "language", "url", "preview", "isChecked",
-            "imageData", "bookmark", "fileName", "path",
+            "imageData", "bookmark", "fileName", "path", "answer",
         )
 
         fun deJson(o: JsonObject): Bloque {
@@ -206,6 +214,7 @@ data class Bloque(
                 bookmark = o.texto("bookmark"),
                 fileName = o.texto("fileName"),
                 path = o.texto("path"),
+                answer = o.texto("answer"),
                 extra = JsonObject(o.filterKeys { it !in conocidas }),
             )
         }

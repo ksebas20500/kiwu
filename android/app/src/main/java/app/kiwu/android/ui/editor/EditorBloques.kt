@@ -135,6 +135,7 @@ private fun BloqueUi(ed: EstadoEditor, b: BloqueEd, numero: Int?, adjuntos: Orig
         TiposBloque.IMAGEN -> BloqueImagenUi(ed, b)
         TiposBloque.ARCHIVO -> BloqueArchivoUi(ed, b, adjuntos)
         TiposBloque.ENLACE -> BloqueEnlaceUi(ed, b, adjuntos)
+        TiposBloque.TARJETA -> BloqueTarjetaUi(ed, b)
         else -> BloqueTextoUi(ed, b, numero)
     }
 }
@@ -217,7 +218,7 @@ private fun BloqueTextoUi(ed: EstadoEditor, b: BloqueEd, numero: Int?) {
                     val pista = when {
                         b.kind == TiposBloque.TITULO -> stringResource(R.string.bloque_titulo1)
                         b.kind == TiposBloque.SUBTITULO -> stringResource(R.string.bloque_titulo2)
-                        b.kind == TiposBloque.PARRAFO && (enfocado || ed.bloques.lastOrNull()?.id == b.id) -> stringResource(R.string.pista_parrafo)
+                        b.kind == TiposBloque.PARRAFO && (enfocado || (ed.enfocado == null && ed.bloques.lastOrNull()?.id == b.id)) ->stringResource(R.string.pista_parrafo)
                         b.kind == TiposBloque.CITA -> stringResource(R.string.bloque_cita)
                         b.kind == TiposBloque.DESTACADO -> stringResource(R.string.bloque_destacado)
                         else -> ""
@@ -226,7 +227,7 @@ private fun BloqueTextoUi(ed: EstadoEditor, b: BloqueEd, numero: Int?) {
                 }
                 BasicTextField(
                     value = b.contenido.campo,
-                    onValueChange = { ed.alEscribir(b, it) },
+                    onValueChange = { escribir(ed, b, it) },
                     textStyle = estilo,
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     visualTransformation = transformacion,
@@ -264,6 +265,10 @@ private fun BloqueTextoUi(ed: EstadoEditor, b: BloqueEd, numero: Int?) {
 /** Pide el foco cuando el estado lo ordena (bloque nuevo, tras Intro…) y coloca el cursor. */
 @Composable
 internal fun PedirFoco(ed: EstadoEditor, b: BloqueEd, foco: FocusRequester) {
+    androidx.compose.runtime.DisposableEffect(b.id) {
+        ed.focos[b.id] = foco
+        onDispose { if (ed.focos[b.id] === foco) ed.focos.remove(b.id) }
+    }
     val peticion = ed.peticionFoco
     LaunchedEffect(peticion) {
         if (peticion == null || peticion.id != b.id) return@LaunchedEffect
@@ -273,6 +278,16 @@ internal fun PedirFoco(ed: EstadoEditor, b: BloqueEd, foco: FocusRequester) {
         b.contenido = Contenido(b.contenido.campo.copy(selection = TextRange(pos + 1)), b.fmt)
         if (ed.peticionFoco === peticion) ed.peticionFoco = null
     }
+}
+
+/**
+ * Si borrar quitó el bloque que tenía el foco, el foco pasa ya al bloque destino: si se espera a que el campo
+ * borrado desaparezca, Android cierra el teclado y lo vuelve a abrir (se «refresca»).
+ */
+internal fun escribir(ed: EstadoEditor, b: BloqueEd, v: androidx.compose.ui.text.input.TextFieldValue) {
+    ed.alEscribir(b, v)
+    val destino = ed.peticionFoco?.id ?: return
+    if (ed.bloques.none { it.id == b.id }) ed.focos[destino]?.let { runCatching { it.requestFocus() } }
 }
 
 /** Atajos de teclado físico (también valen con un teclado Bluetooth). */
@@ -324,6 +339,7 @@ fun EstadoEditor.elegirSlash(b: BloqueEd, tipo: String) {
     b.poner("", emptyList())
     when (tipo) {
         TiposBloque.IMAGEN, TiposBloque.ARCHIVO -> accionPendiente = AccionPendiente(tipo, b)
+        ACCION_REPASAR -> { marcarCambio(); accionPendiente = AccionPendiente(tipo, b) }
         TiposBloque.DIVISOR -> insertarTras(b, listOf(app.kiwu.android.domain.Bloque(kind = TiposBloque.DIVISOR)))
         else -> convertir(b, tipo, "")
     }
@@ -331,4 +347,5 @@ fun EstadoEditor.elegirSlash(b: BloqueEd, tipo: String) {
 
 /** Nombre de cada tipo de bloque en el idioma de la app (menú «/», «Convertir en…»). */
 @Composable
-internal fun titulosBloques(): Map<String, String> = TiposBloque.titulos.mapValues { (_, id) -> stringResource(id) }
+internal fun titulosBloques(): Map<String, String> =
+    TiposBloque.titulos.mapValues { (_, id) -> stringResource(id) } + (ACCION_REPASAR to stringResource(R.string.slash_repasar))

@@ -97,6 +97,13 @@ object Avisos {
 
     fun quitar(contexto: Context, id: String) = NotificationManagerCompat.from(contexto).cancel(identificador(id))
 
+    /** Quita de la barra los avisos de tareas que ya no están pendientes (completadas o borradas, aquí o en otro equipo). */
+    fun quitarSobrantes(contexto: Context, pendientes: Collection<String>) {
+        val nm = contexto.getSystemService(NotificationManager::class.java) ?: return
+        val vivos = pendientes.mapTo(HashSet()) { identificador(it) }
+        for (n in nm.activeNotifications) if (n.notification.channelId == CANAL && n.id !in vivos) nm.cancel(n.id)
+    }
+
     fun alarmaAvisar(contexto: Context, id: String, reaviso: Boolean = false, segundo: Boolean = false) = difusion(contexto, ACCION_AVISAR, id, reaviso, segundo)
 }
 
@@ -138,6 +145,7 @@ class ProgramadorAvisos(private val contexto: Context) {
         for (id in programadasSegundo - vigentesSegundo) alarmas.cancel(Avisos.alarmaAvisar(contexto, id, segundo = true))
         programadas.clear(); programadas += vigentes
         programadasSegundo.clear(); programadasSegundo += vigentesSegundo
+        Avisos.quitarSobrantes(contexto, deberes.filter { !it.completado }.map { it.id })
         // Los avisos pospuestos a mañana siguen vivos aunque se haya reiniciado el teléfono; si la tarea ya no hace falta, se olvidan.
         for ((id, cuando) in Pospuestos.todos(contexto)) {
             val d = deberes.firstOrNull { it.id == id }

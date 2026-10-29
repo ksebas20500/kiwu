@@ -227,7 +227,7 @@ fun CampoNuevaTarea(
                 value = texto,
                 onValueChange = { texto = it },
                 modifier = Modifier.weight(1f).widthIn(min = 96.dp).focusRequester(foco),
-                placeholder = { Text(if (materias.isEmpty()) stringResource(R.string.crea_lista_primero) else marcador) },
+                placeholder = { Text(if (materias.isEmpty()) stringResource(R.string.crea_lista_primero) else marcador, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 enabled = materias.isNotEmpty(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),

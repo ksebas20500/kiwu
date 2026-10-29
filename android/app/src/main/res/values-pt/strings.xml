@@ -525,6 +525,26 @@
     <string name="aviso_evento_hace">Começou há %1$d min</string>
     <string name="aviso_tarea_ya">Acabou de vencer</string>
     <string name="aviso_tarea_hace">Venceu há %1$d min</string>
+    <plurals name="aviso_evento_hace_h">
+        <item quantity="one">Começou há %1$d hora</item>
+        <item quantity="many">Começou há %1$d horas</item>
+        <item quantity="other">Começou há %1$d horas</item>
+    </plurals>
+    <plurals name="aviso_tarea_hace_h">
+        <item quantity="one">Venceu há %1$d hora</item>
+        <item quantity="many">Venceu há %1$d horas</item>
+        <item quantity="other">Venceu há %1$d horas</item>
+    </plurals>
+    <plurals name="aviso_evento_hace_d">
+        <item quantity="one">Começou há %1$d dia</item>
+        <item quantity="many">Começou há %1$d dias</item>
+        <item quantity="other">Começou há %1$d dias</item>
+    </plurals>
+    <plurals name="aviso_tarea_hace_d">
+        <item quantity="one">Venceu há %1$d dia</item>
+        <item quantity="many">Venceu há %1$d dias</item>
+        <item quantity="other">Venceu há %1$d dias</item>
+    </plurals>
     <string name="aviso_evento_min">Começa em %1$d min</string>
     <string name="aviso_evento_h">Começa em %1$d h</string>
     <string name="aviso_evento_manana">Começa amanhã</string>
@@ -730,6 +750,17 @@
     <string name="tarjetas_empezar">Começar revisão (%1$d)</string>
     <string name="tarjetas_intro">Cada cartão tem uma pergunta e sua resposta. Adicione quantos quiser e toque em «Começar revisão».</string>
     <string name="tarjetas_volver">Voltar aos meus cartões</string>
+    <string name="bloque_tarjeta">Cartão de revisão</string>
+    <string name="slash_repasar">Revisar cartões</string>
+    <string name="tarjeta_en_apunte">Na nota</string>
+    <string name="tarjetas_generar">Gerar a partir da nota</string>
+    <string name="tarjetas_generar_nada">Não encontrei cartões na nota. Experimente títulos com a explicação embaixo, perguntas terminadas em «?» seguidas da resposta, linhas «Termo: definição» ou palavras em negrito.</string>
+    <plurals name="tarjetas_propuestas">
+        <item quantity="one">%1$d cartão sugerido. Desmarque se não quiser.</item>
+        <item quantity="many">%1$d cartões sugeridos. Desmarque os que não quiser.</item>
+        <item quantity="other">%1$d cartões sugeridos. Desmarque os que não quiser.</item>
+    </plurals>
+    <string name="tarjetas_anadir_n">Adicionar (%1$d)</string>
     <string name="nota_ayuda">O que você tirou, por exemplo 4.5</string>
     <string name="peso_ayuda">Quanto vale (por exemplo 30). Vazio = todas valem igual</string>
 </resources>

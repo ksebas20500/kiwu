@@ -112,9 +112,22 @@ class PaginaViewModel(private val repo: Repositorio, private val alcanceApp: Cor
     fun cambioIcono(i: String) { icono.value = i; sucio.update { it + 1 } }
     fun cambioDocumento(d: Documento) { documento = d; sucio.update { it + 1 } }
 
+    /**
+     * Lo último que se escribió. Al volver de otra pantalla (p. ej. el repaso) el editor se crea de nuevo y debe partir
+     * de aquí: `pagina` es la versión cargada al abrir y, si se usara, lo escrito después se perdería al guardar.
+     */
+    fun documentoActual(): Documento = documento ?: Documento.deJson(pagina.value?.contenido)
+
     private suspend fun guardarAhoraEnVm() {
         val d = documento ?: return
         repo.guardarContenidoPagina(id, titulo.value, icono.value, d)
+    }
+
+    /** Guarda ya, sin esperar, y luego sigue: el repaso lee las tarjetas del apunte desde la base de datos. */
+    fun guardarYLuego(d: Documento, luego: () -> Unit) = viewModelScope.launch {
+        documento = d
+        guardarAhoraEnVm()
+        luego()
     }
 
     /** Al salir de la pantalla: guarda lo pendiente (o elimina la página si quedó vacía y sin título). */

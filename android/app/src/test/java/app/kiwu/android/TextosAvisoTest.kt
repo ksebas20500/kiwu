@@ -29,12 +29,19 @@ class TextosAvisoTest {
         assertEquals("Vence en 5 h", Recordatorios.textoAviso(d, t0, r))
         assertEquals("Vence en 30 min", Recordatorios.textoAviso(d, t0 + (4.5 * hora).toLong(), r))
         assertEquals("Venció hace 10 min", Recordatorios.textoAviso(d, t0 + 5 * hora + 600_000, r))
+        assertEquals("Venció hace 59 min", Recordatorios.textoAviso(d, t0 + 5 * hora + 59 * 60_000L, r))
+        assertEquals("Venció hace 1 hora", Recordatorios.textoAviso(d, t0 + 6 * hora, r))
+        assertEquals("Venció hace 14 horas", Recordatorios.textoAviso(d, t0 + 5 * hora + 840 * 60_000L, r))
+        assertEquals("Venció hace 23 horas", Recordatorios.textoAviso(d, t0 + 28 * hora + 59 * 60_000L, r))
+        assertEquals("Venció hace 1 día", Recordatorios.textoAviso(d, t0 + 29 * hora, r))
+        assertEquals("Venció hace 3 días", Recordatorios.textoAviso(d, t0 + 5 * hora + 72 * hora, r))
         assertEquals("Vence mañana", Recordatorios.textoAviso(d.copy(fechaEntrega = t0 + 30 * hora), t0, r))
         // 7 minutos de más: así un evento nunca cae en la medianoche de la zona del equipo que corre la prueba.
         val inicio = t0 + 5 * hora + 7 * 60_000L
         val e = tarea(inicio, ID_EVENTOS)
         assertEquals("Empieza en 5 h", Recordatorios.textoAviso(e, t0, r))
         assertEquals("Empezó hace 10 min", Recordatorios.textoAviso(e, inicio + 600_000, r))
+        assertEquals("Empezó hace 2 horas", Recordatorios.textoAviso(e, inicio + 2 * hora, r))
     }
 
     @Test

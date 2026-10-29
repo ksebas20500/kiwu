@@ -39,6 +39,7 @@ class BloqueEd(base: Bloque) {
     var imageData by mutableStateOf(base.imageData)
     var fileName by mutableStateOf(base.fileName)
     var path by mutableStateOf(base.path)
+    var respuesta by mutableStateOf(base.answer.orEmpty())
     var cargandoVistaPrevia by mutableStateOf(false)
     var vistaPrevioFallida by mutableStateOf(false)
     private val bookmark = base.bookmark
@@ -69,7 +70,8 @@ class BloqueEd(base: Bloque) {
     fun aBloque(): Bloque {
         val esTexto = kind in TiposBloque.deTexto
         return Bloque(
-            id = id, kind = kind, text = if (kind in TiposBloque.deTexto || kind == TiposBloque.CODIGO) texto else "",
+            id = id, kind = kind, text = if (kind in TiposBloque.deTexto || kind == TiposBloque.CODIGO || kind == TiposBloque.TARJETA) texto else "",
+            answer = if (kind == TiposBloque.TARJETA) respuesta else null,
             runs = if (esTexto) Formato.aRuns(texto, fmt) else null, indent = indent, language = language, url = url,
             preview = preview, isChecked = isChecked, imageData = imageData, bookmark = bookmark, fileName = fileName,
             path = path, extra = extra,
@@ -88,6 +90,12 @@ internal fun sinTildes(texto: String): String =
 
 class PeticionFoco(val id: String, val alFinal: Boolean, val posicion: Int? = null)
 
+/** Id de foco del campo «respuesta» de una tarjeta (la pregunta usa el id del bloque). */
+internal fun idRespuesta(b: BloqueEd) = b.id + "#respuesta"
+
+/** Opción del menú «/» que no es un tipo de bloque: abre el repaso de las tarjetas de la nota. */
+const val ACCION_REPASAR = "repasar"
+
 /** Acción que necesita al sistema (elegir una imagen o un archivo) y que resuelve `EditorBloques`. */
 class AccionPendiente(val tipo: String, val tras: BloqueEd?)
 
@@ -102,6 +110,9 @@ class EstadoEditor(inicial: Documento) {
     /** Bloque de texto que tiene el foco ahora (para la barra de formato). */
     var enfocado by mutableStateOf<String?>(null)
     var peticionFoco by mutableStateOf<PeticionFoco?>(null)
+
+    /** Foco de cada campo en pantalla, para pasarlo sin esperar a que se redibuje (ver `escribir`). */
+    internal val focos = HashMap<String, androidx.compose.ui.focus.FocusRequester>()
     var accionPendiente by mutableStateOf<AccionPendiente?>(null)
 
     /** Sube con cada cambio; la interfaz lo usa para guardar con retraso. */
@@ -192,6 +203,14 @@ class EstadoEditor(inicial: Documento) {
         val nuevoFmt = Formato.alCambiarTexto(viejoTexto, b.fmt, modelo, b.pendiente)
         b.pendiente = null
 
+        if (b.kind == TiposBloque.TARJETA && modelo.contains('\n')) {
+            // Intro en la pregunta pasa a la respuesta (la pregunta es de una línea).
+            val limpio = modelo.replace("\n", "")
+            b.poner(limpio, nuevoFmt.filterIndexed { i, _ -> modelo[i] != '\n' }, cursor = limpio.length)
+            peticionFoco = PeticionFoco(idRespuesta(b), alFinal = true)
+            cambio()
+            return
+        }
         if (b.kind != TiposBloque.CODIGO && modelo.contains('\n')) {
             dividir(b, modelo, nuevoFmt, cursorModelo.start)
             return
@@ -268,6 +287,8 @@ class EstadoEditor(inicial: Documento) {
         if (!esta(b)) return
         val vacio = b.texto.isEmpty()
         when {
+            // Una tarjeta con algo escrito no se deshace al borrar: perdería la respuesta. Se quita con su menú.
+            b.kind == TiposBloque.TARJETA && (!vacio || b.respuesta.isNotEmpty()) -> Unit
             vacio -> borrarVacio(b)
             b.indent > 0 -> cambiarSangria(b, -1)
             b.kind != TiposBloque.PARRAFO && b.kind != TiposBloque.CODIGO -> convertir(b, TiposBloque.PARRAFO, b.texto)
@@ -416,7 +437,7 @@ class EstadoEditor(inicial: Documento) {
         val t = b.texto
         if (b.kind != TiposBloque.PARRAFO || !t.startsWith("/") || t.contains('\n') || b.slashDescartado) return emptyList()
         val filtro = sinTildes(t.drop(1))
-        return TiposBloque.todos.filter {
+        return (TiposBloque.todos + ACCION_REPASAR).filter {
             it != TiposBloque.PARRAFO && (filtro.isEmpty() || filtro in sinTildes(titulos[it] ?: ""))
         }
     }

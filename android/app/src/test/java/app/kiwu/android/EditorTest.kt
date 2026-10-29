@@ -214,6 +214,50 @@ class EditorTest {
         assertTrue(otro.opcionesSlash(otro.bloques[0], titulos).isEmpty())
     }
 
+    // --- tarjetas de repaso ------------------------------------------------------------------------
+
+    @Test
+    fun tarjetaGuardaPreguntaYRespuestaEnElJson() {
+        val doc = Documento(listOf(Bloque(kind = TiposBloque.TARJETA, text = "¿Capital de Francia?", answer = "París")))
+        val vuelta = EstadoEditor(Documento.deJson(doc.aJson())).documento().bloques[0]
+        assertEquals(TiposBloque.TARJETA, vuelta.kind)
+        assertEquals("¿Capital de Francia?", vuelta.text)
+        assertEquals("París", vuelta.answer)
+        assertNull("los demás bloques no llevan respuesta", Documento.deJson(Documento(listOf(Bloque(text = "x"))).aJson()).bloques[0].answer)
+    }
+
+    @Test
+    fun introEnLaPreguntaPasaALaRespuesta() {
+        val ed = editor(Bloque(kind = TiposBloque.TARJETA, text = "Pregunta"))
+        val b = ed.bloques[0]
+        escribir(ed, b, "Pregunta\n")
+        assertEquals("Pregunta", b.texto)
+        assertEquals(TiposBloque.TARJETA, b.kind)
+        assertEquals("${b.id}#respuesta", ed.peticionFoco?.id)
+        assertEquals("no crea bloques nuevos", 2, ed.bloques.size)
+    }
+
+    @Test
+    fun borrarAlInicioNoDeshaceUnaTarjetaConContenido() {
+        val ed = editor(Bloque(kind = TiposBloque.TARJETA, text = "", answer = "Respuesta"))
+        val b = ed.bloques[0]
+        borrarAlInicio(ed, b)
+        assertEquals(TiposBloque.TARJETA, b.kind)
+        assertEquals("Respuesta", b.respuesta)
+        val vacia = editor(Bloque(text = "a"), Bloque(kind = TiposBloque.TARJETA))
+        borrarAlInicio(vacia, vacia.bloques[1])
+        assertEquals("la vacía sí se convierte en párrafo", TiposBloque.PARRAFO, vacia.bloques[1].kind)
+    }
+
+    @Test
+    fun menuSlashOfreceTarjetaYRepasar() {
+        val titulos = mapOf(TiposBloque.TARJETA to "Tarjeta de repaso", app.kiwu.android.ui.editor.ACCION_REPASAR to "Repasar tarjetas")
+        val ed = editor(Bloque(text = "/tarj"))
+        assertEquals(listOf(TiposBloque.TARJETA, app.kiwu.android.ui.editor.ACCION_REPASAR), ed.opcionesSlash(ed.bloques[0], titulos))
+        escribir(ed, ed.bloques[0], "/repasar")
+        assertEquals(listOf(app.kiwu.android.ui.editor.ACCION_REPASAR), ed.opcionesSlash(ed.bloques[0], titulos))
+    }
+
     @Test
     fun numeracionPorNivelDeSangria() {
         val ed = editor(

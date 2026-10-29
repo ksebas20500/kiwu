@@ -53,6 +53,7 @@ import app.kiwu.android.ui.editor.OrigenAdjuntos
 import app.kiwu.android.ui.editor.rememberEstadoEditor
 import app.kiwu.android.R
 import androidx.compose.ui.res.stringResource
+import androidx.compose.runtime.LaunchedEffect
 
 /** Una página de nota: icono, título y editor por bloques. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,7 +70,12 @@ fun PaginaScreen(vm: PaginaViewModel, adjuntos: OrigenAdjuntos, alVolver: () -> 
     DisposableEffect(vm) { onDispose { vm.alSalir() } }
 
     val p = pagina ?: run { Box(Modifier.fillMaxSize()); return }
-    val editor = rememberEstadoEditor(remember(p.id) { Documento.deJson(p.contenido) }, vm::cambioDocumento)
+    val editor = rememberEstadoEditor(remember(p.id) { vm.documentoActual() }, vm::cambioDocumento)
+    val irATarjetas = { vm.guardarYLuego(editor.documento(), alTarjetas); Unit }
+    // «/repasar» en el editor.
+    LaunchedEffect(editor.accionPendiente) {
+        if (editor.accionPendiente?.tipo == app.kiwu.android.ui.editor.ACCION_REPASAR) { editor.accionPendiente = null; irATarjetas() }
+    }
 
     Scaffold(
         topBar = {
@@ -86,7 +92,7 @@ fun PaginaScreen(vm: PaginaViewModel, adjuntos: OrigenAdjuntos, alVolver: () -> 
                     Box {
                         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.mas_opciones)) }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                            DropdownMenuItem(text = { Text(stringResource(R.string.repasar_tarjetas)) }, onClick = { menu = false; alTarjetas() })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.repasar_tarjetas)) }, onClick = { menu = false; irATarjetas() })
                             if (cuadernos.size > 1) DropdownMenuItem(text = { Text(stringResource(R.string.mover_otro_cuaderno)) }, onClick = { menu = false; mover = true })
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.nota_eliminar), color = MaterialTheme.colorScheme.error) },

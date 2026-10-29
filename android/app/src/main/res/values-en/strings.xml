@@ -511,6 +511,22 @@
     <string name="aviso_evento_hace">Started %1$d min ago</string>
     <string name="aviso_tarea_ya">Just became due</string>
     <string name="aviso_tarea_hace">Was due %1$d min ago</string>
+    <plurals name="aviso_evento_hace_h">
+        <item quantity="one">Started %1$d hour ago</item>
+        <item quantity="other">Started %1$d hours ago</item>
+    </plurals>
+    <plurals name="aviso_tarea_hace_h">
+        <item quantity="one">Was due %1$d hour ago</item>
+        <item quantity="other">Was due %1$d hours ago</item>
+    </plurals>
+    <plurals name="aviso_evento_hace_d">
+        <item quantity="one">Started %1$d day ago</item>
+        <item quantity="other">Started %1$d days ago</item>
+    </plurals>
+    <plurals name="aviso_tarea_hace_d">
+        <item quantity="one">Was due %1$d day ago</item>
+        <item quantity="other">Was due %1$d days ago</item>
+    </plurals>
     <string name="aviso_evento_min">Starts in %1$d min</string>
     <string name="aviso_evento_h">Starts in %1$d h</string>
     <string name="aviso_evento_manana">Starts tomorrow</string>
@@ -712,6 +728,16 @@
     <string name="tarjetas_empezar">Start review (%1$d)</string>
     <string name="tarjetas_intro">Each card has a question and its answer. Add as many as you like and tap "Start review".</string>
     <string name="tarjetas_volver">Back to my cards</string>
+    <string name="bloque_tarjeta">Flashcard</string>
+    <string name="slash_repasar">Review flashcards</string>
+    <string name="tarjeta_en_apunte">In the note</string>
+    <string name="tarjetas_generar">Generate from the note</string>
+    <string name="tarjetas_generar_nada">No cards found in the note. Try headings with their explanation below, questions ending in "?" followed by the answer, "Term: definition" lines or words in bold.</string>
+    <plurals name="tarjetas_propuestas">
+        <item quantity="one">%1$d suggested card. Untick it if you don\'t want it.</item>
+        <item quantity="other">%1$d suggested cards. Untick the ones you don\'t want.</item>
+    </plurals>
+    <string name="tarjetas_anadir_n">Add (%1$d)</string>
     <string name="nota_ayuda">What you got, for example 4.5</string>
     <string name="peso_ayuda">How much it counts (for example 30). Empty = all count the same</string>
 </resources>

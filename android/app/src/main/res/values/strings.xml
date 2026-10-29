@@ -529,6 +529,22 @@
     <string name="aviso_evento_hace">Empezó hace %1$d min</string>
     <string name="aviso_tarea_ya">Acaba de vencer</string>
     <string name="aviso_tarea_hace">Venció hace %1$d min</string>
+    <plurals name="aviso_evento_hace_h">
+        <item quantity="one">Empezó hace %1$d hora</item>
+        <item quantity="other">Empezó hace %1$d horas</item>
+    </plurals>
+    <plurals name="aviso_tarea_hace_h">
+        <item quantity="one">Venció hace %1$d hora</item>
+        <item quantity="other">Venció hace %1$d horas</item>
+    </plurals>
+    <plurals name="aviso_evento_hace_d">
+        <item quantity="one">Empezó hace %1$d día</item>
+        <item quantity="other">Empezó hace %1$d días</item>
+    </plurals>
+    <plurals name="aviso_tarea_hace_d">
+        <item quantity="one">Venció hace %1$d día</item>
+        <item quantity="other">Venció hace %1$d días</item>
+    </plurals>
     <string name="aviso_evento_min">Empieza en %1$d min</string>
     <string name="aviso_evento_h">Empieza en %1$d h</string>
     <string name="aviso_evento_manana">Empieza mañana</string>
@@ -734,6 +750,16 @@
     <string name="tarjetas_empezar">Empezar repaso (%1$d)</string>
     <string name="tarjetas_intro">Cada tarjeta tiene una pregunta y su respuesta. Añade las que quieras y pulsa «Empezar repaso».</string>
     <string name="tarjetas_volver">Volver a mis tarjetas</string>
+    <string name="bloque_tarjeta">Tarjeta de repaso</string>
+    <string name="slash_repasar">Repasar tarjetas</string>
+    <string name="tarjeta_en_apunte">En el apunte</string>
+    <string name="tarjetas_generar">Generar desde el apunte</string>
+    <string name="tarjetas_generar_nada">No encontré tarjetas en el apunte. Prueba con títulos que tengan su explicación debajo, preguntas que terminen en «?» seguidas de la respuesta, líneas «Término: definición» o palabras en negrita.</string>
+    <plurals name="tarjetas_propuestas">
+        <item quantity="one">%1$d tarjeta propuesta. Desmárcala si no la quieres.</item>
+        <item quantity="other">%1$d tarjetas propuestas. Desmarca las que no quieras.</item>
+    </plurals>
+    <string name="tarjetas_anadir_n">Añadir (%1$d)</string>
     <string name="nota_ayuda">Lo que sacaste, por ejemplo 4.5</string>
     <string name="peso_ayuda">Cuánto vale (por ejemplo 30). Vacío = todas valen igual</string>
 </resources>
