@@ -90,6 +90,7 @@ object Copia {
                     // Campos opcionales (Android 0.3): carpeta de listas y emoji.
                     put("grupo", m.grupoId?.let { JsonPrimitive(it) } ?: JsonNull)
                     put("emoji", m.emoji?.let { JsonPrimitive(it) } ?: JsonNull)
+                    put("calificaciones", m.calificaciones)
                     put("creada", iso(m.creada)); put("actualizada", iso(m.actualizada))
                 })
             })
@@ -104,7 +105,7 @@ object Copia {
                 for (d in deberes) add(buildJsonObject {
                     put("id", d.id); put("materia", d.materiaId); put("titulo", d.titulo)
                     put("completado", d.completado); put("estado", d.estado)
-                    put("fechaEntrega", iso(d.fechaEntrega)); put("recordatorioHoras", d.recordatorioHoras)
+                    put("fechaEntrega", iso(d.fechaEntrega)); put("recordatorioHoras", d.recordatorioHoras); put("repite", d.repite); put("prioridad", d.prioridad); put("etiquetas", d.etiquetas); put("pasos", d.pasos); put("examen", d.examen)
                     put("fechaCompletado", iso(d.fechaCompletado)); put("nota", comoJson(d.nota))
                     put("creada", iso(d.creada)); put("actualizada", iso(d.actualizada))
                 })
@@ -118,7 +119,7 @@ object Copia {
             put("paginas", buildJsonArray {
                 for (p in paginas) add(buildJsonObject {
                     put("id", p.id); put("cuaderno", p.cuadernoId); put("titulo", p.titulo); put("icono", p.icono)
-                    put("favorita", p.favorita); put("contenido", comoJson(p.contenido))
+                    put("favorita", p.favorita); put("tarjetas", p.tarjetas); put("contenido", comoJson(p.contenido))
                     put("creada", iso(p.creada)); put("actualizada", iso(p.actualizada))
                 })
             })
@@ -180,6 +181,7 @@ object Copia {
                 // Campos opcionales: las copias antiguas no los traen (lista suelta y aspecto automático).
                 grupoId = m.cadena("grupo")?.takeIf { it in idsGrupo },
                 emoji = m.cadena("emoji")?.takeIf { it.isNotBlank() },
+                calificaciones = m.cadena("calificaciones").orEmpty(),
                 creada = desdeIso(m["creada"]) ?: 0L, actualizada = desdeIso(m["actualizada"]) ?: 0L,
             )
         }
@@ -190,7 +192,8 @@ object Copia {
             Deber(
                 id = id, materiaId = materia, titulo = d.cadena("titulo") ?: return@mapNotNull null,
                 completado = d.logico("completado"), estado = d.entero("estado", 0),
-                fechaEntrega = desdeIso(d["fechaEntrega"]), recordatorioHoras = d.entero("recordatorioHoras", 24),
+                fechaEntrega = desdeIso(d["fechaEntrega"]), recordatorioHoras = d.entero("recordatorioHoras", 24), repite = d.entero("repite", 0), prioridad = d.entero("prioridad", 0),
+                etiquetas = d.cadena("etiquetas").orEmpty(), pasos = d.cadena("pasos").orEmpty(), examen = d.logico("examen"),
                 fechaCompletado = desdeIso(d["fechaCompletado"]), nota = contenido(d["nota"]),
                 creada = desdeIso(d["creada"]) ?: 0L, actualizada = desdeIso(d["actualizada"]) ?: 0L,
             )
@@ -209,7 +212,7 @@ object Copia {
             Pagina(
                 id = p.cadena("id") ?: return@mapNotNull null, cuadernoId = cuaderno,
                 titulo = p.cadena("titulo") ?: "", icono = p.cadena("icono") ?: "",
-                contenido = doc.aJson(), textoPlano = doc.textoPlano(), favorita = p.logico("favorita"),
+                contenido = doc.aJson(), textoPlano = doc.textoPlano(), favorita = p.logico("favorita"), tarjetas = p.cadena("tarjetas").orEmpty(),
                 creada = desdeIso(p["creada"]) ?: 0L, actualizada = desdeIso(p["actualizada"]) ?: 0L,
             )
         }

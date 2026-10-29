@@ -73,7 +73,7 @@ val EmojisCuaderno = listOf("📓", "📝", "📚", "📖", "🎓", "💡", "�
 /** Módulo de notas: cuadernos (filtros), búsqueda y lista de páginas. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun NotasScreen(vm: NotasViewModel, alAbrirPagina: (String) -> Unit, alAbrirMenu: () -> Unit, insigniaRacha: @Composable () -> Unit = {}) {
+fun NotasScreen(vm: NotasViewModel, alAbrirPagina: (String) -> Unit, alAbrirMenu: () -> Unit, insigniaRacha: @Composable () -> Unit = {}, accionesExtra: @Composable () -> Unit = {}) {
     val estado by vm.estado.collectAsStateWithLifecycle()
     val alcance = rememberCoroutineScope()
     var buscando by remember { mutableStateOf(false) }
@@ -106,12 +106,15 @@ fun NotasScreen(vm: NotasViewModel, alAbrirPagina: (String) -> Unit, alAbrirMenu
                     if (buscando) {
                         IconButton(onClick = { buscando = false; vm.buscar("") }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.cerrar_busqueda)) }
                     } else {
-                        IconButton(onClick = alAbrirMenu) { Icon(Icons.Filled.Menu, stringResource(R.string.abrir_menu)) }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = alAbrirMenu) { Icon(Icons.Filled.Menu, stringResource(R.string.abrir_menu)) }
+                            insigniaRacha()
+                        }
                     }
                 },
                 actions = {
                     // Al buscar, el campo de búsqueda necesita el sitio: la racha se esconde.
-                    if (!buscando) insigniaRacha()
+                    if (!buscando) accionesExtra()
                     if (!buscando) IconButton(onClick = { buscando = true }) { Icon(Icons.Filled.Search, stringResource(R.string.buscar)) }
                     if (estado.cuadernoActual != null && !buscando) {
                         Box {

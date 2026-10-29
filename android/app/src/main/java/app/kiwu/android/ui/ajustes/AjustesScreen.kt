@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Star
@@ -84,6 +85,8 @@ import app.kiwu.android.data.Copia
 import app.kiwu.android.data.ErrorCuenta
 import app.kiwu.android.data.PermisoDrive
 import app.kiwu.android.data.RespaldoDrive
+import app.kiwu.android.data.CalendarioTelefono
+import app.kiwu.android.data.TareasGoogle
 import app.kiwu.android.data.ErrorCopia
 import app.kiwu.android.notify.Avisos
 import app.kiwu.android.notify.ProgramadorAvisos
@@ -141,6 +144,9 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit, alVerGuia: () -> Unit = {}
             }
         }
     }
+    val permisoCalendario = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        cambiar { it.copy(calendarioGoogle = ok) }
+    }
     val importar = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) alcance.launch {
             mensaje = try {
@@ -177,6 +183,27 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit, alVerGuia: () -> Unit = {}
         val accion = pendienteDrive
         pendienteDrive = null
         if (accion != null && actividad != null) alcance.launch { correrDrive { accion(RespaldoDrive(AutorizacionDrive.token(actividad, r.data))) } }
+    }
+    // Tareas de Google (Google Tasks): permiso de Google una vez; después se guardan en el teléfono para el widget.
+    suspend fun traerTareasGoogle(token: String?) {
+        val ok = TareasGoogle.actualizar(contexto, token)
+        mensaje = if (ok) null else contexto.getString(R.string.google_tareas_error)
+        cambiar { it.copy(tareasGoogle = ok) }
+    }
+    val consentimientoTareas = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { r ->
+        alcance.launch { traerTareasGoogle(actividad?.let { TareasGoogle.token(it, r.data) }) }
+    }
+    fun activarTareasGoogle() {
+        alcance.launch {
+            try {
+                when (val p = TareasGoogle.pedir(contexto)) {
+                    is PermisoDrive.Listo -> traerTareasGoogle(p.token)
+                    is PermisoDrive.Pedir -> consentimientoTareas.launch(IntentSenderRequest.Builder(p.intencion).build())
+                }
+            } catch (e: ErrorCuenta) {
+                mensaje = contexto.getString(R.string.google_tareas_error)
+            }
+        }
     }
     fun conDrive(accion: suspend (RespaldoDrive) -> String) {
         if (actividad == null) return
@@ -233,6 +260,7 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit, alVerGuia: () -> Unit = {}
                         FilaAjuste(Icons.Filled.Backup, stringResource(SeccionAjustes.COPIA.titulo), resumen.copia()) { elegida = SeccionAjustes.COPIA.id }
                         val sinAnuncios by app.compras.sinAnuncios.collectAsStateWithLifecycle()
                         FilaAjuste(Icons.Filled.Star, stringResource(SeccionAjustes.ANUNCIOS.titulo), resumen.anuncios(sinAnuncios)) { elegida = SeccionAjustes.ANUNCIOS.id }
+                        FilaAjuste(Icons.Filled.Delete, stringResource(SeccionAjustes.PAPELERA.titulo), stringResource(R.string.papelera_resumen)) { elegida = SeccionAjustes.PAPELERA.id }
                         FilaAjuste(Icons.Filled.Info, stringResource(SeccionAjustes.ACERCA.titulo), resumen.acerca(BuildConfig.VERSION_NAME)) { elegida = SeccionAjustes.ACERCA.id }
                         mensaje?.let { Text(it, Modifier.padding(horizontal = 20.dp, vertical = 12.dp), color = MaterialTheme.colorScheme.primary) }
                     }
@@ -342,8 +370,29 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit, alVerGuia: () -> Unit = {}
                         }
                     }
                     SeccionAjustes.CUENTA -> SeccionCuenta(app)
+                    SeccionAjustes.PAPELERA -> SeccionPapelera(app)
                     SeccionAjustes.COPIA -> {
                         Seccion("") {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(stringResource(R.string.ajustes_google_calendar), style = MaterialTheme.typography.bodyMedium)
+                                    Text(stringResource(R.string.ajustes_google_calendar_texto), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                androidx.compose.material3.Switch(
+                                    checked = ajustes.calendarioGoogle && CalendarioTelefono.permitido(contexto),
+                                    onCheckedChange = { v -> if (!v) cambiar { it.copy(calendarioGoogle = false) } else permisoCalendario.launch(android.Manifest.permission.READ_CALENDAR) },
+                                )
+                            }
+                            if (TareasGoogle.DISPONIBLE) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(stringResource(R.string.ajustes_google_tareas), style = MaterialTheme.typography.bodyMedium)
+                                    Text(stringResource(R.string.ajustes_google_tareas_texto), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                androidx.compose.material3.Switch(
+                                    checked = ajustes.tareasGoogle,
+                                    onCheckedChange = { v -> if (v) activarTareasGoogle() else { TareasGoogle.borrar(contexto); cambiar { it.copy(tareasGoogle = false) } } },
+                                )
+                            }
                             Text(stringResource(R.string.ajustes_copia_texto), style = MaterialTheme.typography.bodyMedium)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(onClick = { exportar.launch("kiwu-${LocalDate.now()}.kiwu.json") }) { Text(stringResource(R.string.exportar)) }

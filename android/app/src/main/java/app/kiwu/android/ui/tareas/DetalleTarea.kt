@@ -59,7 +59,10 @@ import app.kiwu.android.domain.Documento
 import app.kiwu.android.domain.Materia
 import app.kiwu.android.ui.Fechas
 import app.kiwu.android.ui.SelectorFechaHora
+import app.kiwu.android.domain.Repeticion
 import app.kiwu.android.domain.esEvento
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Repeat
 import app.kiwu.android.ui.editor.BarraFormato
 import app.kiwu.android.ui.editor.EditorBloques
 import app.kiwu.android.ui.editor.rememberEstadoEditor
@@ -110,6 +113,11 @@ class DetalleTareaViewModel(private val repo: Repositorio, private val alcanceAp
     fun mover(c: Columna) = viewModelScope.launch { repo.mover(id, c) }
     fun ponerFecha(f: Long?) = viewModelScope.launch { repo.ponerFecha(id, f) }
     fun cambiarRecordatorio(h: Int) = viewModelScope.launch { repo.cambiarRecordatorio(id, h) }
+    fun cambiarRepeticion(m: Int) = viewModelScope.launch { repo.cambiarRepeticion(id, m) }
+    fun cambiarExamen(e: Boolean) = viewModelScope.launch { repo.cambiarExamen(id, e) }
+    fun cambiarPrioridad(p: Int) = viewModelScope.launch { repo.cambiarPrioridad(id, p) }
+    fun cambiarEtiquetas(e: List<String>) = viewModelScope.launch { repo.cambiarEtiquetas(id, e) }
+    fun cambiarPasos(p: List<app.kiwu.android.domain.Paso>) = viewModelScope.launch { repo.cambiarPasos(id, p) }
     fun moverAMateria(m: String) = viewModelScope.launch { repo.moverAMateria(id, m) }
     fun eliminar() = alcanceApp.launch { repo.eliminarDeber(id) }
 }
@@ -133,8 +141,8 @@ fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVo
     var seleccionarFecha by remember { mutableStateOf(false) }
     var menuLista by remember { mutableStateOf(false) }
     var menuAviso by remember { mutableStateOf(false) }
+    var menuRepite by remember { mutableStateOf(false) }
     var menuFecha by remember { mutableStateOf(false) }
-    var menuHora by remember { mutableStateOf(false) }
     var seleccionarHora by remember { mutableStateOf(false) }
     val zona = ZoneId.systemDefault()
 
@@ -193,84 +201,105 @@ fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVo
                 ),
             )
 
-            // Día, hora y aviso en chips separados (se pasan a la línea siguiente si no caben).
+            fun conDia(dia: LocalDate) {
+                val base = actual.fechaEntrega?.let { java.time.Instant.ofEpochMilli(it).atZone(zona).toLocalTime() } ?: java.time.LocalTime.of(18, 0)
+                vm.ponerFecha(dia.atTime(base).atZone(zona).toInstant().toEpochMilli())
+            }
+            fun conHora(h: Int, m: Int) {
+                val dia = actual.fechaEntrega?.let { java.time.Instant.ofEpochMilli(it).atZone(zona).toLocalDate() } ?: LocalDate.now(zona)
+                vm.ponerFecha(dia.atTime(h, m).atZone(zona).toInstant().toEpochMilli())
+            }
+            val neutro = coloresChipNeutro()
+
+            // Fila 1 · cuándo: fecha y hora juntas en un solo chip, el aviso y la repetición.
             androidx.compose.foundation.layout.FlowRow(
-                Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                fun conDia(dia: LocalDate) {
-                    val base = actual.fechaEntrega?.let { java.time.Instant.ofEpochMilli(it).atZone(zona).toLocalTime() } ?: java.time.LocalTime.of(18, 0)
-                    vm.ponerFecha(dia.atTime(base).atZone(zona).toInstant().toEpochMilli())
-                }
-                fun conHora(h: Int, m: Int) {
-                    val dia = actual.fechaEntrega?.let { java.time.Instant.ofEpochMilli(it).atZone(zona).toLocalDate() } ?: LocalDate.now(zona)
-                    vm.ponerFecha(dia.atTime(h, m).atZone(zona).toInstant().toEpochMilli())
-                }
+                val entrega = actual.fechaEntrega
                 Box {
+                    // Las 00:00 significan «todo el día» (la lista de tareas tampoco muestra hora en ese caso).
+                    val todoElDia = entrega?.let { java.time.Instant.ofEpochMilli(it).atZone(zona).toLocalTime() }?.let { it.hour == 0 && it.minute == 0 } ?: false
                     AssistChip(
-                        onClick = { menuFecha = true },
-                        label = { Text(actual.fechaEntrega?.let { Fechas.dia(it, zona) } ?: stringResource(if (actual.esEvento) R.string.fecha_evento else R.string.fecha_entrega)) },
+                        onClick = { menuFecha = true }, colors = neutro,
+                        label = {
+                            Text(
+                                if (entrega == null) stringResource(if (actual.esEvento) R.string.fecha_evento else R.string.fecha_entrega)
+                                else Fechas.dia(entrega, zona) + " · " + if (todoElDia) stringResource(R.string.todo_el_dia) else Fechas.hora(entrega, zona),
+                            )
+                        },
                         leadingIcon = { Icon(Icons.Filled.CalendarMonth, null) },
                     )
                     DropdownMenu(expanded = menuFecha, onDismissRequest = { menuFecha = false }) {
                         DropdownMenuItem(text = { Text(stringResource(R.string.hoy)) }, onClick = { menuFecha = false; conDia(LocalDate.now(zona)) })
                         DropdownMenuItem(text = { Text(stringResource(R.string.manana)) }, onClick = { menuFecha = false; conDia(LocalDate.now(zona).plusDays(1)) })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.el_lunes)) }, onClick = { menuFecha = false; conDia(LocalDate.now(zona).with(java.time.temporal.TemporalAdjusters.next(java.time.DayOfWeek.MONDAY))) })
                         DropdownMenuItem(text = { Text(stringResource(R.string.en_una_semana)) }, onClick = { menuFecha = false; conDia(LocalDate.now(zona).plusDays(7)) })
                         DropdownMenuItem(text = { Text(stringResource(R.string.elegir_dia)) }, onClick = { menuFecha = false; seleccionarFecha = true })
-                        if (actual.fechaEntrega != null) {
+                        if (entrega != null) {
+                            androidx.compose.material3.HorizontalDivider()
+                            DropdownMenuItem(text = { Text(stringResource(R.string.elegir_hora)) }, onClick = { menuFecha = false; seleccionarHora = true })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.todo_el_dia_sin_hora)) }, onClick = { menuFecha = false; conHora(0, 0) })
+                            androidx.compose.material3.HorizontalDivider()
                             DropdownMenuItem(text = { Text(stringResource(R.string.quitar_fecha)) }, onClick = { menuFecha = false; vm.ponerFecha(null) })
                         }
                     }
                 }
-                if (actual.fechaEntrega != null) {
-                    val horaActual = java.time.Instant.ofEpochMilli(actual.fechaEntrega!!).atZone(zona).toLocalTime()
-                    // Las 00:00 significan «todo el día» (la lista de tareas tampoco muestra hora en ese caso).
-                    val todoElDia = horaActual.hour == 0 && horaActual.minute == 0
-                    Box {
-                        AssistChip(
-                            onClick = { menuHora = true },
-                            label = { Text(if (todoElDia) stringResource(R.string.todo_el_dia) else Fechas.hora(actual.fechaEntrega!!, zona)) },
-                            leadingIcon = { Icon(Icons.Filled.Schedule, null) },
-                        )
-                        DropdownMenu(expanded = menuHora, onDismissRequest = { menuHora = false }) {
-                            DropdownMenuItem(text = { Text(stringResource(R.string.elegir_hora)) }, onClick = { menuHora = false; seleccionarHora = true })
-                            DropdownMenuItem(text = { Text(stringResource(R.string.todo_el_dia_sin_hora)) }, onClick = { menuHora = false; conHora(0, 0) })
+                if (entrega != null) Box {
+                    AssistChip(
+                        onClick = { menuAviso = true }, colors = neutro,
+                        label = { Text(textoAvisoTarea(actual.recordatorioHoras)) },
+                        leadingIcon = { Icon(Icons.Filled.Notifications, null) },
+                    )
+                    DropdownMenu(expanded = menuAviso, onDismissRequest = { menuAviso = false }) {
+                        for (horas in AvisosDisponibles) {
+                            DropdownMenuItem(text = { Text(textoAvisoTarea(horas)) }, onClick = { menuAviso = false; vm.cambiarRecordatorio(horas) })
                         }
                     }
-                    Box {
-                        AssistChip(
-                            onClick = { menuAviso = true },
-                            label = { Text(textoAvisoTarea(actual.recordatorioHoras)) },
-                            leadingIcon = { Icon(Icons.Filled.Notifications, null) },
-                        )
-                        DropdownMenu(expanded = menuAviso, onDismissRequest = { menuAviso = false }) {
-                            for (horas in AvisosDisponibles) {
-                                DropdownMenuItem(text = { Text(textoAvisoTarea(horas)) }, onClick = { menuAviso = false; vm.cambiarRecordatorio(horas) })
-                            }
+                }
+                if (!actual.esEvento) Box {
+                    AssistChip(
+                        onClick = { menuRepite = true }, colors = neutro,
+                        label = { Text(if (actual.repite == 0) stringResource(R.string.repetir) else textoRepeticion(actual.repite)) },
+                        leadingIcon = { Icon(Icons.Filled.Repeat, null) },
+                    )
+                    DropdownMenu(expanded = menuRepite, onDismissRequest = { menuRepite = false }) {
+                        for (m in listOf(Repeticion.NINGUNA, Repeticion.TODOS_LOS_DIAS, Repeticion.LUNES_A_VIERNES, Repeticion.FINES_DE_SEMANA)) {
+                            DropdownMenuItem(text = { Text(textoRepeticion(m)) }, onClick = { menuRepite = false; vm.cambiarRepeticion(m) })
                         }
                     }
                 }
             }
 
-            if (!actual.esEvento) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Fila 2 · contexto: estado, lista, prioridad, examen y etiquetas (las categorías van con fondo suave, sin borde).
+            if (!actual.esEvento) androidx.compose.foundation.layout.FlowRow(
+                Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 Box {
-                    AssistChip(onClick = { menuLista = true }, label = { Text(materias.firstOrNull { it.id == actual.materiaId }?.nombre ?: stringResource(R.string.lista)) })
+                    var menuEstado by remember { mutableStateOf(false) }
+                    AssistChip(
+                        onClick = { menuEstado = true }, colors = neutro,
+                        label = { Text(stringResource(columna.titulo)) },
+                        trailingIcon = { Icon(Icons.Filled.ArrowDropDown, null) },
+                    )
+                    DropdownMenu(expanded = menuEstado, onDismissRequest = { menuEstado = false }) {
+                        for (c in Columna.entries) DropdownMenuItem(text = { Text(stringResource(c.titulo)) }, onClick = { menuEstado = false; vm.mover(c) })
+                    }
+                }
+                Box {
+                    ChipCategoria(materias.firstOrNull { it.id == actual.materiaId }?.nombre ?: stringResource(R.string.lista), onClick = { menuLista = true })
                     DropdownMenu(expanded = menuLista, onDismissRequest = { menuLista = false }) {
                         for (m in materias) DropdownMenuItem(text = { Text(m.nombre) }, onClick = { menuLista = false; vm.moverAMateria(m.id) })
                     }
                 }
+                ChipsOrganizar(actual, vm::cambiarPrioridad, vm::cambiarEtiquetas, vm::cambiarExamen)
             }
 
-            if (!actual.esEvento) SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
-                Columna.entries.forEachIndexed { i, c ->
-                    SegmentedButton(
-                        selected = columna == c, onClick = { vm.mover(c) },
-                        shape = SegmentedButtonDefaults.itemShape(i, Columna.entries.size),
-                    ) { Text(stringResource(c.titulo)) }
-                }
-            }
+            // Fila 3 · pasos
+            if (!actual.esEvento) PasosTarea(actual, vm::cambiarPasos)
 
-            EditorBloques(editor, adjuntos, Modifier.fillMaxWidth().padding(top = 8.dp))
+            EditorBloques(editor, adjuntos, Modifier.fillMaxWidth().padding(top = 20.dp))
 
             Text(
                 stringResource(R.string.editado_n, Fechas.completa(actual.actualizada, zona)), style = MaterialTheme.typography.labelSmall,
@@ -294,3 +323,15 @@ fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVo
         }
     }
 }
+
+/** «No se repite», «Todos los días»… para el chip de repetición. */
+@androidx.compose.runtime.Composable
+fun textoRepeticion(mascara: Int): String = androidx.compose.ui.res.stringResource(
+    when (mascara) {
+        Repeticion.NINGUNA -> R.string.no_se_repite
+        Repeticion.TODOS_LOS_DIAS -> R.string.todos_los_dias
+        Repeticion.LUNES_A_VIERNES -> R.string.lunes_a_viernes
+        Repeticion.FINES_DE_SEMANA -> R.string.fines_de_semana
+        else -> R.string.se_repite
+    },
+)

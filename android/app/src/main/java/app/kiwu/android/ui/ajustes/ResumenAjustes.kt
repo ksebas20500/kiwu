@@ -14,6 +14,7 @@ enum class SeccionAjustes(val id: String, @StringRes val titulo: Int) {
     CUENTA("cuenta", R.string.ajustes_cuenta),
     COPIA("copia", R.string.ajustes_copia),
     ANUNCIOS("anuncios", R.string.ajustes_anuncios),
+    PAPELERA("papelera", R.string.papelera),
     ACERCA("acerca", R.string.ajustes_acerca);
 
     companion object {

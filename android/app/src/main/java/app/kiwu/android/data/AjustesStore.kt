@@ -41,6 +41,10 @@ data class AjustesUi(
     val guiaVista: Boolean = false,
     /** Último día (ISO) en que se celebró la racha: la celebración sale una vez al día. */
     val rachaCelebrada: String? = null,
+    /** Si el widget de calendario (y su hoja del día) muestra también los eventos de Google Calendar del teléfono. */
+    val calendarioGoogle: Boolean = false,
+    /** Si también salen las tareas con fecha de Google Tasks (necesita el permiso de Google). */
+    val tareasGoogle: Boolean = false,
 )
 
 class AjustesStore(private val contexto: Context) {
@@ -59,6 +63,8 @@ class AjustesStore(private val contexto: Context) {
         val rachaAviso = androidx.datastore.preferences.core.booleanPreferencesKey("racha_aviso")
         val guiaVista = androidx.datastore.preferences.core.booleanPreferencesKey("guia_vista")
         val rachaCelebrada = stringPreferencesKey("racha_celebrada")
+        val calendarioGoogle = androidx.datastore.preferences.core.booleanPreferencesKey("calendario_google")
+        val tareasGoogle = androidx.datastore.preferences.core.booleanPreferencesKey("tareas_google")
     }
 
     private fun leer(p: Preferences) = AjustesUi(
@@ -76,6 +82,8 @@ class AjustesStore(private val contexto: Context) {
         rachaAviso = p[Claves.rachaAviso] ?: true,
         guiaVista = p[Claves.guiaVista] ?: false,
         rachaCelebrada = p[Claves.rachaCelebrada],
+        calendarioGoogle = p[Claves.calendarioGoogle] ?: false,
+        tareasGoogle = p[Claves.tareasGoogle] ?: false,
     )
 
     val flujo: Flow<AjustesUi> = contexto.almacen.data.map(::leer)
@@ -96,6 +104,8 @@ class AjustesStore(private val contexto: Context) {
             p[Claves.rachaVisible] = nuevo.rachaVisible
             p[Claves.rachaAviso] = nuevo.rachaAviso
             p[Claves.guiaVista] = nuevo.guiaVista
+            p[Claves.calendarioGoogle] = nuevo.calendarioGoogle
+            p[Claves.tareasGoogle] = nuevo.tareasGoogle
             if (nuevo.rachaCelebrada == null) p.remove(Claves.rachaCelebrada) else p[Claves.rachaCelebrada] = nuevo.rachaCelebrada
         }
     }

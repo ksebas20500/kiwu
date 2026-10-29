@@ -37,7 +37,7 @@ class IdiomasTest {
         val zona = java.time.ZoneId.of("UTC")
         val ahora = LocalDate.of(2026, 10, 21).atStartOfDay(zona).toInstant().toEpochMilli()
         val manana = ahora + 86_400_000L + 9 * 3_600_000L
-        assertEquals("Tomorrow 09:00", Fechas.corta(manana, ahora, zona, "Today", "Tomorrow", "Yesterday"))
+        assertEquals("Tomorrow, 09:00", Fechas.corta(manana, ahora, zona, "Today", "Tomorrow", "Yesterday"))
         assertEquals("Wednesday 21 Oct 2026", Fechas.diaLargo(LocalDate.of(2026, 10, 21)))
     }
 }

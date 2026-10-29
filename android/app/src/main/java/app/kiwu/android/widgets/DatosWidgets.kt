@@ -264,7 +264,10 @@ object DatosWidgets {
      * El mes de [mes] con lo pendiente de cada día: las tareas sin completar y los eventos con fecha de entrega, de todas las
      * listas, ordenados por hora. Las tareas borradas ya no llegan aquí (`deberes` solo trae las vigentes).
      */
-    fun calendario(deberes: List<Deber>, mes: LocalDate, ahora: Long, zona: ZoneId = ZoneId.systemDefault()): DatosCalendario {
+    fun calendario(
+        deberes: List<Deber>, mes: LocalDate, ahora: Long, zona: ZoneId = ZoneId.systemDefault(),
+        externos: List<app.kiwu.android.domain.EventoExterno> = emptyList(),
+    ): DatosCalendario {
         val reglas = Reglas(zona)
         val primero = mes.withDayOfMonth(1)
         val hoy = Instant.ofEpochMilli(ahora).atZone(zona).toLocalDate()
@@ -272,6 +275,7 @@ object DatosWidgets {
             .filter { it.fechaEntrega != null && (it.esEvento || !it.completado) }
             .sortedBy { it.fechaEntrega }
             .groupBy { Instant.ofEpochMilli(it.fechaEntrega!!).atZone(zona).toLocalDate() }
+        val externosPorDia = externos.sortedBy { it.inicio }.groupBy { it.dia(zona) }
         val ultimo = primero.withDayOfMonth(primero.lengthOfMonth())
         var inicio = primero.minusDays((primero.dayOfWeek.value - 1).toLong())
         val semanas = buildList {
@@ -280,7 +284,8 @@ object DatosWidgets {
                     val dia = inicio.plusDays(n)
                     DiaCalendario(
                         fecha = dia, delMes = dia.month == primero.month, esHoy = dia == hoy,
-                        chips = porDia[dia].orEmpty().map { ChipCalendario(it.id, it.titulo, !it.esEvento && reglas.estaVencido(it, ahora), it.esEvento) },
+                        chips = porDia[dia].orEmpty().map { ChipCalendario(it.id, it.titulo, !it.esEvento && reglas.estaVencido(it, ahora), it.esEvento) } +
+                            externosPorDia[dia].orEmpty().map { ChipCalendario("g:${it.id}", it.titulo, it.tarea && dia.isBefore(hoy), !it.tarea) },
                     )
                 })
                 inicio = inicio.plusDays(7)

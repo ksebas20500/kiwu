@@ -54,6 +54,34 @@ Kiwu es gratis y muestra un banner pequeño en las listas de Tareas y Notas, nun
 
 Se pegan en Play Console → la versión → «Notas de la versión», una por idioma.
 
+### 0.7.0 (versionCode 18)
+
+Reúne la 0.5.4 a la 0.7.0. Nombre de la versión: `0.7.0 – Hábitos, estudio y Google Calendar`.
+
+```
+<es-419>
+• Tareas que se repiten (hábitos), pasos, prioridad y etiquetas.
+• Temporizador de estudio, notas con promedio, cuenta atrás de exámenes y tarjetas de repaso.
+• Tus eventos de Google Calendar en el widget de Calendario.
+• Papelera para restaurar lo que borraste y búsqueda en todo Kiwu.
+• La racha ya no baja al tocar tareas viejas. Fechas más claras y pantalla de la tarea más limpia.
+</es-419>
+<en-US>
+• Repeating tasks (habits), steps, priority and tags.
+• Study timer, grades with average, exam countdown and flashcards.
+• Your Google Calendar events in the Calendar widget.
+• Trash to restore what you deleted and search across Kiwu.
+• Your streak no longer drops when you touch old tasks. Clearer dates and a cleaner task screen.
+</en-US>
+<pt-BR>
+• Tarefas que se repetem (hábitos), passos, prioridade e etiquetas.
+• Temporizador de estudo, notas com média, contagem regressiva de provas e cartões de revisão.
+• Seus eventos do Google Agenda no widget de Calendário.
+• Lixeira para restaurar o que você excluiu e busca em todo o Kiwu.
+• Sua sequência não cai mais ao mexer em tarefas antigas. Datas mais claras e tela da tarefa mais limpa.
+</pt-BR>
+```
+
 ### 0.5.2 (versionCode 15)
 
 ```

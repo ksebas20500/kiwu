@@ -148,6 +148,7 @@ class WidgetAlarmaReceiver : BroadcastReceiver() {
         val app = contexto.applicationContext as KiwuApp
         app.alcance.launch {
             try {
+                app.repo.reiniciarRepetidas()
                 Widgets.refrescar(contexto)
                 Widgets.programar(contexto)
             } finally {
