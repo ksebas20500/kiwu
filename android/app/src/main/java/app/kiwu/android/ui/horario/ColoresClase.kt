@@ -68,7 +68,12 @@ object ColoresClase {
             val fondo = deHex(elegido)
             return ColorPastel(fondo, contraste(fondo))
         }
-        return Pasteles.colores[Pasteles.indicePreferido(c.materiaId ?: c.grupo)]
+        // Sin color elegido y sin lista vinculada, el automático sale del título normalizado:
+        // la misma materia repite su color en todos los días y horarios, aunque se haya
+        // creado como entradas separadas (p. ej. martes de 12 a 2 y jueves de 8 a 10).
+        // El prefijo evita colisionar con las claves de listas (uuid de `materiaId`).
+        val clave = c.materiaId ?: "clase:" + c.titulo.trim().lowercase()
+        return Pasteles.colores[Pasteles.indicePreferido(clave)]
     }
 }
 
