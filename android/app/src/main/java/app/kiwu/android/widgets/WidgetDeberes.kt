@@ -126,13 +126,25 @@ private fun ContenidoDeberes(datos: DatosDeberes, colores: ColoresWidget, config
 private fun FilaDeberWidget(fila: FilaDeber, colores: ColoresWidget) {
     val contexto = LocalContext.current
     Row(GlanceModifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-        // Toda la caja es el botón (44 dp, lo mínimo cómodo para un dedo), no solo el círculo.
-        Box(
-            GlanceModifier.size(44.dp)
-                .clickable(actionRunCallback<CompletarDeber>(actionParametersOf(ClaveDeberWidget to fila.id))),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("○", style = TextStyle(fontSize = 24.sp, color = colores.acento))
+        if (fila.esEvento) {
+            // Cumpleaños, charlas y demás eventos propios: no se completan; la pastilla azul los distingue de las tareas.
+            Box(GlanceModifier.size(44.dp).padding(7.dp), contentAlignment = Alignment.Center) {
+                Box(
+                    GlanceModifier.fillMaxSize().cornerRadius(15.dp).background(colores.eventoFondo),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("◆", style = TextStyle(fontSize = 11.sp, color = colores.eventoGlifo))
+                }
+            }
+        } else {
+            // Toda la caja es el botón (44 dp, lo mínimo cómodo para un dedo), no solo el círculo.
+            Box(
+                GlanceModifier.size(44.dp)
+                    .clickable(actionRunCallback<CompletarDeber>(actionParametersOf(ClaveDeberWidget to fila.id))),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("○", style = TextStyle(fontSize = 24.sp, color = colores.acento))
+            }
         }
         Column(
             GlanceModifier.defaultWeight()
@@ -146,7 +158,7 @@ private fun FilaDeberWidget(fila: FilaDeber, colores: ColoresWidget) {
             if (fila.lista.isNotBlank() || fila.fecha.isNotBlank()) {
                 Text(
                     listOf(fila.lista, fila.fecha).filter { it.isNotBlank() }.joinToString(" · "),
-                    style = TextStyle(fontSize = 12.sp, color = if (fila.vencida) colores.rojo else colores.secundario),
+                    style = TextStyle(fontSize = 12.sp, color = if (fila.esEvento) colores.eventoTexto else if (fila.vencida) colores.rojo else colores.secundario),
                     maxLines = 1,
                 )
             }

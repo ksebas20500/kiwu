@@ -81,14 +81,52 @@ class DatosWidgetsTest {
     }
 
     @Test
-    fun deberesNoMuestranEventos() {
+    fun deberesMuestranEventosMezcladosPorFecha() {
         val listas = listOf(materia("mate", "Cálculo"))
         val deberes = listOf(
-            deber("evento", ID_EVENTOS, "Cumpleaños", ms(lunes)),
-            deber("tarea", "mate", "Informe", ms(lunes.plusDays(2))),
+            deber("pasado", ID_EVENTOS, "Charla que pasó", ms(lunes.minusDays(1))),
+            deber("tarea2", "mate", "Informe mañana", ms(lunes.plusDays(1))),
+            deber("evento2", ID_EVENTOS, "Cumpleaños mañana", ms(lunes.plusDays(2))),
+            deber("tarea", "mate", "Informe hoy", ms(lunes, 18, 0)),
+            deber("evento", ID_EVENTOS, "Parcial hoy", ms(lunes)),
         )
         val datos = DatosWidgets.deberes(listas, emptyList(), deberes, null, ahora, textos, zona)
-        assertEquals(listOf("tarea"), datos.pendientes.map { it.id })
+        // mezclados por fecha; el evento pasado deja de verse, como en «Todas» de la app
+        assertEquals(listOf("evento", "tarea", "tarea2", "evento2"), datos.pendientes.map { it.id })
+        // los eventos se ven, pero el contador del encabezado solo cuenta tareas
+        assertEquals(2, datos.total)
+        // un evento nunca sale «Vencida …»: pasa, no vence
+        assertTrue(datos.pendientes.none { it.esEvento && it.fecha.startsWith("Vencida") })
+        assertTrue(datos.pendientes.first { it.id == "evento" }.esEvento)
+        assertTrue(datos.pendientes.first { it.id == "tarea" }.vencida.not())
+    }
+
+    @Test
+    fun enHoyLosEventosSonSoloDelDia() {
+        val listas = listOf(materia("mate", "Cálculo"))
+        val deberes = listOf(
+            deber("evento", ID_EVENTOS, "Parcial hoy", ms(lunes)),
+            deber("evento2", ID_EVENTOS, "Cumpleaños mañana", ms(lunes.plusDays(1))),
+            deber("tarea", "mate", "Informe", ms(lunes)),
+        )
+        val hoy = DatosWidgets.deberes(listas, emptyList(), deberes, ConfigWidget.HOY, ahora, textos, zona)
+        assertEquals(listOf("evento", "tarea"), hoy.pendientes.map { it.id })
+    }
+
+    @Test
+    fun elWidgetDeUnaListaNoMezclaEventosDeOtras() {
+        val listas = listOf(materia("mate", "Cálculo"))
+        val deberes = listOf(
+            deber("evento", ID_EVENTOS, "Parcial hoy", ms(lunes)),
+            deber("tarea", "mate", "Informe", ms(lunes)),
+        )
+        val una = DatosWidgets.deberes(listas, emptyList(), deberes, ConfigWidget.lista("mate"), ahora, textos, zona)
+        assertEquals(listOf("tarea"), una.pendientes.map { it.id })
+        // un widget fijado a la lista «Eventos» enseña solo eventos
+        val conEventos = listOf(materia("mate", "Cálculo"), materia(ID_EVENTOS, "Eventos"))
+        val soloEventos = DatosWidgets.deberes(conEventos, emptyList(), deberes, ConfigWidget.lista(ID_EVENTOS), ahora, textos, zona)
+        assertEquals(listOf("evento"), soloEventos.pendientes.map { it.id })
+        assertTrue(soloEventos.pendientes.single().esEvento)
     }
 
     @Test

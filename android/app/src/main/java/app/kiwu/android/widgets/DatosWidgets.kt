@@ -41,11 +41,13 @@ object ConfigWidget {
     fun cuaderno(id: String) = CUADERNO + id
 }
 
-data class FilaDeber(val id: String, val titulo: String, val lista: String, val fecha: String, val vencida: Boolean)
+/** Una fila del widget de deberes. [esEvento] marca los eventos propios (no se completan, se ven con la pastilla azul). */
+data class FilaDeber(val id: String, val titulo: String, val lista: String, val fecha: String, val vencida: Boolean, val esEvento: Boolean = false)
 
 data class DatosDeberes(
     val titulo: String,
     val pendientes: List<FilaDeber>,
+    /** Cuántas tareas hay (los eventos se muestran en la lista pero no cuentan, como en la app). */
     val total: Int,
     /** Si hay listas (aunque no tengan tareas). Sin listas, el widget invita a crear la primera. */
     val hayListas: Boolean,
@@ -114,7 +116,9 @@ object DatosWidgets {
         val reglas = Reglas(zona)
         val nombres = materias.associate { it.id to it.nombre }
         val (elemento, titulo, soloListas) = alcance(config, materias, grupos, textos)
-        val visibles = deberes.filter { !it.esEvento && (soloListas == null || it.materiaId in soloListas) }
+        // Los eventos propios (lista «Eventos») se mezclan con las tareas por fecha, igual que en la app:
+        // en «Hoy» solo los de hoy, en «Todas» sin los pasados, y nunca «Vencida» (un evento no vence, pasa).
+        val visibles = deberes.filter { soloListas == null || it.materiaId in soloListas }
         val pendientes = reglas.pendientes(visibles, elemento, ahora).map {
             FilaDeber(
                 id = it.id,
@@ -122,9 +126,10 @@ object DatosWidgets {
                 lista = nombres[it.materiaId].orEmpty(),
                 fecha = textoFecha(it.fechaEntrega, ahora, textos, zona),
                 vencida = reglas.estaVencido(it, ahora),
+                esEvento = it.esEvento,
             )
         }
-        return DatosDeberes(titulo, pendientes, pendientes.size, materias.isNotEmpty())
+        return DatosDeberes(titulo, pendientes, pendientes.count { !it.esEvento }, materias.isNotEmpty())
     }
 
     private fun alcance(

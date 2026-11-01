@@ -18,9 +18,12 @@ import androidx.glance.appwidget.updateAll
 import androidx.glance.unit.ColorProvider
 import app.kiwu.android.KiwuApp
 import app.kiwu.android.MainActivity
+import app.kiwu.android.domain.esEvento
 import app.kiwu.android.ui.Acentos
 import app.kiwu.android.ui.ColorPastel
 import app.kiwu.android.ui.esquemaDe
+import app.kiwu.android.ui.tareas.AzulEvento
+import app.kiwu.android.ui.tareas.AzulEventoTexto
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -40,6 +43,10 @@ class ColoresWidget(
     val rojo: ColorProvider,
     /** Baldosa de cada día del calendario: un tono sobre el fondo para separar los días. */
     val celda: ColorProvider,
+    /** Eventos propios (lista «Eventos»): la pastilla azul del calendario, su glifo y el texto de la línea de datos. */
+    val eventoFondo: ColorProvider,
+    val eventoGlifo: ColorProvider,
+    val eventoTexto: ColorProvider,
 )
 
 /** Lee el tema de la app (claro, oscuro o el del sistema) para que el widget se vea como la app. */
@@ -65,6 +72,9 @@ suspend fun coloresDelWidget(contexto: Context): ColoresWidget {
         sobreAcento = ColorProvider(esquema.onPrimary),
         rojo = ColorProvider(if (oscuro) Color(0xFFFF8A80) else Color(0xFFD32F2F)),
         celda = ColorProvider(esquema.onSurface.copy(alpha = if (oscuro) 0.10f else 0.05f)),
+        eventoFondo = ColorProvider(AzulEvento),
+        eventoGlifo = ColorProvider(AzulEventoTexto),
+        eventoTexto = ColorProvider(if (oscuro) Color(0xFFCFE5F7) else AzulEventoTexto),
     )
 }
 
@@ -158,11 +168,12 @@ class WidgetAlarmaReceiver : BroadcastReceiver() {
     }
 }
 
-/** Tocar el círculo de una tarea la completa sin abrir la app; los avisos se cancelan solos. */
+/** Tocar el círculo de una tarea la completa sin abrir la app; los eventos no (no tienen casilla en la app). */
 class CompletarDeber : androidx.glance.appwidget.action.ActionCallback {
     override suspend fun onAction(contexto: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val id = parameters[ClaveDeberWidget] ?: return
         val app = contexto.applicationContext as KiwuApp
+        if (app.repo.deber(id)?.esEvento == true) return
         app.repo.marcar(id, true)
         // Cambia el contador y los puntos de urgencia del horario: se refrescan los tres.
         Widgets.refrescar(contexto)
