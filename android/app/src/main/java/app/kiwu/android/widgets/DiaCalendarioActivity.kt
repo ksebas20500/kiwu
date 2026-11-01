@@ -1,5 +1,6 @@
 package app.kiwu.android.widgets
 
+import app.kiwu.android.ui.casillaDe
 import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -37,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import app.kiwu.android.domain.ID_EVENTOS
 import app.kiwu.android.ui.tareas.AzulEvento
 import app.kiwu.android.ui.tareas.AzulEventoTexto
@@ -60,6 +62,8 @@ import app.kiwu.android.ui.Fechas
 import app.kiwu.android.ui.KiwuTheme
 import app.kiwu.android.ui.tareas.CampoNuevaTarea
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
@@ -91,9 +95,19 @@ class DiaCalendarioActivity : ComponentActivity() {
                 val materias by app.repo.materias.collectAsStateWithLifecycle(emptyList())
                 val deberes by app.repo.deberes.collectAsStateWithLifecycle(emptyList())
                 val zona = ZoneId.systemDefault()
-                val externos = remember(dia, ajustes.calendarioGoogle, ajustes.tareasGoogle) {
+                fun externosDe(): List<EventoExterno> =
                     (if (ajustes.calendarioGoogle) CalendarioTelefono.eventos(this@DiaCalendarioActivity, dia, dia, zona) else emptyList()) +
                         (if (ajustes.tareasGoogle) TareasGoogle.leer(this@DiaCalendarioActivity).filter { it.dia(zona) == dia } else emptyList())
+                var externos by remember(dia, ajustes.calendarioGoogle, ajustes.tareasGoogle) {
+                    mutableStateOf(externosDe())
+                }
+                // Las tareas de Google salen de la copia local del widget (máximo 5 minutos de edad): al abrir la
+                // hoja se le pide la lista fresca, para que lo que se ve aquí esté tan al día como se pueda.
+                LaunchedEffect(dia, ajustes.tareasGoogle) {
+                    if (ajustes.tareasGoogle) {
+                        val nueva = withContext(Dispatchers.IO) { TareasGoogle.actualizar(this@DiaCalendarioActivity) }
+                        if (nueva) externos = externosDe()
+                    }
                 }
                 val delDia = remember(deberes, dia) {
                     deberes.filter { d ->
@@ -167,7 +181,7 @@ private fun FilaDia(d: Deber, lista: String?, zona: ZoneId, alCompletar: () -> U
     val detalle = listOfNotNull(lista, hora?.let { Fechas.hora(d.fechaEntrega!!, zona) }).joinToString(" · ")
     Row(Modifier.fillMaxWidth().clickable(onClick = alAbrir).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         // Los eventos no se completan: en su lugar va un hueco del mismo ancho para que el texto quede alineado.
-        if (d.esEvento) Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Event, null, tint = AzulEventoTexto) } else Checkbox(checked = false, onCheckedChange = { alCompletar() })
+        if (d.esEvento) Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Event, null, tint = AzulEventoTexto) } else Checkbox(checked = false, onCheckedChange = { alCompletar() }, modifier = Modifier.casillaDe(d.titulo))
         Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
             Text(d.titulo, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (detalle.isNotBlank()) Text(detalle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)

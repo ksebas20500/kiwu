@@ -2,11 +2,16 @@ package app.kiwu.android
 
 import android.app.Application
 import android.content.res.Configuration
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
+import android.provider.CalendarContract
 import app.kiwu.android.data.AjustesStore
 import app.kiwu.android.data.KiwuDb
 import app.kiwu.android.data.Repositorio
 import app.kiwu.android.data.ServicioSync
 import app.kiwu.android.notify.Avisos
+import app.kiwu.android.notify.AvisosAndroid
 import app.kiwu.android.domain.Rachas
 import app.kiwu.android.notify.AvisosClases
 import app.kiwu.android.notify.AvisosRacha
@@ -16,11 +21,13 @@ import app.kiwu.android.notify.ProgramadorRacha
 import app.kiwu.android.widgets.Widgets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
@@ -31,10 +38,11 @@ class KiwuApp : Application() {
     private val prefsRacha by lazy { getSharedPreferences("racha", MODE_PRIVATE) }
     val repo by lazy {
         val banco = prefsRacha.getStringSet("banco", emptySet()).orEmpty().mapNotNull { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }.toSet()
-        Repositorio(db.dao(), bancoRacha = kotlinx.coroutines.flow.MutableStateFlow(banco))
+        Repositorio(db.dao(), bancoRacha = kotlinx.coroutines.flow.MutableStateFlow(banco), avisos = AvisosAndroid(this))
     }
     val ajustes by lazy { AjustesStore(this) }
     val sync by lazy { ServicioSync(this) }
+    private val programadorAvisos by lazy { ProgramadorAvisos(this) }
 
     /** Alcance que sobrevive a las pantallas: para guardar lo pendiente cuando se cierra una (p. ej. una nota). */
     val alcance = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -43,6 +51,8 @@ class KiwuApp : Application() {
 
     private var avisosIniciados = false
     private var widgetsIniciados = false
+    private var observadorCalendario: ContentObserver? = null
+    private var refrescoCalendarioPendiente: Job? = null
 
     // En Android 8–12, el idioma elegido en Ajustes también para lo que no es una pantalla (fechas por defecto, servicios).
     override fun attachBaseContext(base: android.content.Context) = super.attachBaseContext(Idioma.contexto(base))
@@ -52,6 +62,7 @@ class KiwuApp : Application() {
         Textos.actualizar(this)
         iniciarAvisos()
         iniciarWidgets()
+        iniciarObservadorCalendario()
         sync.iniciar()
     }
 
@@ -74,10 +85,13 @@ class KiwuApp : Application() {
         avisosIniciados = true
         Avisos.crearCanal(this)
         AvisosClases.crearCanal(this)
-        val programador = ProgramadorAvisos(this)
+        val programador = programadorAvisos
         alcance.launch {
-            kotlinx.coroutines.flow.combine(repo.deberes, ajustes.flujo.map { it.segundoAvisoMin }.distinctUntilChanged()) { deberes, segundo -> deberes to segundo }
-                .collect { (deberes, segundo) -> programador.reconciliar(deberes, segundo) }
+            kotlinx.coroutines.flow.combine(
+                repo.deberes,
+                ajustes.flujo.map { it.segundoAvisoMin to it.horaAvisoSinHora }.distinctUntilChanged(),
+            ) { deberes, (segundo, horaSinHora) -> Triple(deberes, segundo, horaSinHora) }
+                .collect { (deberes, segundo, horaSinHora) -> programador.reconciliar(deberes, segundo, horaSinHora = horaSinHora) }
         }
         // Los hábitos (tareas que se repiten) vuelven a empezar cada día.
         alcance.launch { repo.deberes.collect { repo.reiniciarRepetidas() } }
@@ -96,6 +110,33 @@ class KiwuApp : Application() {
                     repo.bancoRacha.value = r.dias
                     prefsRacha.edit().putStringSet("banco", r.dias.map(java.time.LocalDate::toString).toSet()).apply()
                 }
+            }
+        }
+    }
+
+    /**
+     * Red de seguridad al volver a la app: vuelve a cuadrar alarmas y barra con la base. Cubre los cambios hechos
+     * fuera de una pantalla (widget, hoja del día, notificación) cuando el proceso pudo morir antes de que el flujo
+     * de la base reaccionara.
+     */
+    fun revisarAvisos() {
+        alcance.launch {
+            try {
+                val a = ajustes.flujo.first()
+                programadorAvisos.reconciliar(repo.deberesAhora(), a.segundoAvisoMin, horaSinHora = a.horaAvisoSinHora)
+            } catch (_: Exception) {
+                // Sin base o sin permiso de notificaciones: no debe romper la app.
+            }
+        }
+        // Red de seguridad de los widgets: si el proceso estuvo muerto, el observador del calendario
+        // no corrió; al volver, se re-registra (por si el permiso llegó después de arrancar) y se
+        // redibuja todo con lo que haya en el teléfono, borrando los eventos borrados mientras tanto.
+        iniciarObservadorCalendario()
+        alcance.launch {
+            try {
+                Widgets.refrescar(this@KiwuApp)
+            } catch (_: Exception) {
+                // Sin widgets o en pruebas: no debe romper la app.
             }
         }
     }
@@ -121,6 +162,39 @@ class KiwuApp : Application() {
                     // Sin lanzador o en las pruebas JVM no hay widgets que refrescar; no debe romper la app.
                 }
             }
+        }
+    }
+
+    /**
+     * Los widgets enseñan eventos del calendario del teléfono (donde Google Calendar sincroniza los suyos), pero el
+     * proveedor no avisa por sí solo: sin este observador, un evento borrado o editado en Google seguía pintado en el
+     * widget hasta el próximo cambio interno o hasta la alarma del próximo cambio de clase.
+     *
+     * Se escuchan tanto los eventos como sus instancias expandidas, y el refresco va con retraso corto: las
+     * sincronizaciones del sistema llegan en ráfagas y no hay que redibujar los widgets por cada cambio.
+     */
+    private fun iniciarObservadorCalendario() {
+        if (observadorCalendario != null) return
+        val observador = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                refrescoCalendarioPendiente?.cancel()
+                refrescoCalendarioPendiente = alcance.launch {
+                    delay(1000)
+                    try {
+                        Widgets.refrescar(this@KiwuApp)
+                    } catch (_: Exception) {
+                        // Sin widgets o en pruebas: no debe romper la app.
+                    }
+                }
+            }
+        }
+        try {
+            if (!app.kiwu.android.data.CalendarioTelefono.permitido(this)) return // sin permiso no hay eventos que vigilar
+            contentResolver.registerContentObserver(CalendarContract.Events.CONTENT_URI, true, observador)
+            contentResolver.registerContentObserver(CalendarContract.Instances.CONTENT_URI, true, observador)
+            observadorCalendario = observador
+        } catch (_: Exception) {
+            // Proveedor ausente: el refresco por alarma cubre el resto.
         }
     }
 }

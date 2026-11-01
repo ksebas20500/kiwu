@@ -20,7 +20,7 @@ import java.time.Instant
 /**
  * Las tareas con fecha de Google Tasks (las «Tareas» de Google Calendar), solo lectura. No salen del calendario del
  * teléfono: hace falta el permiso `tasks.readonly` de Google, que se pide una vez en Ajustes. La lista se guarda en el
- * teléfono (el widget no puede enseñar la pantalla de permiso) y se renueva sola cada 15 minutos si el widget se redibuja.
+ * teléfono (el widget no puede enseñar la pantalla de permiso) y se renueva sola cada 5 minutos si el widget se redibuja.
  *
  * shortcut: solo cuenta la cuenta de Google que dio el permiso y las tareas con fecha de entrega; las completadas se
  * ocultan. Añadir varias cuentas o las tareas sin fecha si alguien lo pide.
@@ -32,7 +32,7 @@ object TareasGoogle {
     const val ALCANCE = "https://www.googleapis.com/auth/tasks.readonly"
     private const val API = "https://tasks.googleapis.com/tasks/v1"
     private const val PREFS = "tareas_google"
-    private const val VIGENCIA_MS = 15 * 60_000L
+    private const val VIGENCIA_MS = 5 * 60_000L
     private val json = Json { ignoreUnknownKeys = true }
 
     private fun prefs(c: Context) = c.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -54,25 +54,28 @@ object TareasGoogle {
     fun token(actividad: Activity, datos: Intent?): String? =
         try { Identity.getAuthorizationClient(actividad).getAuthorizationResultFromIntent(datos).accessToken } catch (e: Exception) { null }
 
-    /** Vuelve a leer las tareas de Google y las guarda. `false` si falta el permiso o falla la red. */
-    suspend fun actualizar(c: Context, token: String? = null): Boolean = try {
-        val t = token ?: (pedir(c) as? PermisoDrive.Listo)?.token ?: return false
-        val listas = obtener("$API/users/@me/lists?maxResults=100", t).getValue("items").jsonArray.map { it.jsonObject.getValue("id").jsonPrimitive.content }
-        val tareas = buildJsonArray {
-            for (lista in listas) {
-                val items = obtener("$API/lists/$lista/tasks?showCompleted=false&showHidden=false&maxResults=100", t)["items"]?.jsonArray.orEmpty()
-                for (it in items) {
-                    val o = it.jsonObject
-                    val due = o["due"]?.jsonPrimitive?.contentOrNull ?: continue
-                    val titulo = o["title"]?.jsonPrimitive?.contentOrNull?.takeIf { s -> s.isNotBlank() } ?: continue
-                    add(buildJsonObject { put("i", o.getValue("id").jsonPrimitive.content); put("t", titulo); put("d", Instant.parse(due).toEpochMilli()) })
+    /** Vuelve a leer las tareas de Google y las guarda. Con [force] refresca aunque la copia siga vigente. `false` si falta el permiso o falla la red. */
+    suspend fun actualizar(c: Context, token: String? = null, force: Boolean = false): Boolean {
+        if (!force && !vieja(c)) return true // la copia sigue vigente: no vuelve a llamar a la API
+        return try {
+            val t = token ?: (pedir(c) as? PermisoDrive.Listo)?.token ?: return false
+            val listas = obtener("$API/users/@me/lists?maxResults=100", t).getValue("items").jsonArray.map { it.jsonObject.getValue("id").jsonPrimitive.content }
+            val tareas = buildJsonArray {
+                for (lista in listas) {
+                    val items = obtener("$API/lists/$lista/tasks?showCompleted=false&showHidden=false&maxResults=100", t)["items"]?.jsonArray.orEmpty()
+                    for (it in items) {
+                        val o = it.jsonObject
+                        val due = o["due"]?.jsonPrimitive?.contentOrNull ?: continue
+                        val titulo = o["title"]?.jsonPrimitive?.contentOrNull?.takeIf { s -> s.isNotBlank() } ?: continue
+                        add(buildJsonObject { put("i", o.getValue("id").jsonPrimitive.content); put("t", titulo); put("d", Instant.parse(due).toEpochMilli()) })
+                    }
                 }
             }
+            prefs(c).edit().putString("datos", tareas.toString()).putLong("hora", System.currentTimeMillis()).apply()
+            true
+        } catch (e: Exception) {
+            false // sin red, sin permiso o con la API de Tasks apagada: se queda lo último que se guardó
         }
-        prefs(c).edit().putString("datos", tareas.toString()).putLong("hora", System.currentTimeMillis()).apply()
-        true
-    } catch (e: Exception) {
-        false // sin red, sin permiso o con la API de Tasks apagada: se queda lo último que se guardó
     }
 
     private suspend fun obtener(url: String, token: String) =
