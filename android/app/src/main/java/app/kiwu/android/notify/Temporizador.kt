@@ -13,6 +13,9 @@ import androidx.core.app.NotificationManagerCompat
 import app.kiwu.android.Idioma
 import app.kiwu.android.MainActivity
 import app.kiwu.android.R
+import app.kiwu.android.domain.SesionEstudio
+import app.kiwu.android.domain.TiempoEstudio
+import java.time.LocalDate
 
 /**
  * Temporizador de estudio (Pomodoro): una cuenta atrás que sobrevive a cerrar la pantalla. Se guarda el momento de fin y
@@ -30,15 +33,37 @@ object Temporizador {
 
     fun minutos(c: Context): Int = prefs(c).getInt("minutos", 25)
 
+    /** Lista (materia) a la que se apunta el tiempo estudiado; null = ninguna. */
+    fun materia(c: Context): String? = prefs(c).getString("materia", null)
+
+    fun elegirMateria(c: Context, id: String?) = prefs(c).edit().putString("materia", id).apply()
+
+    /** Tiempo estudiado (solo en este dispositivo). */
+    fun sesiones(c: Context): List<SesionEstudio> = TiempoEstudio.leer(prefs(c).getString("sesiones", "").orEmpty())
+
+    private fun registrar(c: Context, minutos: Int) {
+        if (minutos < 1) return
+        val nueva = SesionEstudio(materia(c), LocalDate.now().toEpochDay(), minutos)
+        prefs(c).edit().putString("sesiones", TiempoEstudio.escribir(TiempoEstudio.anadir(sesiones(c), nueva))).apply()
+    }
+
     fun iniciar(c: Context, minutos: Int) {
         val fin = System.currentTimeMillis() + minutos * 60_000L
         prefs(c).edit().putLong("fin", fin).putInt("minutos", minutos).apply()
         c.getSystemService(AlarmManager::class.java)?.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fin, alarma(c))
     }
 
+    /** Para antes de tiempo: cuenta los minutos que sí se estudiaron. */
     fun cancelar(c: Context) {
+        fin(c)?.let { registrar(c, minutos(c) - ((it - System.currentTimeMillis()) / 60_000L).toInt() - 1) }
         prefs(c).edit().putLong("fin", 0L).apply()
         c.getSystemService(AlarmManager::class.java)?.cancel(alarma(c))
+    }
+
+    /** La alarma de fin: apunta la sesión completa y avisa. */
+    fun terminar(c: Context) {
+        registrar(c, minutos(c))
+        avisar(c)
     }
 
     private fun alarma(c: Context) = PendingIntent.getBroadcast(
@@ -71,5 +96,5 @@ object Temporizador {
 }
 
 class TemporizadorReceiver : BroadcastReceiver() {
-    override fun onReceive(contexto: Context, intent: Intent) = Temporizador.avisar(contexto)
+    override fun onReceive(contexto: Context, intent: Intent) = Temporizador.terminar(contexto)
 }

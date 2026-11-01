@@ -96,6 +96,9 @@ internal fun idRespuesta(b: BloqueEd) = b.id + "#respuesta"
 /** Opción del menú «/» que no es un tipo de bloque: abre el repaso de las tarjetas de la nota. */
 const val ACCION_REPASAR = "repasar"
 
+/** Opción del menú «/»: elige una foto (pizarra, libro) y añade su texto como párrafos. */
+const val ACCION_TEXTO_FOTO = "texto_foto"
+
 /** Acción que necesita al sistema (elegir una imagen o un archivo) y que resuelve `EditorBloques`. */
 class AccionPendiente(val tipo: String, val tras: BloqueEd?)
 
@@ -437,7 +440,7 @@ class EstadoEditor(inicial: Documento) {
         val t = b.texto
         if (b.kind != TiposBloque.PARRAFO || !t.startsWith("/") || t.contains('\n') || b.slashDescartado) return emptyList()
         val filtro = sinTildes(t.drop(1))
-        return (TiposBloque.todos + ACCION_REPASAR).filter {
+        return (TiposBloque.todos + ACCION_TEXTO_FOTO + ACCION_REPASAR).filter {
             it != TiposBloque.PARRAFO && (filtro.isEmpty() || filtro in sinTildes(titulos[it] ?: ""))
         }
     }

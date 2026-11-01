@@ -45,6 +45,17 @@ class TextosAvisoTest {
     }
 
     @Test
+    @Config(qualifiers = "es")
+    fun sinHoraDiceVenceHoy() {
+        // 18:00 es lo que la app guarda cuando la tarea no tiene hora.
+        val zona = java.time.ZoneId.systemDefault()
+        val hoy = java.time.LocalDate.now(zona)
+        val entrega = hoy.atTime(18, 0).atZone(zona).toInstant().toEpochMilli()
+        val ahora = hoy.atTime(8, 0).atZone(zona).toInstant().toEpochMilli()
+        assertEquals("Vence hoy", Recordatorios.textoAviso(tarea(entrega), ahora, r))
+    }
+
+    @Test
     @Config(qualifiers = "en")
     fun enIngles() {
         val d = tarea(t0 + 5 * hora)

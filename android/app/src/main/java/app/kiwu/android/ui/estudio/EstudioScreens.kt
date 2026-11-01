@@ -53,6 +53,7 @@ import app.kiwu.android.domain.Calificacion
 import app.kiwu.android.domain.Calificaciones
 import app.kiwu.android.domain.Tarjeta
 import app.kiwu.android.domain.Tarjetas
+import app.kiwu.android.domain.TiempoEstudio
 import app.kiwu.android.notify.Temporizador
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -76,9 +77,13 @@ private fun Pantalla(titulo: String, alVolver: () -> Unit, contenido: @Composabl
 /** Temporizador de estudio: 25, 50, 5 o 10 minutos; avisa al terminar aunque cierres la app. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TemporizadorScreen(alVolver: () -> Unit) {
+fun TemporizadorScreen(app: KiwuApp, alVolver: () -> Unit) {
     val c = LocalContext.current
+    val materias by app.repo.materias.collectAsStateWithLifecycle(emptyList())
+    var materia by remember { mutableStateOf(Temporizador.materia(c)) }
     var fin by remember { mutableStateOf(Temporizador.fin(c)) }
+    // Se relee al terminar o parar, que es cuando se apunta una sesión.
+    val semana = remember(fin) { TiempoEstudio.semana(Temporizador.sesiones(c), java.time.LocalDate.now()) }
     var ahora by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(fin) {
         while (fin != null) {
@@ -89,7 +94,10 @@ fun TemporizadorScreen(alVolver: () -> Unit) {
     }
     val restante = ((fin ?: 0L) - ahora).coerceAtLeast(0L) / 1000
     Pantalla(stringResource(R.string.temporizador), alVolver) { relleno ->
-        Column(Modifier.padding(relleno).fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        Column(
+            Modifier.padding(relleno).fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
             Text(
                 if (fin != null) "%02d:%02d".format(restante / 60, restante % 60) else "%02d:00".format(Temporizador.minutos(c)),
                 fontSize = 72.sp, style = MaterialTheme.typography.displayLarge,
@@ -103,6 +111,29 @@ fun TemporizadorScreen(alVolver: () -> Unit) {
                     }
                 }
                 Text(stringResource(R.string.temporizador_ayuda), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                if (materias.isNotEmpty()) {
+                    Text(stringResource(R.string.temporizador_lista), color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, modifier = Modifier.fillMaxWidth())
+                    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        for (m in materias) {
+                            FilterChip(
+                                selected = m.id == materia,
+                                onClick = { materia = if (m.id == materia) null else m.id; Temporizador.elegirMateria(c, materia) },
+                                label = { Text(listOfNotNull(m.emoji, m.nombre).joinToString(" ")) },
+                            )
+                        }
+                    }
+                }
+            }
+            if (semana.isNotEmpty()) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(stringResource(R.string.estudio_semana), style = MaterialTheme.typography.titleSmall)
+                    for ((id, min) in semana) {
+                        Row {
+                            Text(materias.firstOrNull { it.id == id }?.nombre ?: stringResource(R.string.estudio_sin_lista), Modifier.weight(1f))
+                            Text(if (min >= 60) stringResource(R.string.duracion_h_min, min / 60, min % 60) else stringResource(R.string.duracion_min, min))
+                        }
+                    }
+                }
             }
         }
     }
@@ -118,9 +149,11 @@ fun CalificacionesScreen(app: KiwuApp, materiaId: String, alVolver: () -> Unit) 
     var nombre by remember { mutableStateOf("") }
     var valor by remember { mutableStateOf("") }
     var peso by remember { mutableStateOf("") }
+    var meta by remember { mutableStateOf("") }
+    var pesoFalta by remember { mutableStateOf("") }
     fun guardar(l: List<Calificacion>) { alcance.launch { app.repo.cambiarCalificaciones(materiaId, l) } }
     Pantalla(stringResource(R.string.calificaciones) + (m?.let { " · ${it.nombre}" } ?: ""), alVolver) { relleno ->
-        Column(Modifier.padding(relleno).fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(relleno).fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Calificaciones.promedio(notas)?.let {
                 Text(stringResource(R.string.promedio_n, "%.2f".format(it)), style = MaterialTheme.typography.headlineSmall)
             } ?: Text(stringResource(R.string.sin_calificaciones), color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -142,6 +175,21 @@ fun CalificacionesScreen(app: KiwuApp, materiaId: String, alVolver: () -> Unit) 
                 onClick = { guardar(notas + Calificacion(nombre.trim(), v!!, p!!)); nombre = ""; valor = ""; peso = "" },
                 enabled = nombre.isNotBlank() && v != null && p != null && p > 0,
             ) { Text(stringResource(R.string.anadir)) }
+
+            // ¿Cuánto necesito? Meta de promedio y peso de lo que falta (el examen final, otro parcial…).
+            Text(stringResource(R.string.cuanto_necesito), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(meta, { meta = it }, Modifier.weight(1f), singleLine = true, label = { Text(stringResource(R.string.meta_promedio)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                OutlinedTextField(pesoFalta, { pesoFalta = it }, Modifier.weight(1f), singleLine = true, label = { Text(stringResource(R.string.peso_que_falta)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+            }
+            val mt = meta.replace(',', '.').toDoubleOrNull()
+            val pf = pesoFalta.replace(',', '.').toDoubleOrNull()
+            if (mt != null && pf != null) Calificaciones.necesaria(notas, mt, pf)?.let {
+                Text(
+                    if (it <= 0.0) stringResource(R.string.necesitas_nada) else stringResource(R.string.necesitas_n, "%.2f".format(it)),
+                    style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
     }
 }

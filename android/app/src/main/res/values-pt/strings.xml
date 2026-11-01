@@ -210,6 +210,8 @@
     <string name="ajustes_mostrar_racha">Mostrar a sequência 🔥</string>
     <string name="ajustes_segundo_aviso">Segundo aviso</string>
     <string name="ajustes_sin_segundo">Sem segundo aviso</string>
+    <string name="ajustes_hora_sin_hora">Hora das tarefas sem hora</string>
+    <string name="ajustes_hora_sin_hora_texto">As tarefas com data mas sem hora são avisadas nesse mesmo dia a esta hora.</string>
     <string name="antes_de">%1$s antes</string>
     <string name="ajustes_aviso_racha">Aviso da sequência</string>
     <string name="ajustes_aviso_racha_texto">Às 20:00, se ainda houver tarefas para entregar ou atrasadas hoje</string>
@@ -520,7 +522,7 @@
     <string name="canal_horario_desc">Avisos antes de suas aulas e atividades começarem</string>
     <string name="completar">Concluir</string>
     <string name="posponer_1h">Adiar 1 h</string>
-    <string name="posponer_manana">Adiar para amanhã</string>
+    <string name="posponer_manana">Amanhã</string>
     <string name="aviso_evento_ya">Acabou de começar</string>
     <string name="aviso_evento_hace">Começou há %1$d min</string>
     <string name="aviso_tarea_ya">Acabou de vencer</string>
@@ -550,6 +552,7 @@
     <string name="aviso_evento_manana">Começa amanhã</string>
     <string name="aviso_evento_dias">Começa em %1$d dias</string>
     <string name="aviso_tarea_min">Vence em %1$d min</string>
+    <string name="aviso_tarea_hoy">Vence hoje</string>
     <string name="aviso_tarea_h">Vence em %1$d h</string>
     <string name="aviso_tarea_manana">Vence amanhã</string>
     <string name="aviso_tarea_dias">Vence em %1$d dias</string>
@@ -752,6 +755,25 @@
     <string name="tarjetas_volver">Voltar aos meus cartões</string>
     <string name="bloque_tarjeta">Cartão de revisão</string>
     <string name="slash_repasar">Revisar cartões</string>
+    <string name="slash_texto_foto">Texto de foto</string>
+    <string name="texto_foto_error">Não foi possível ler a foto. Verifique a conexão e tente de novo.</string>
+    <string name="texto_foto_nada">Nenhum texto encontrado na foto.</string>
+    <string name="temporizador_lista">De qual lista você está estudando?</string>
+    <string name="estudio_semana">Estudado esta semana</string>
+    <string name="estudio_sin_lista">Sem lista</string>
+    <string name="duracion_h_min">%1$d h %2$d min</string>
+    <string name="cuanto_necesito">Quanto eu preciso?</string>
+    <string name="meta_promedio">Média que você quer</string>
+    <string name="peso_que_falta">Peso do que falta</string>
+    <string name="necesitas_n">Você precisa de %1$s no que falta</string>
+    <string name="necesitas_nada">Já garantiu, mesmo tirando 0</string>
+    <string name="repaso_de">Revisar: %1$s</string>
+    <plurals name="plan_repaso">
+        <item quantity="one">Criar plano de revisão (%1$d sessão)</item>
+        <item quantity="many">Criar plano de revisão (%1$d sessões)</item>
+        <item quantity="other">Criar plano de revisão (%1$d sessões)</item>
+    </plurals>
+    <string name="casilla_de">Concluir %1$s</string>
     <string name="tarjeta_en_apunte">Na nota</string>
     <string name="tarjetas_generar">Gerar a partir da nota</string>
     <string name="tarjetas_generar_nada">Não encontrei cartões na nota. Experimente títulos com a explicação embaixo, perguntas terminadas em «?» seguidas da resposta, linhas «Termo: definição» ou palavras em negrito.</string>

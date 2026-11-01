@@ -154,7 +154,7 @@ fun Raiz(
                     PaginaScreen(vm, adjuntos, alVolver = { nav.volver() }, alTarjetas = { nav.navigate("tarjetas/$id") })
                 }
                 composable("buscar") { BuscarScreen(app, alVolver = { nav.volver() }, alAbrirTarea = { nav.navigate("tarea/$it") }, alAbrirPagina = { nav.navigate("pagina/$it") }) }
-                composable("temporizador") { TemporizadorScreen(alVolver = { nav.volver() }) }
+                composable("temporizador") { TemporizadorScreen(app, alVolver = { nav.volver() }) }
                 composable("calificaciones/{id}") { entrada ->
                     val id = entrada.arguments?.getString("id") ?: return@composable
                     CalificacionesScreen(app, id, alVolver = { nav.volver() })

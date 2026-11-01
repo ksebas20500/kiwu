@@ -48,6 +48,8 @@ credentials = { module = "androidx.credentials:credentials", version.ref = "cred
 credentials-play = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 play-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playAuth" }
+# Reconocimiento de texto con el modelo de Play Services (se descarga solo; no engorda el APK).
+mlkit-texto = { module = "com.google.android.gms:play-services-mlkit-text-recognition", version = "19.0.1" }
 junit = { module = "junit:junit", version.ref = "junit" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTest" }

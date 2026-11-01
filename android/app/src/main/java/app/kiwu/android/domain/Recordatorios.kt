@@ -24,21 +24,64 @@ object Recordatorios {
         return if (hora == LocalTime.MIDNIGHT) entrega + HORA_EVENTO_TODO_EL_DIA_MS else entrega
     }
 
-    /** Momento en que debe sonar el aviso de una tarea; null si no lleva aviso. */
-    fun momentoDeAviso(d: Deber): Long? {
-        val entrega = referencia(d) ?: return null
+    /** La hora que se guarda cuando la tarea tiene fecha pero no hora (y que la app muestra como «sin hora»). */
+    val HORA_SIN_HORA: LocalTime = LocalTime.of(18, 0)
+
+    /** Hora por defecto de los avisos de tareas sin hora, en minutos desde las 00:00 (8:00). */
+    const val HORA_SIN_HORA_POR_DEFECTO = 8 * 60
+
+    /**
+     * Si la tarea tiene fecha pero no hora: la app guarda las 18:00, y las 00:00 cuando es «todo el día».
+     * A estas tareas se las avisa a la hora elegida en Ajustes, no a las 18:00 de la víspera.
+     */
+    fun sinHora(d: Deber, zona: ZoneId = ZoneId.systemDefault()): Boolean {
+        if (d.esEvento) return false
+        val entrega = d.fechaEntrega ?: return false
+        val hora = Instant.ofEpochMilli(entrega).atZone(zona).toLocalTime()
+        return hora == HORA_SIN_HORA || hora == LocalTime.MIDNIGHT
+    }
+
+    /**
+     * Momento en que debe sonar el aviso de una tarea; null si no lleva aviso.
+     *
+     * [horaSinHora] son los minutos desde las 00:00 a los que se avisa de las tareas sin hora. En ellas no se aplica
+     * el adelanto del chip («1 h antes», «1 día antes»): no hay una hora de entrega de la que restar.
+     */
+    fun momentoDeAviso(d: Deber, horaSinHora: Int = HORA_SIN_HORA_POR_DEFECTO, zona: ZoneId = ZoneId.systemDefault()): Long? {
+        val entrega = d.fechaEntrega ?: return null
         if (d.completado || d.recordatorioHoras <= 0) return null
-        return entrega - d.recordatorioHoras * HORA_MS
+        if (sinHora(d, zona)) {
+            // Modelo A: aviso ese día a la hora elegida, ignora el adelanto (chip)
+            return Instant.ofEpochMilli(entrega).atZone(zona).toLocalDate().atStartOfDay(zona)
+                .plusMinutes(horaSinHora.toLong()).toInstant().toEpochMilli()
+        }
+        val referencia = referencia(d, zona) ?: return null
+        return referencia - d.recordatorioHoras * HORA_MS
+    }
+
+    /**
+     * Hasta cuándo tiene sentido avisar: una hora después de la entrega. En las tareas sin hora, hasta el final del día
+     * (la hora elegida puede caer después de las 18:00 que se guardan como «sin hora»).
+     */
+    private fun limite(d: Deber, zona: ZoneId): Long? {
+        val entrega = d.fechaEntrega ?: return null
+        if (sinHora(d, zona)) {
+            // Hasta el último instante del día: a las 00:00 del día siguiente ya no es «hoy».
+            val inicioManana = Instant.ofEpochMilli(entrega).atZone(zona).toLocalDate().plusDays(1).atStartOfDay(zona).toInstant().toEpochMilli()
+            return inicioManana - 1
+        }
+        val referencia = referencia(d, zona) ?: return null
+        return referencia + GRACIA_MS
     }
 
     /**
      * Cuándo hay que programar la alarma de una tarea, o null si no toca avisar (sin fecha, completada, ya avisada
      * o vencida hace mucho). Si el aviso ya pasó pero aún está en plazo, sale enseguida.
      */
-    fun momentoDeDisparo(d: Deber, ahora: Long): Long? {
-        val aviso = momentoDeAviso(d) ?: return null
-        val entrega = referencia(d) ?: return null
-        if (ahora > entrega + GRACIA_MS) return null
+    fun momentoDeDisparo(d: Deber, ahora: Long, horaSinHora: Int = HORA_SIN_HORA_POR_DEFECTO, zona: ZoneId = ZoneId.systemDefault()): Long? {
+        val aviso = momentoDeAviso(d, horaSinHora, zona) ?: return null
+        val hasta = limite(d, zona) ?: return null
+        if (ahora > hasta) return null
         if (d.recordado != null && d.recordado >= aviso) return null
         return maxOf(aviso, ahora + 2_000)
     }
@@ -60,17 +103,23 @@ object Recordatorios {
     }
 
     /** Tareas cuyo aviso ya llegó y todavía no se ha notificado. */
-    fun pendientesDeAviso(deberes: List<Deber>, ahora: Long): List<Deber> =
+    fun pendientesDeAviso(deberes: List<Deber>, ahora: Long, horaSinHora: Int = HORA_SIN_HORA_POR_DEFECTO, zona: ZoneId = ZoneId.systemDefault()): List<Deber> =
         deberes.filter { d ->
-            val aviso = momentoDeAviso(d) ?: return@filter false
-            val entrega = referencia(d) ?: return@filter false
-            aviso <= ahora && ahora <= entrega + GRACIA_MS && (d.recordado == null || d.recordado < aviso)
+            val aviso = momentoDeAviso(d, horaSinHora, zona) ?: return@filter false
+            val hasta = limite(d, zona) ?: return@filter false
+            aviso <= ahora && ahora <= hasta && (d.recordado == null || d.recordado < aviso)
         }.sortedBy { it.fechaEntrega }
 
     /** «Vence en 5 h», «Vence mañana», «Venció hace 10 min»… (en un evento: «Empieza en 5 h», «Empezó hace 10 min»). */
     fun textoAviso(d: Deber, ahora: Long, r: Resources): String {
         val entrega = referencia(d) ?: return ""
         val ev = d.esEvento
+        // Sin hora no hay una hora de entrega real: decir «Vence en 10 h» (a las 18:00) confundiría.
+        if (sinHora(d)) {
+            val zona = ZoneId.systemDefault()
+            val finDelDia = Instant.ofEpochMilli(entrega).atZone(zona).toLocalDate().plusDays(1).atStartOfDay(zona).toInstant().toEpochMilli()
+            if (ahora < finDelDia) return r.getString(R.string.aviso_tarea_hoy)
+        }
         val resto = entrega - ahora
         if (resto < 0) {
             val minutos = (-resto / 60_000).toInt()

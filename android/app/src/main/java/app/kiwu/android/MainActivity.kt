@@ -61,6 +61,8 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         (application as KiwuApp).sync.alPrimerPlano()
+        // Por si un cambio hecho fuera (widget, notificación, hoja del día) no llegó a quitar su aviso.
+        (application as KiwuApp).revisarAvisos()
     }
 
     override fun onStop() {

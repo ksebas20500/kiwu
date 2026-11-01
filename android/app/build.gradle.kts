@@ -25,14 +25,14 @@ android {
     }
 
     namespace = "app.kiwu.android"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "app.kiwu.android"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 18
-        versionName = "0.7.1"
+        targetSdk = 36
+        versionCode = 22
+        versionName = "0.7.3"
         buildConfigField("String", "FIREBASE_API_KEY", "\"${propiedadesLocales.getProperty("firebase.apiKey", "")}\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${propiedadesLocales.getProperty("google.webClientId", "")}\"")
         buildConfigField("String", "FIREBASE_PROJECT_ID", "\"${propiedadesLocales.getProperty("firebase.projectId", "")}\"")
@@ -106,6 +106,7 @@ dependencies {
     implementation(libs.credentials.play)
     implementation(libs.googleid)
     implementation(libs.play.auth)
+    implementation(libs.mlkit.texto)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

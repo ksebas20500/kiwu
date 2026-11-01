@@ -78,6 +78,16 @@ internal fun ManejarAcciones(ed: EstadoEditor, adjuntos: OrigenAdjuntos) {
                 val nombre = nombreDeArchivo(contexto, uri)
                 ed.insertarTras(accion.tras, listOf(Bloque(kind = TiposBloque.ARCHIVO, fileName = nombre, path = uri.toString())))
             }
+            ACCION_TEXTO_FOTO -> adjuntos.elegirImagen { uri ->
+                alcance.launch {
+                    val parrafos = textoDeFoto(contexto, uri)
+                    if (parrafos.isNullOrEmpty()) {
+                        android.widget.Toast.makeText(contexto, contexto.getString(if (parrafos == null) R.string.texto_foto_error else R.string.texto_foto_nada), android.widget.Toast.LENGTH_SHORT).show()
+                    } else {
+                        ed.insertarTras(accion.tras, parrafos.map { Bloque(text = it) })
+                    }
+                }
+            }
         }
     }
 }

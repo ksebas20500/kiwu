@@ -1,5 +1,6 @@
 package app.kiwu.android.ui.tareas
 
+import app.kiwu.android.ui.casillaDe
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -121,7 +122,7 @@ fun FilaTarea(
                 }
             }
         } else {
-            Checkbox(checked = d.completado, onCheckedChange = alMarcar)
+            Checkbox(checked = d.completado, onCheckedChange = alMarcar, modifier = Modifier.casillaDe(d.titulo))
         }
         Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
             Text(

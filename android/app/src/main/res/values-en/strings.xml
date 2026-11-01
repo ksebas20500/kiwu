@@ -206,6 +206,8 @@
     <string name="ajustes_mostrar_racha">Show the streak 🔥</string>
     <string name="ajustes_segundo_aviso">Second reminder</string>
     <string name="ajustes_sin_segundo">No second reminder</string>
+    <string name="ajustes_hora_sin_hora">Time for tasks without a time</string>
+    <string name="ajustes_hora_sin_hora_texto">Tasks with a date but no time are reminded that same day at this time.</string>
     <string name="antes_de">%1$s before</string>
     <string name="ajustes_aviso_racha">Streak reminder</string>
     <string name="ajustes_aviso_racha_texto">At 8:00 PM, if you still have tasks due or overdue today</string>
@@ -506,7 +508,7 @@
     <string name="canal_horario_desc">Reminders before your classes and activities start</string>
     <string name="completar">Complete</string>
     <string name="posponer_1h">Snooze 1 h</string>
-    <string name="posponer_manana">Snooze until tomorrow</string>
+    <string name="posponer_manana">Tomorrow</string>
     <string name="aviso_evento_ya">Just started</string>
     <string name="aviso_evento_hace">Started %1$d min ago</string>
     <string name="aviso_tarea_ya">Just became due</string>
@@ -532,6 +534,7 @@
     <string name="aviso_evento_manana">Starts tomorrow</string>
     <string name="aviso_evento_dias">Starts in %1$d days</string>
     <string name="aviso_tarea_min">Due in %1$d min</string>
+    <string name="aviso_tarea_hoy">Due today</string>
     <string name="aviso_tarea_h">Due in %1$d h</string>
     <string name="aviso_tarea_manana">Due tomorrow</string>
     <string name="aviso_tarea_dias">Due in %1$d days</string>
@@ -730,6 +733,24 @@
     <string name="tarjetas_volver">Back to my cards</string>
     <string name="bloque_tarjeta">Flashcard</string>
     <string name="slash_repasar">Review flashcards</string>
+    <string name="slash_texto_foto">Text from photo</string>
+    <string name="texto_foto_error">Couldn\'t read the photo. Check your connection and try again.</string>
+    <string name="texto_foto_nada">No text found in the photo.</string>
+    <string name="temporizador_lista">Which list are you studying?</string>
+    <string name="estudio_semana">Studied this week</string>
+    <string name="estudio_sin_lista">No list</string>
+    <string name="duracion_h_min">%1$d h %2$d min</string>
+    <string name="cuanto_necesito">What do I need?</string>
+    <string name="meta_promedio">Target average</string>
+    <string name="peso_que_falta">Weight still to come</string>
+    <string name="necesitas_n">You need %1$s on what\'s left</string>
+    <string name="necesitas_nada">You\'ve got it, even with a 0</string>
+    <string name="repaso_de">Review: %1$s</string>
+    <plurals name="plan_repaso">
+        <item quantity="one">Create study plan (%1$d session)</item>
+        <item quantity="other">Create study plan (%1$d sessions)</item>
+    </plurals>
+    <string name="casilla_de">Complete %1$s</string>
     <string name="tarjeta_en_apunte">In the note</string>
     <string name="tarjetas_generar">Generate from the note</string>
     <string name="tarjetas_generar_nada">No cards found in the note. Try headings with their explanation below, questions ending in "?" followed by the answer, "Term: definition" lines or words in bold.</string>

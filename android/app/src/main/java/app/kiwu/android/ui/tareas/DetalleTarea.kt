@@ -1,5 +1,6 @@
 package app.kiwu.android.ui.tareas
 
+import app.kiwu.android.ui.casillaDe
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,6 +64,8 @@ import app.kiwu.android.domain.Repeticion
 import app.kiwu.android.domain.esEvento
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material3.TextButton
 import app.kiwu.android.ui.editor.BarraFormato
 import app.kiwu.android.ui.editor.EditorBloques
 import app.kiwu.android.ui.editor.rememberEstadoEditor
@@ -119,6 +122,12 @@ class DetalleTareaViewModel(private val repo: Repositorio, private val alcanceAp
     fun cambiarEtiquetas(e: List<String>) = viewModelScope.launch { repo.cambiarEtiquetas(id, e) }
     fun cambiarPasos(p: List<app.kiwu.android.domain.Paso>) = viewModelScope.launch { repo.cambiarPasos(id, p) }
     fun moverAMateria(m: String) = viewModelScope.launch { repo.moverAMateria(id, m) }
+    val deberes: Flow<List<Deber>> = repo.deberes
+
+    /** Crea una tarea «Repasar» por cada sesión, en la misma lista que el examen, con aviso 1 hora antes. */
+    fun crearPlanRepaso(titulo: String, examen: Deber, sesiones: List<Long>) = viewModelScope.launch {
+        for (f in sesiones) repo.cambiarRecordatorio(repo.crearDeber(titulo, examen.materiaId, f).id, 1)
+    }
     fun eliminar() = alcanceApp.launch { repo.eliminarDeber(id) }
 }
 
@@ -178,7 +187,7 @@ fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVo
                 title = {},
                 navigationIcon = { IconButton(onClick = alVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.volver)) } },
                 actions = {
-                    if (!actual.esEvento) Checkbox(checked = actual.completado, onCheckedChange = vm::marcar)
+                    if (!actual.esEvento) Checkbox(checked = actual.completado, onCheckedChange = vm::marcar, modifier = Modifier.casillaDe(titulo))
                     IconButton(onClick = { vm.eliminar(); alVolver() }) { Icon(Icons.Filled.Delete, stringResource(if (actual.esEvento) R.string.evento_eliminar else R.string.tarea_eliminar)) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
@@ -298,6 +307,20 @@ fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVo
 
             // Fila 3 · pasos
             if (!actual.esEvento) PasosTarea(actual, vm::cambiarPasos)
+
+            // Plan de repaso de un examen: tareas «Repasar» 7, 3 y 1 días antes. Se ofrece una vez (hasta que existan).
+            val entregaExamen = actual.fechaEntrega
+            if (actual.examen && !actual.completado && entregaExamen != null) {
+                val todos by vm.deberes.collectAsStateWithLifecycle(emptyList())
+                val tituloRepaso = stringResource(R.string.repaso_de, actual.titulo.trim())
+                val sesiones = remember(entregaExamen) { app.kiwu.android.domain.Examenes.sesionesRepaso(entregaExamen, System.currentTimeMillis()) }
+                if (sesiones.isNotEmpty() && todos.none { it.materiaId == actual.materiaId && it.titulo == tituloRepaso }) {
+                    TextButton(onClick = { vm.crearPlanRepaso(tituloRepaso, actual, sesiones) }) {
+                        Icon(Icons.Filled.School, null)
+                        Text(pluralStringResource(R.plurals.plan_repaso, sesiones.size, sesiones.size), Modifier.padding(start = 6.dp))
+                    }
+                }
+            }
 
             EditorBloques(editor, adjuntos, Modifier.fillMaxWidth().padding(top = 20.dp))
 

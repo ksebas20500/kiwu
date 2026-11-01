@@ -21,6 +21,7 @@ import app.kiwu.android.domain.Recordatorios
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import app.kiwu.android.Idioma
 import app.kiwu.android.Textos
@@ -97,12 +98,29 @@ object Avisos {
 
     fun quitar(contexto: Context, id: String) = NotificationManagerCompat.from(contexto).cancel(identificador(id))
 
-    /** Quita de la barra los avisos de tareas que ya no están pendientes (completadas o borradas, aquí o en otro equipo). */
-    fun quitarSobrantes(contexto: Context, pendientes: Collection<String>) {
-        val nm = contexto.getSystemService(NotificationManager::class.java) ?: return
-        val vivos = pendientes.mapTo(HashSet()) { identificador(it) }
-        for (n in nm.activeNotifications) if (n.notification.channelId == CANAL && n.id !in vivos) nm.cancel(n.id)
+    /**
+     * Quita el aviso de una tarea y sus alarmas (el normal, el segundo aviso y el pospuesto). Se llama al completarla,
+     * borrarla o quitarle la fecha: la notificación no puede quedarse en la barra a que el flujo de la base reaccione
+     * (si el proceso se abrió solo para la acción del widget, puede morir antes).
+     */
+    fun olvidar(contexto: Context, id: String) {
+        quitar(contexto, id)
+        Pospuestos.quitar(contexto, id)
+        val alarmas = contexto.getSystemService(AlarmManager::class.java) ?: return
+        // El reaviso usa el mismo PendingIntent que el aviso normal (mismo código de petición): basta con cancelarlo.
+        alarmas.cancel(alarmaAvisar(contexto, id))
+        alarmas.cancel(alarmaAvisar(contexto, id, segundo = true))
     }
+
+    /** Quita de la barra los avisos del [canal] que ya no están en [vivos] (identificadores de notificación). */
+    internal fun limpiarBarra(contexto: Context, canal: String, vivos: Set<Int>) {
+        val nm = contexto.getSystemService(NotificationManager::class.java) ?: return
+        for (n in nm.activeNotifications) if (n.notification.channelId == canal && n.id !in vivos) nm.cancel(n.id)
+    }
+
+    /** Quita de la barra los avisos de tareas que ya no están pendientes (completadas o borradas, aquí o en otro equipo). */
+    fun quitarSobrantes(contexto: Context, canal: String = CANAL, pendientes: Collection<String>) =
+        limpiarBarra(contexto, canal, pendientes.mapTo(HashSet()) { identificador(it) })
 
     fun alarmaAvisar(contexto: Context, id: String, reaviso: Boolean = false, segundo: Boolean = false) = difusion(contexto, ACCION_AVISAR, id, reaviso, segundo)
 }
@@ -129,14 +147,22 @@ class ProgramadorAvisos(private val contexto: Context) {
 
     fun puedeExactas(): Boolean = Build.VERSION.SDK_INT < 31 || alarmas.canScheduleExactAlarms()
 
-    /** [segundoMin]: si es mayor que 0, además del aviso normal suena otro esos minutos antes de la entrega. */
-    fun reconciliar(deberes: List<Deber>, segundoMin: Int = 0, ahora: Long = System.currentTimeMillis()) {
+    /** [segundoMin]: si es mayor que 0, además del aviso normal suena otro esos minutos antes de la entrega.
+     *  [horaSinHora]: minutos desde las 00:00 a los que se avisa de las tareas sin hora (ver `Recordatorios`). */
+    @Synchronized
+    fun reconciliar(
+        deberes: List<Deber>,
+        segundoMin: Int = 0,
+        ahora: Long = System.currentTimeMillis(),
+        horaSinHora: Int = Recordatorios.HORA_SIN_HORA_POR_DEFECTO,
+    ) {
         val vigentes = HashSet<String>()
         val vigentesSegundo = HashSet<String>()
         for (d in deberes) {
-            Recordatorios.momentoDeDisparo(d, ahora)?.let { programar(d.id, it); vigentes += d.id }
+            Recordatorios.momentoDeDisparo(d, ahora, horaSinHora)?.let { programar(d.id, it); vigentes += d.id }
             val entrega = d.fechaEntrega
-            if (segundoMin > 0 && entrega != null && !d.completado) {
+            // En las tareas sin hora no hay una entrega real de la que restar: el segundo aviso no tiene sentido.
+            if (segundoMin > 0 && entrega != null && !d.completado && !Recordatorios.sinHora(d)) {
                 val segundo = entrega - segundoMin * 60_000L
                 if (segundo > ahora) { programar(d.id, segundo, segundo = true); vigentesSegundo += d.id }
             }
@@ -145,7 +171,7 @@ class ProgramadorAvisos(private val contexto: Context) {
         for (id in programadasSegundo - vigentesSegundo) alarmas.cancel(Avisos.alarmaAvisar(contexto, id, segundo = true))
         programadas.clear(); programadas += vigentes
         programadasSegundo.clear(); programadasSegundo += vigentesSegundo
-        Avisos.quitarSobrantes(contexto, deberes.filter { !it.completado }.map { it.id })
+        Avisos.quitarSobrantes(contexto, Avisos.CANAL, deberes.filter { !it.completado }.map { it.id })
         // Los avisos pospuestos a mañana siguen vivos aunque se haya reiniciado el teléfono; si la tarea ya no hace falta, se olvidan.
         for ((id, cuando) in Pospuestos.todos(contexto)) {
             val d = deberes.firstOrNull { it.id == id }
@@ -178,8 +204,9 @@ class AlarmaReceiver : BroadcastReceiver() {
         alcanceReceptores.launch {
             try {
                 val ahora = System.currentTimeMillis()
+                val horaSinHora = app.ajustes.flujo.first().horaAvisoSinHora
                 val d = app.repo.deber(id)
-                val toca = d != null && !d.completado && if (reaviso) true else Recordatorios.pendientesDeAviso(listOf(d), ahora).isNotEmpty()
+                val toca = d != null && !d.completado && if (reaviso) true else Recordatorios.pendientesDeAviso(listOf(d), ahora, horaSinHora).isNotEmpty()
                 if (d != null && toca) {
                     val lista = if (d.materiaId == ID_EVENTOS) Textos.eventos else app.repo.materia(d.materiaId)?.nombre
                     // El segundo aviso no cambia el estado «avisada» del primero.
@@ -200,7 +227,7 @@ class AccionReceiver : BroadcastReceiver() {
         val pendiente = goAsync()
         alcanceReceptores.launch {
             try {
-                Avisos.quitar(contexto, id)
+                Avisos.olvidar(contexto, id)
                 when (intent.action) {
                     Avisos.ACCION_COMPLETAR -> app.repo.marcar(id, true)
                     Avisos.ACCION_POSPONER -> {

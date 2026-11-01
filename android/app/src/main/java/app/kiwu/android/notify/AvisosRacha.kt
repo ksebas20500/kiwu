@@ -68,7 +68,10 @@ object AvisosRacha {
         }
     }
 
-    fun quitar(contexto: Context) = NotificationManagerCompat.from(contexto).cancel(IDENTIFICADOR)
+    fun quitar(contexto: Context) {
+        NotificationManagerCompat.from(contexto).cancel(IDENTIFICADOR)
+        Avisos.quitarSobrantes(contexto, AvisosRacha.CANAL, emptyList())
+    }
 }
 
 /** Programa (o cancela) la alarma diaria. No necesita ser exacta: unos minutos de retraso no importan. */
@@ -77,7 +80,12 @@ class ProgramadorRacha(private val contexto: Context) {
 
     fun reconciliar(activo: Boolean, ahora: Long = System.currentTimeMillis()) {
         val pi = AvisosRacha.alarma(contexto)
-        if (activo) alarmas.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, Rachas.proximoAviso(ahora), pi) else alarmas.cancel(pi)
+        if (activo) {
+            alarmas.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, Rachas.proximoAviso(ahora), pi)
+        } else {
+            alarmas.cancel(pi)
+            AvisosRacha.quitar(contexto) // si se apaga el aviso, el que esté en la barra sobra
+        }
     }
 }
 

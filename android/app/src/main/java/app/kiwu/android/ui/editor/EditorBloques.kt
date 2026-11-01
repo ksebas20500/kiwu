@@ -338,7 +338,7 @@ private fun MenuSlash(ed: EstadoEditor, b: BloqueEd, opciones: List<String>) {
 fun EstadoEditor.elegirSlash(b: BloqueEd, tipo: String) {
     b.poner("", emptyList())
     when (tipo) {
-        TiposBloque.IMAGEN, TiposBloque.ARCHIVO -> accionPendiente = AccionPendiente(tipo, b)
+        TiposBloque.IMAGEN, TiposBloque.ARCHIVO, ACCION_TEXTO_FOTO -> accionPendiente = AccionPendiente(tipo, b)
         ACCION_REPASAR -> { marcarCambio(); accionPendiente = AccionPendiente(tipo, b) }
         TiposBloque.DIVISOR -> insertarTras(b, listOf(app.kiwu.android.domain.Bloque(kind = TiposBloque.DIVISOR)))
         else -> convertir(b, tipo, "")
@@ -348,4 +348,5 @@ fun EstadoEditor.elegirSlash(b: BloqueEd, tipo: String) {
 /** Nombre de cada tipo de bloque en el idioma de la app (menú «/», «Convertir en…»). */
 @Composable
 internal fun titulosBloques(): Map<String, String> =
-    TiposBloque.titulos.mapValues { (_, id) -> stringResource(id) } + (ACCION_REPASAR to stringResource(R.string.slash_repasar))
+    TiposBloque.titulos.mapValues { (_, id) -> stringResource(id) } + (ACCION_REPASAR to stringResource(R.string.slash_repasar)) +
+        (ACCION_TEXTO_FOTO to stringResource(R.string.slash_texto_foto))

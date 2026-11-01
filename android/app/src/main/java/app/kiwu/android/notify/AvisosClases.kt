@@ -70,6 +70,10 @@ object AvisosClases {
             false
         }
     }
+
+    /** Quita de la barra los avisos de clases que ya no existen o a las que se les quitó el aviso. */
+    fun quitarSobrantes(contexto: Context, conAviso: Collection<Clase>) =
+        Avisos.quitarSobrantes(contexto, CANAL, conAviso.map { it.id })
 }
 
 /** Mantiene una alarma por clase con aviso (para su próxima vez) y quita las de clases eliminadas o sin aviso. */
@@ -77,6 +81,7 @@ class ProgramadorClases(private val contexto: Context) {
     private val alarmas = contexto.getSystemService(AlarmManager::class.java)
     private val programadas = HashSet<String>()
 
+    @Synchronized
     fun reconciliar(clases: List<Clase>, ahora: Long = System.currentTimeMillis()) {
         val vigentes = HashSet<String>()
         for (c in clases) {
@@ -87,6 +92,7 @@ class ProgramadorClases(private val contexto: Context) {
         for (id in programadas - vigentes) alarmas.cancel(AvisosClases.alarma(contexto, id))
         programadas.clear()
         programadas += vigentes
+        AvisosClases.quitarSobrantes(contexto, clases.filter { it.avisoMin != null })
     }
 
     fun programar(id: String, cuando: Long) {

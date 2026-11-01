@@ -34,6 +34,12 @@ object Calificaciones {
         val pesos = notas.sumOf { it.peso }
         return if (notas.isEmpty() || pesos <= 0.0) null else notas.sumOf { it.nota * it.peso } / pesos
     }
+
+    /** Nota que hace falta en lo que queda (con peso [pesoRestante]) para terminar con promedio [meta]; null si no queda peso. */
+    fun necesaria(notas: List<Calificacion>, meta: Double, pesoRestante: Double): Double? {
+        if (pesoRestante <= 0.0) return null
+        return (meta * (notas.sumOf { it.peso } + pesoRestante) - notas.sumOf { it.nota * it.peso }) / pesoRestante
+    }
 }
 
 /** Una tarjeta de repaso: pregunta y respuesta. */
@@ -140,4 +146,38 @@ object Examenes {
     /** Días naturales que faltan para la fecha de [entrega]: 0 = hoy, negativo = ya pasó. */
     fun diasRestantes(entrega: Long, ahora: Long, zona: ZoneId = ZoneId.systemDefault()): Long =
         ChronoUnit.DAYS.between(Instant.ofEpochMilli(ahora).atZone(zona).toLocalDate(), Instant.ofEpochMilli(entrega).atZone(zona).toLocalDate())
+
+    /** Repasos antes de un examen: 7, 3 y 1 días antes a las 18:00, sin los que ya pasaron. */
+    fun sesionesRepaso(entrega: Long, ahora: Long, zona: ZoneId = ZoneId.systemDefault()): List<Long> {
+        val examen = Instant.ofEpochMilli(entrega).atZone(zona).toLocalDate()
+        return listOf(7L, 3L, 1L).map { examen.minusDays(it).atTime(18, 0).atZone(zona).toInstant().toEpochMilli() }.filter { it > ahora }
+    }
+}
+
+/** Una sesión del temporizador: la lista (materia) en la que se estudió, el día (`LocalDate.toEpochDay`) y los minutos. */
+data class SesionEstudio(val materiaId: String?, val dia: Long, val minutos: Int)
+
+object TiempoEstudio {
+    fun leer(json: String): List<SesionEstudio> = try {
+        if (json.isBlank()) emptyList()
+        else Json.parseToJsonElement(json).jsonArray.map {
+            val o = it.jsonObject
+            SesionEstudio(o["m"]?.jsonPrimitive?.content, o.getValue("d").jsonPrimitive.content.toLong(), o.getValue("n").jsonPrimitive.content.toInt())
+        }
+    } catch (e: Exception) {
+        emptyList()
+    }
+
+    fun escribir(s: List<SesionEstudio>): String =
+        JsonArray(s.map { JsonObject(listOfNotNull(it.materiaId?.let { m -> "m" to JsonPrimitive(m) }, "d" to JsonPrimitive(it.dia), "n" to JsonPrimitive(it.minutos)).toMap()) }).toString()
+
+    /** Añade una sesión y olvida las de hace más de 8 semanas (solo se muestra la semana actual). */
+    fun anadir(s: List<SesionEstudio>, nueva: SesionEstudio): List<SesionEstudio> = s.filter { it.dia > nueva.dia - 56 } + nueva
+
+    /** Minutos por lista en la semana (de lunes a domingo) que contiene [hoy], de más a menos. */
+    fun semana(s: List<SesionEstudio>, hoy: java.time.LocalDate): List<Pair<String?, Int>> {
+        val lunes = hoy.with(java.time.DayOfWeek.MONDAY).toEpochDay()
+        return s.filter { it.dia in lunes until lunes + 7 }.groupBy { it.materiaId }
+            .map { (m, l) -> m to l.sumOf { it.minutos } }.sortedByDescending { it.second }
+    }
 }

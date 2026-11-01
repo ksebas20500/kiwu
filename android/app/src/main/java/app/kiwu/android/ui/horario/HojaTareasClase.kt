@@ -1,5 +1,6 @@
 package app.kiwu.android.ui.horario
 
+import app.kiwu.android.ui.casillaDe
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -207,7 +208,7 @@ private fun OpcionLista(texto: String, marcada: Boolean, alPulsar: () -> Unit) {
 @Composable
 private fun FilaTarea(d: Deber, ahora: Long, hecha: Boolean, marcar: (String, Boolean) -> Unit, alAbrir: (String) -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(hecha, onCheckedChange = { marcar(d.id, it) })
+        Checkbox(hecha, onCheckedChange = { marcar(d.id, it) }, modifier = Modifier.casillaDe(d.titulo))
         Column(Modifier.weight(1f).clickable { alAbrir(d.id) }.padding(vertical = 6.dp)) {
             Text(
                 d.titulo, maxLines = 2, overflow = TextOverflow.Ellipsis,

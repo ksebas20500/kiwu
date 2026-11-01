@@ -78,6 +78,28 @@ fun imagenParaNota(contexto: Context, uri: Uri): String? = try {
     null
 }
 
+/**
+ * Texto de una foto (pizarra, libro, apuntes a mano) con ML Kit, un párrafo por bloque de texto. Vacío si no hay texto;
+ * null si no se pudo leer (sin Play Services o el modelo aún no se descargó).
+ */
+suspend fun textoDeFoto(contexto: Context, uri: Uri): List<String>? = try {
+    val imagen = com.google.mlkit.vision.common.InputImage.fromFilePath(contexto, uri)
+    val lector = com.google.mlkit.vision.text.TextRecognition.getClient(com.google.mlkit.vision.text.latin.TextRecognizerOptions.DEFAULT_OPTIONS)
+    try {
+        val resultado = kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+            lector.process(imagen)
+                .addOnSuccessListener { cont.resumeWith(Result.success(it)) }
+                .addOnFailureListener { cont.resumeWith(Result.failure(it)) }
+        }
+        // Dentro de un bloque, las líneas cortadas por el ancho de la foto se unen en una sola frase.
+        resultado.textBlocks.map { b -> b.lines.joinToString(" ") { it.text.trim() } }.filter { it.isNotBlank() }
+    } finally {
+        lector.close()
+    }
+} catch (e: Exception) {
+    null
+}
+
 private class Pendientes {
     var imagen: ((Uri) -> Unit)? = null
     var archivo: ((Uri) -> Unit)? = null

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import app.kiwu.android.domain.Recordatorios
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -27,6 +28,8 @@ data class AjustesUi(
     val opacidadPaneles: Float = 0.45f,
     /** Segundo aviso: minutos antes de la entrega (0 = sin segundo aviso). Vale para todas las tareas con fecha. */
     val segundoAvisoMin: Int = 0,
+    /** A qué hora se avisa de las tareas que tienen fecha pero no hora, en minutos desde las 00:00 (8:00 = 480). */
+    val horaAvisoSinHora: Int = Recordatorios.HORA_SIN_HORA_POR_DEFECTO,
     /** Aspecto del menú de Tareas: plegable | compacto | color. */
     val menuAspecto: String = "plegable",
     /** Orden de las listas del menú: manual | alfabetico | pendientes. */
@@ -56,6 +59,7 @@ class AjustesStore(private val contexto: Context) {
         val visibilidad = floatPreferencesKey("fondo_visibilidad")
         val opacidad = floatPreferencesKey("opacidad_paneles")
         val segundoAviso = androidx.datastore.preferences.core.intPreferencesKey("segundo_aviso_min")
+        val horaAvisoSinHora = androidx.datastore.preferences.core.intPreferencesKey("hora_aviso_sin_hora")
         val menuAspecto = stringPreferencesKey("menu_aspecto")
         val menuOrden = stringPreferencesKey("menu_orden")
         val menuContadores = androidx.datastore.preferences.core.booleanPreferencesKey("menu_contadores")
@@ -75,6 +79,7 @@ class AjustesStore(private val contexto: Context) {
         fondoVisibilidad = (p[Claves.visibilidad] ?: 0.5f).coerceIn(0f, 1f),
         opacidadPaneles = (p[Claves.opacidad] ?: 0.45f).coerceIn(0f, 1f),
         segundoAvisoMin = (p[Claves.segundoAviso] ?: 0).coerceAtLeast(0),
+        horaAvisoSinHora = (p[Claves.horaAvisoSinHora] ?: Recordatorios.HORA_SIN_HORA_POR_DEFECTO).coerceIn(0, 24 * 60 - 1),
         menuAspecto = (p[Claves.menuAspecto] ?: "plegable").takeIf { it in setOf("plegable", "compacto", "color") } ?: "plegable",
         menuOrden = (p[Claves.menuOrden] ?: "manual").takeIf { it in setOf("manual", "alfabetico", "pendientes") } ?: "manual",
         menuContadores = p[Claves.menuContadores] ?: true,
@@ -98,6 +103,7 @@ class AjustesStore(private val contexto: Context) {
             p[Claves.visibilidad] = nuevo.fondoVisibilidad
             p[Claves.opacidad] = nuevo.opacidadPaneles
             p[Claves.segundoAviso] = nuevo.segundoAvisoMin
+            p[Claves.horaAvisoSinHora] = nuevo.horaAvisoSinHora.coerceIn(0, 24 * 60 - 1)
             p[Claves.menuAspecto] = nuevo.menuAspecto
             p[Claves.menuOrden] = nuevo.menuOrden
             p[Claves.menuContadores] = nuevo.menuContadores

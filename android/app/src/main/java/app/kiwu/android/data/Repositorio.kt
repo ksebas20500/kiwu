@@ -2,6 +2,7 @@ package app.kiwu.android.data
 
 import app.kiwu.android.domain.Clase
 import app.kiwu.android.domain.Columna
+import app.kiwu.android.domain.AvisosDeTareas
 import app.kiwu.android.domain.Cuaderno
 import app.kiwu.android.domain.Deber
 import app.kiwu.android.domain.Documento
@@ -36,6 +37,8 @@ class Repositorio(
     private val reloj: () -> Long = System::currentTimeMillis,
     /** Días que ya contaron para la racha; la app lo guarda en disco (ver `EntradaRacha.banco`). */
     val bancoRacha: kotlinx.coroutines.flow.MutableStateFlow<Set<LocalDate>> = kotlinx.coroutines.flow.MutableStateFlow(emptySet()),
+    /** Qué hacer con la barra de notificaciones al cambiar una tarea (la app quita el aviso; en las pruebas, nada). */
+    private val avisos: AvisosDeTareas = AvisosDeTareas.Nada,
 ) {
     /** Las listas que se ven y se eligen; la lista especial de eventos queda aparte. */
     val materias: Flow<List<Materia>> = dao.materias().map { l -> l.filter { it.id != ID_EVENTOS } }
@@ -154,7 +157,10 @@ class Repositorio(
     /** Elimina la carpeta; sus listas (y las tareas de ellas) se conservan como listas sueltas. */
     suspend fun eliminarGrupoListas(id: String) = dao.eliminarGrupoListas(id, reloj())
 
-    suspend fun eliminarMateria(id: String) = dao.eliminarMateria(id, reloj())
+    suspend fun eliminarMateria(id: String) {
+        dao.eliminarMateria(id, reloj())
+        avisos.revisar()
+    }
 
     // --- tareas ---------------------------------------------------------------------------------
 
@@ -180,6 +186,9 @@ class Repositorio(
     suspend fun actualizarDeber(d: Deber): Deber? {
         dao.deber(d.id) ?: return null
         val nuevo = d.copy(actualizada = reloj(), eliminada = null)
+        if (d.fechaEntrega != nuevo.fechaEntrega || d.recordatorioHoras != nuevo.recordatorioHoras) {
+            avisos.olvidar(d.id)
+        }
         dao.guardarDeber(nuevo)
         return nuevo
     }
@@ -199,6 +208,7 @@ class Repositorio(
     /** Horas de antelación del aviso (0 = sin aviso). Cambiarlo rearma el aviso. */
     suspend fun cambiarRecordatorio(id: String, horas: Int): Deber? {
         val d = dao.deber(id) ?: return null
+        if (horas <= 0) avisos.olvidar(id)
         return d.copy(recordatorioHoras = horas, recordado = null, actualizada = reloj()).also { dao.guardarDeber(it) }
     }
 
@@ -256,16 +266,19 @@ class Repositorio(
 
     suspend fun marcar(id: String, completado: Boolean): Deber? {
         val d = dao.deber(id) ?: return null
+        if (completado) avisos.olvidar(id) // el aviso ya no sirve en cuanto se completa (aquí o desde el widget)
         return reglas.marcar(d, completado, reloj()).also { dao.guardarDeber(it) }
     }
 
     suspend fun mover(id: String, columna: Columna): Deber? {
         val d = dao.deber(id) ?: return null
+        if (columna == Columna.HECHO && !d.completado) avisos.olvidar(id) // mover a «Hecho» completa la tarea
         return reglas.mover(d, columna, reloj()).also { dao.guardarDeber(it) }
     }
 
     suspend fun ponerFecha(id: String, fecha: Long?): Deber? {
         val d = dao.deber(id) ?: return null
+        if (fecha == null) avisos.olvidar(id) // sin fecha no hay aviso que dar
         return reglas.ponerFecha(d, fecha, reloj()).also { dao.guardarDeber(it) }
     }
 
@@ -274,7 +287,10 @@ class Repositorio(
         return d.copy(materiaId = materiaId, actualizada = reloj()).also { dao.guardarDeber(it) }
     }
 
-    suspend fun eliminarDeber(id: String) = dao.eliminarDeber(id, reloj())
+    suspend fun eliminarDeber(id: String) {
+        avisos.olvidar(id)
+        dao.eliminarDeber(id, reloj())
+    }
 
     // --- papelera (lo borrado de forma lógica se puede devolver) ---
     val deberesEliminados: Flow<List<Deber>> = dao.deberesEliminados()

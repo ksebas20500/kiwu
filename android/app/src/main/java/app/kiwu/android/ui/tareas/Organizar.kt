@@ -1,5 +1,6 @@
 package app.kiwu.android.ui.tareas
 
+import app.kiwu.android.ui.casillaDe
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -195,7 +196,7 @@ fun PasosTarea(d: Deber, alCambiarPasos: (List<Paso>) -> Unit) {
     Column(Modifier.fillMaxWidth().padding(top = 4.dp)) {
         for ((i, p) in pasos.withIndex()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = p.hecho, onCheckedChange = { alCambiarPasos(pasos.toMutableList().also { l -> l[i] = p.copy(hecho = it) }) })
+                Checkbox(checked = p.hecho, onCheckedChange = { alCambiarPasos(pasos.toMutableList().also { l -> l[i] = p.copy(hecho = it) }) }, modifier = Modifier.casillaDe(p.texto))
                 Text(
                     p.texto, Modifier.weight(1f),
                     textDecoration = if (p.hecho) TextDecoration.LineThrough else null,

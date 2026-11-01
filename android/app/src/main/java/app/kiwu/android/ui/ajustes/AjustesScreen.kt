@@ -345,6 +345,23 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit, alVerGuia: () -> Unit = {}
                             }
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                                 Column(Modifier.weight(1f)) {
+                                    Text(stringResource(R.string.ajustes_hora_sin_hora), style = MaterialTheme.typography.bodyMedium)
+                                    Text(stringResource(R.string.ajustes_hora_sin_hora_texto), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                OutlinedButton(onClick = {
+                                    val h = ajustes.horaAvisoSinHora / 60
+                                    val m = ajustes.horaAvisoSinHora % 60
+                                    android.app.TimePickerDialog(
+                                        contexto,
+                                        { _, hora, minuto -> cambiar { it.copy(horaAvisoSinHora = hora * 60 + minuto) } },
+                                        h, m, android.text.format.DateFormat.is24HourFormat(contexto),
+                                    ).show()
+                                }) {
+                                    Text("%02d:%02d".format(ajustes.horaAvisoSinHora / 60, ajustes.horaAvisoSinHora % 60))
+                                }
+                            }
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                                Column(Modifier.weight(1f)) {
                                     Text(stringResource(R.string.ajustes_aviso_racha), style = MaterialTheme.typography.bodyMedium)
                                     Text(stringResource(R.string.ajustes_aviso_racha_texto), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }

@@ -43,6 +43,15 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import app.kiwu.android.R
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+
+/** Para TalkBack: la casilla dice qué marca («Completar Leer cap. 3»), no solo «casilla sin marcar». */
+@Composable
+fun Modifier.casillaDe(titulo: String): Modifier {
+    val texto = stringResource(R.string.casilla_de, titulo)
+    return this.then(Modifier.semantics { contentDescription = texto })
+}
 
 /** Cuadro para pedir un texto (nombre de lista, de cuaderno…). */
 @Composable
