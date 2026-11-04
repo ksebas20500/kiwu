@@ -54,3 +54,6 @@ android/.kotlin/
 
 # Contexto privado (no se sube)
 CONTEXTO.md
+
+# Grafo de código generado (graphify)
+graphify-out/

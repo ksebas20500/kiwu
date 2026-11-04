@@ -2,7 +2,9 @@
 
 App nativa de Android (Kotlin, Jetpack Compose, Room). Mismas funciones que la de escritorio, con widgets de pantalla de inicio. Para ver qué hace Kiwu, consulta el [README principal](../README.md); la ruta de desarrollo está en [docs/android-plan.md](../docs/android-plan.md).
 
-Versión actual: **0.5.2** · Android 8.0 (API 26) o superior.
+Versión actual: **0.7.5** · Android 8.0 (API 26) o superior.
+
+> Novedades de **0.7.5**: el Pomodoro se puede **pausar y reanudar**, con notificación permanente en curso, **descansos de 5 min**, **«No molestar»** y color del número; el **widget de Deberes** ahora también muestra los **eventos** al fijarlo a una lista o carpeta; y por las festividades de octubre estrenamos **icono nuevo**: el gato mago 🧙‍♂️🐱 (también dentro de la app y como silueta para las notificaciones; el arte para Play Store está en `play_store_512.png`).
 
 ## Qué incluye
 
@@ -14,6 +16,7 @@ Versión actual: **0.5.2** · Android 8.0 (API 26) o superior.
 | **Notas** | Cuadernos, páginas con emoji, favoritas, búsqueda y editor por bloques con menú `/`, formato en línea, código con colores, enlaces con vista previa (web, YouTube, Vimeo), imágenes y archivos adjuntos |
 | **Archivos** | Carpeta del dispositivo vinculada a cada lista, con explorador integrado |
 | **Racha** | Días seguidos «al día» (sin tareas vencidas): cuentan los días con entregas y los días con clase en que completas o añades una tarea; los días libres no suman ni rompen. Arriba del menú de Tareas, con la mejor racha y las últimas 8 semanas; aviso opcional a las 20:00 si hoy quedan entregas |
+| **Estudio** | Temporizador de Pomodoro (25/50/5/10 min) que avisa al terminar aunque cierres la app. Mientras corre sale en la barra de notificaciones y en la pantalla de bloqueo con el tiempo que queda y botón *Parar*; se puede **pausar y reanudar**, arrancar un **descanso de 5 min** que no cuenta como estudio, activar **«No molestar»** mientras estudia (silencia el teléfono) y elegir el **color del número**. El tiempo estudiado se apunta por lista en la semana. Calificaciones con promedio ponderado y «¿cuánto necesito?», y tarjetas de repaso |
 | **Guía de inicio** | Al abrir la app por primera vez: unas pantallas de bienvenida y la lista de ejemplo «Empieza aquí»; se puede repetir desde Ajustes → Acerca de |
 | **Recordatorios** | Notificaciones con las acciones *Completar* y *Posponer 1 h*; se reprograman al reiniciar el teléfono |
 | **Ajustes** | Ordenados por secciones (Apariencia, Idioma, Menú de Tareas, Avisos, Copia de seguridad, Acerca de): tema claro/oscuro/sistema, color, fondo de imagen con velo, aspecto y orden del menú, segundo aviso y copia de seguridad `.kiwu.json` (el mismo formato que Linux) |
