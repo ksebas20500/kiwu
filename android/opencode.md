@@ -237,7 +237,7 @@ banco de racha, sesiones del temporizador.
 | `Avisos` | `recordatorios` | Tarea con acciones: Completar / Posponer 1 h / Posponer a mañana |
 | `AvisosClases` | `horario` | Aviso de clase; una alarma por clase, reprogramada semanalmente |
 | `AvisosRacha` | `racha` | Diaria a las 20:00, solo si la racha está en riesgo |
-| `Temporizador` | `temporizador` | Fin de Pomodoro + registro de sesión |
+| `Temporizador` | `temporizador` / `temporizador_curso` | Fin de Pomodoro + registro de sesión; mientras corre, notificación permanente con cuenta atrás (`setUsesChronometer` + `setChronometerCountDown`) y acción Parar |
 
 - Alarmas exactas si `canScheduleExactAlarms`; si no, `setAndAllowWhileIdle`.
 - Receptores: `AlarmaReceiver`, `AccionReceiver`, `ClaseReceiver`, `RachaReceiver`, `TemporizadorReceiver`, `ArranqueReceiver`.
@@ -245,6 +245,7 @@ banco de racha, sesiones del temporizador.
 - Posposiciones «a mañana» persistidas en `SharedPreferences("avisos_pospuestos")`.
 - Canales recreados siempre para que su nombre siga el idioma.
 - `POST_NOTIFICATIONS` se pide solo cuando hay una tarea con fecha, no al abrir.
+- `ACCESS_NOTIFICATION_POLICY` (sin diálogo, se concede en Ajustes del sistema): «No molestar» opcional del temporizador — se activa al iniciar una cuenta atrás de estudio (no en los descansos) y se devuelve a `INTERRUPTION_FILTER_ALL` al terminar o parar.
 
 ---
 

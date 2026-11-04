@@ -1,6 +1,8 @@
 package app.kiwu.android.ui.estudio
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -8,6 +10,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -27,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -40,6 +45,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -55,6 +61,9 @@ import app.kiwu.android.domain.Tarjeta
 import app.kiwu.android.domain.Tarjetas
 import app.kiwu.android.domain.TiempoEstudio
 import app.kiwu.android.notify.Temporizador
+import app.kiwu.android.ui.Acentos
+import android.content.Intent
+import android.provider.Settings
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -70,6 +79,7 @@ private fun Pantalla(titulo: String, alVolver: () -> Unit, contenido: @Composabl
             )
         },
         containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onSurface,
         content = contenido,
     )
 }
@@ -82,45 +92,97 @@ fun TemporizadorScreen(app: KiwuApp, alVolver: () -> Unit) {
     val materias by app.repo.materias.collectAsStateWithLifecycle(emptyList())
     var materia by remember { mutableStateOf(Temporizador.materia(c)) }
     var fin by remember { mutableStateOf(Temporizador.fin(c)) }
+    var pausa by remember { mutableLongStateOf(Temporizador.pausaRestante(c)) }
+    var noMolestar by remember { mutableStateOf(Temporizador.quiereNoMolestar(c)) }
+    var colorNum by remember { mutableStateOf(Temporizador.color(c)) }
     // Se relee al terminar o parar, que es cuando se apunta una sesión.
-    val semana = remember(fin) { TiempoEstudio.semana(Temporizador.sesiones(c), java.time.LocalDate.now()) }
+    val semana = remember(fin, pausa) { TiempoEstudio.semana(Temporizador.sesiones(c), java.time.LocalDate.now()) }
     var ahora by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(fin) {
         while (fin != null) {
             ahora = System.currentTimeMillis()
-            if (ahora >= fin!!) fin = null
+            // «Parar» desde la notificación cambia las preferencias: se refleja en el próximo tic.
+            if (Temporizador.fin(c) == null) fin = null
+            else if (ahora >= fin!!) fin = null
             delay(500)
         }
     }
-    val restante = ((fin ?: 0L) - ahora).coerceAtLeast(0L) / 1000
+    // El color del número, si se eligió uno; «auto» hereda el del tema (null).
+    val colorNumero = if (colorNum == "auto") null else Acentos.muestra(colorNum)
     Pantalla(stringResource(R.string.temporizador), alVolver) { relleno ->
         Column(
             Modifier.padding(relleno).fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+            val quedanMs = if (fin != null) (fin ?: 0L) - ahora else pausa
             Text(
-                if (fin != null) "%02d:%02d".format(restante / 60, restante % 60) else "%02d:00".format(Temporizador.minutos(c)),
+                if (fin != null || pausa > 0) "%02d:%02d".format(quedanMs / 60_000, quedanMs / 1000 % 60)
+                else "%02d:00".format(Temporizador.minutos(c)),
                 fontSize = 72.sp, style = MaterialTheme.typography.displayLarge,
+                color = colorNumero ?: Color.Unspecified,
             )
-            if (fin != null) {
-                OutlinedButton(onClick = { Temporizador.cancelar(c); fin = null }) { Text(stringResource(R.string.temporizador_parar)) }
-            } else {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for (m in listOf(25, 50, 5, 10)) {
-                        Button(onClick = { Temporizador.iniciar(c, m); fin = Temporizador.fin(c) }) { Text(stringResource(R.string.duracion_min, m)) }
-                    }
+            when {
+                fin != null -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { Temporizador.pausar(c); fin = null; pausa = Temporizador.pausaRestante(c) }) { Text(stringResource(R.string.temporizador_pausar)) }
+                    OutlinedButton(onClick = { Temporizador.cancelar(c); fin = null; pausa = 0 }) { Text(stringResource(R.string.temporizador_parar)) }
                 }
-                Text(stringResource(R.string.temporizador_ayuda), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                if (materias.isNotEmpty()) {
-                    Text(stringResource(R.string.temporizador_lista), color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, modifier = Modifier.fillMaxWidth())
+                pausa > 0 -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { Temporizador.reanudar(c); fin = Temporizador.fin(c); pausa = 0 }) { Text(stringResource(R.string.temporizador_reanudar)) }
+                    OutlinedButton(onClick = { Temporizador.cancelar(c); pausa = 0 }) { Text(stringResource(R.string.temporizador_parar)) }
+                }
+                else -> {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        for (m in listOf(25, 50, 5, 10)) {
+                            Button(onClick = { Temporizador.iniciar(c, m); fin = Temporizador.fin(c) }) { Text(stringResource(R.string.duracion_min, m)) }
+                        }
+                        // Pausa activa de 5 minutos: una cuenta igual que no se registra como estudio.
+                        OutlinedButton(onClick = { Temporizador.iniciarDescanso(c, 5); fin = Temporizador.fin(c) }) { Text(stringResource(R.string.temporizador_descanso)) }
+                    }
+                    Text(stringResource(R.string.temporizador_ayuda), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                    if (materias.isNotEmpty()) {
+                        Text(stringResource(R.string.temporizador_lista), color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, modifier = Modifier.fillMaxWidth())
+                        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            for (m in materias) {
+                                FilterChip(
+                                    selected = m.id == materia,
+                                    onClick = { materia = if (m.id == materia) null else m.id; Temporizador.elegirMateria(c, materia) },
+                                    label = { Text(listOfNotNull(m.emoji, m.nombre).joinToString(" ")) },
+                                )
+                            }
+                        }
+                    }
+                    // El color del número, para que se vea como quiera: auto (el del tema) o uno de los acentos de la app.
+                    Text(stringResource(R.string.temporizador_color), color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleSmall, modifier = Modifier.fillMaxWidth())
                     FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        for (m in materias) {
+                        FilterChip(
+                            selected = colorNum == "auto",
+                            onClick = { colorNum = "auto"; Temporizador.elegirColor(c, "auto") },
+                            label = { Text(stringResource(R.string.temporizador_auto)) },
+                        )
+                        for (a in Acentos.predefinidos) {
                             FilterChip(
-                                selected = m.id == materia,
-                                onClick = { materia = if (m.id == materia) null else m.id; Temporizador.elegirMateria(c, materia) },
-                                label = { Text(listOfNotNull(m.emoji, m.nombre).joinToString(" ")) },
+                                selected = colorNum == a.id,
+                                onClick = { colorNum = a.id; Temporizador.elegirColor(c, a.id) },
+                                label = { Box(Modifier.padding(4.dp).size(18.dp).clip(CircleShape).background(a.muestra)) },
                             )
                         }
+                    }
+                    // «No molestar» mientras estudia: silencia el teléfono al iniciar; el permiso se da en Ajustes la primera vez.
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(stringResource(R.string.temporizador_no_molestar), style = MaterialTheme.typography.titleSmall)
+                            Text(stringResource(R.string.temporizador_no_molestar_ayuda), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Switch(
+                            checked = noMolestar,
+                            onCheckedChange = { quiero ->
+                                if (quiero && !Temporizador.puedeNoMolestar(c)) c.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+                                else {
+                                    noMolestar = quiero
+                                    Temporizador.elegirNoMolestar(c, quiero)
+                                }
+                            },
+                        )
                     }
                 }
             }

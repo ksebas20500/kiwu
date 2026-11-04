@@ -81,4 +81,14 @@ class EstudioTest {
         assertEquals(s, TiempoEstudio.leer(TiempoEstudio.escribir(s)))
         assertEquals(listOf(SesionEstudio("x", lunes, 5)), TiempoEstudio.anadir(listOf(SesionEstudio("x", lunes - 60, 5)), SesionEstudio("x", lunes, 5)))
     }
+
+    @Test
+    fun losMinutosHechosCuentanLoEstudiadoAunqueSePause() {
+        // 50 min elegidos, quedaban 10 (tras pausar y reanudar da igual: el tiempo restante dice todo)
+        assertEquals(39, TiempoEstudio.minutosHechos(50, 10 * 60_000L))
+        // quedaba solo la marca del último minuto: el −1 redondea por lo bajo
+        assertEquals(49, TiempoEstudio.minutosHechos(50, 30_000L))
+        // una sesión completada no entra por aquí, pero el suelo por lo bajo se respeta igual
+        assertEquals(0, TiempoEstudio.minutosHechos(1, 0))
+    }
 }

@@ -174,6 +174,13 @@ object TiempoEstudio {
     /** Añade una sesión y olvida las de hace más de 8 semanas (solo se muestra la semana actual). */
     fun anadir(s: List<SesionEstudio>, nueva: SesionEstudio): List<SesionEstudio> = s.filter { it.dia > nueva.dia - 56 } + nueva
 
+    /**
+     * Minutos efectivamente estudiados de una sesión que quedó con [restanteMs] sin terminar (0 si llegó al final).
+     * El −1 redondea por lo bajo: un «40 min estudiados» de la pantalla cuenta la marca del minuto incompleto.
+     */
+    fun minutosHechos(minutos: Int, restanteMs: Long): Int =
+        (minutos - (restanteMs / 60_000).toInt() - 1).coerceAtLeast(0)
+
     /** Minutos por lista en la semana (de lunes a domingo) que contiene [hoy], de más a menos. */
     fun semana(s: List<SesionEstudio>, hoy: java.time.LocalDate): List<Pair<String?, Int>> {
         val lunes = hoy.with(java.time.DayOfWeek.MONDAY).toEpochDay()

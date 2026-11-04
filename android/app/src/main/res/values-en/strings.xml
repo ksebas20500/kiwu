@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Kiwu</string>
     <string name="widget_deberes">Homework</string>
@@ -18,9 +18,9 @@
     <string name="fecha_ayer">Yesterday</string>
     <string name="idioma">Language</string>
     <string name="idioma_sistema">Phone language</string>
-    <string name="idioma_es">Español</string>
+    <string name="idioma_es">EspaÃ±ol</string>
     <string name="idioma_en">English</string>
-    <string name="idioma_pt">Português</string>
+    <string name="idioma_pt">PortuguÃªs</string>
 
     <!-- Faltas -->
     <string name="faltas_chip">Absences: %1$d</string>
@@ -34,13 +34,13 @@
     <string name="faltas_hoy_marcada">Today\'s absence marked</string>
     <string name="faltas_marcar_hoy">Mark absence today</string>
     <string name="faltas_otro_dia">Another day</string>
-    <string name="faltas_ninguna">No absences in “%1$s”. Keep it up!</string>
+    <string name="faltas_ninguna">No absences in â€œ%1$sâ€. Keep it up!</string>
     <string name="faltas_sin_clase_titulo">No class that day</string>
-    <string name="faltas_sin_clase_texto">“%1$s” has no class on %2$s. Mark the absence anyway?</string>
+    <string name="faltas_sin_clase_texto">â€œ%1$sâ€ has no class on %2$s. Mark the absence anyway?</string>
     <string name="faltas_marcar">Mark</string>
     <string name="cancelar">Cancel</string>
     <string name="guardar">Save</string>
-    <string name="faltas_justificada_no_cuenta">Excused · doesn\'t count</string>
+    <string name="faltas_justificada_no_cuenta">Excused Â· doesn\'t count</string>
     <string name="faltas_justificada">Excused</string>
     <string name="faltas_quitar">Remove absence</string>
     <string name="faltas_maximo_titulo">Absence limit</string>
@@ -79,19 +79,19 @@
     <string name="horario_eliminar_texto">All its classes will be deleted too.</string>
     <string name="horario_eliminar_boton">Delete schedule and its classes</string>
     <string name="horario_vacio_titulo">Create your first schedule</string>
-    <string name="horario_vacio_texto">You can have several: one for university, one for work, one for your free time…</string>
+    <string name="horario_vacio_texto">You can have several: one for university, one for work, one for your free timeâ€¦</string>
     <string name="horario_universidad">University</string>
     <string name="horario_trabajo">Work</string>
     <string name="horario_ocio">Free time</string>
-    <string name="horario_otro">Other…</string>
-    <string name="horario_ahora_hasta">Now: %1$s · until %2$s</string>
-    <string name="horario_siguiente">Next: %1$s · %2$s %3$s</string>
+    <string name="horario_otro">Otherâ€¦</string>
+    <string name="horario_ahora_hasta">Now: %1$s Â· until %2$s</string>
+    <string name="horario_siguiente">Next: %1$s Â· %2$s %3$s</string>
     <string name="horario_hoy">today</string>
     <string name="horario_manana">tomorrow</string>
     <string name="horario_sin_clases_dia">No classes this day</string>
     <string name="horario_ahora">Now</string>
     <string name="horario_nuevo">New schedule</string>
-    <string name="horario_nombre">Name (University, Work, Free time…)</string>
+    <string name="horario_nombre">Name (University, Work, Free timeâ€¦)</string>
     <string name="horario_icono">Icon</string>
     <string name="cerrar">Close</string>
     <string name="clase_nueva">New class</string>
@@ -131,7 +131,7 @@
     <string name="hoja_tareas">Tasks</string>
     <string name="hoja_sin_lista">This class has no task list.</string>
     <string name="hoja_sin_lista_texto">Link it to a list to see its tasks here and show dots on the class.</string>
-    <string name="hoja_crear_lista">Create the list “%1$s”</string>
+    <string name="hoja_crear_lista">Create the list â€œ%1$sâ€</string>
     <string name="hoja_vincular">Link a list</string>
     <string name="hoja_nada_pendiente">No pending tasks. Nice!</string>
     <string name="hoja_nada_hecho">You haven\'t completed any yet.</string>
@@ -139,7 +139,7 @@
     <string name="hoja_abrir_lista">Open the full list</string>
     <string name="hoja_lista_titulo">Task list for this class</string>
     <string name="hoja_sin_lista_opcion">No list</string>
-    <string name="hoja_eliminar_titulo">Delete “%1$s”?</string>
+    <string name="hoja_eliminar_titulo">Delete â€œ%1$sâ€?</string>
     <string name="hoja_eliminar_texto">The class will be removed from all its days. The tasks in its list are kept.</string>
 
     <!-- Ajustes -->
@@ -203,7 +203,7 @@
     <string name="orden_alfabetico">Alphabetical</string>
     <string name="orden_pendientes">By pending tasks</string>
     <string name="ajustes_mostrar_numero">Show the number of tasks</string>
-    <string name="ajustes_mostrar_racha">Show the streak 🔥</string>
+    <string name="ajustes_mostrar_racha">Show the streak ðŸ”¥</string>
     <string name="ajustes_segundo_aviso">Second reminder</string>
     <string name="ajustes_sin_segundo">No second reminder</string>
     <string name="ajustes_hora_sin_hora">Time for tasks without a time</string>
@@ -228,7 +228,7 @@
     <string name="color_tono">Hue</string>
     <string name="color_intensidad">Intensity</string>
     <string name="color_usar">Use this color</string>
-    <string name="encuadre_ayuda">Drag to move · pinch to zoom</string>
+    <string name="encuadre_ayuda">Drag to move Â· pinch to zoom</string>
     <string name="listo">Done</string>
     <string name="ejemplo_semestre">Semester</string>
     <string name="ejemplo_calculo">Calculus</string>
@@ -264,10 +264,10 @@
     </plurals>
     <string name="importado">Imported: %1$s</string>
 
-    <!-- Menú de tareas -->
+    <!-- MenÃº de tareas -->
     <string name="crear">Create</string>
     <string name="emoji_opcional">Emoji (optional)</string>
-    <string name="emoji_cambiar">Emoji · tap to change it</string>
+    <string name="emoji_cambiar">Emoji Â· tap to change it</string>
     <string name="lista_nueva_en">New list in %1$s</string>
     <string name="lista_nueva">New list</string>
     <string name="lista_nombre_materia">Subject name</string>
@@ -299,14 +299,14 @@
     <string name="subir">Move up</string>
     <string name="bajar">Move down</string>
     <string name="carpeta_vacia">Empty folder</string>
-    <string name="lista_nueva_mas">＋ New list</string>
+    <string name="lista_nueva_mas">ï¼‹ New list</string>
     <string name="completadas">Completed</string>
-    <string name="mover_a_carpeta">Move to a folder…</string>
+    <string name="mover_a_carpeta">Move to a folderâ€¦</string>
     <string name="sacar_de_carpeta">Take out of the folder</string>
     <string name="lista_eliminar">Delete list</string>
-    <string name="mover_n">Move “%1$s”</string>
+    <string name="mover_n">Move â€œ%1$sâ€</string>
     <string name="sin_carpeta">No folder</string>
-    <string name="carpeta_nueva_mas">＋ New folder…</string>
+    <string name="carpeta_nueva_mas">ï¼‹ New folderâ€¦</string>
     <string name="crear_y_mover">Create and move</string>
 
     <!-- Tareas -->
@@ -325,10 +325,10 @@
     <string name="fecha_entrega">Due date</string>
     <string name="manana">Tomorrow</string>
     <string name="en_una_semana">In a week</string>
-    <string name="elegir_dia">Choose day…</string>
+    <string name="elegir_dia">Choose dayâ€¦</string>
     <string name="quitar_fecha">Remove date</string>
     <string name="todo_el_dia">All day</string>
-    <string name="elegir_hora">Choose time…</string>
+    <string name="elegir_hora">Choose timeâ€¦</string>
     <string name="todo_el_dia_sin_hora">All day (no time)</string>
     <string name="editado_n">Edited %1$s</string>
     <string name="evento">Event</string>
@@ -374,7 +374,7 @@
     <string name="cuaderno_eliminar">Delete notebook</string>
     <string name="nota_nueva">New note</string>
     <string name="todas">All</string>
-    <string name="favoritas_estrella">★ Favorites</string>
+    <string name="favoritas_estrella">â˜… Favorites</string>
     <string name="cuaderno_mas">+ Notebook</string>
     <string name="sin_resultados">No results</string>
     <string name="sin_notas">No notes</string>
@@ -385,9 +385,9 @@
     <string name="quitar_favoritas">Remove from favorites</string>
     <string name="anadir_favoritas">Add to favorites</string>
     <string name="nota_opciones">Note options</string>
-    <string name="mover_otro_cuaderno">Move to another notebook…</string>
+    <string name="mover_otro_cuaderno">Move to another notebookâ€¦</string>
     <string name="nota_eliminar">Delete note</string>
-    <string name="mover_a">Move to…</string>
+    <string name="mover_a">Move toâ€¦</string>
     <string name="nota_eliminar_titulo">Delete this note?</string>
     <string name="no_se_recupera">It can\'t be recovered.</string>
     <string name="cuaderno_nuevo">New notebook</string>
@@ -439,7 +439,7 @@
     <string name="mas_sangria">Increase indent</string>
     <string name="insertar">Insert</string>
     <string name="bloque_mas_opciones">More block options</string>
-    <string name="convertir_en">Turn into…</string>
+    <string name="convertir_en">Turn intoâ€¦</string>
     <string name="mover_arriba">Move up</string>
     <string name="mover_abajo">Move down</string>
     <string name="duplicar">Duplicate</string>
@@ -449,7 +449,7 @@
     <string name="quitar_enlace">Remove link</string>
     <string name="bloque_opciones">Block options</string>
     <string name="automatico">Automatic</string>
-    <string name="automatico_n">Automatic · %1$s</string>
+    <string name="automatico_n">Automatic Â· %1$s</string>
     <string name="texto_plano">Plain text</string>
     <string name="copiar_codigo">Copy code</string>
     <string name="imagen_nota">Note image</string>
@@ -460,16 +460,16 @@
     <string name="quitar_adjunto">Remove attachment (doesn\'t delete the file)</string>
     <string name="pega_enlace">Paste a link (web, YouTube or Vimeo)</string>
     <string name="reproducir">Play</string>
-    <string name="cargando_vista_previa">Loading preview…</string>
+    <string name="cargando_vista_previa">Loading previewâ€¦</string>
     <string name="vista_previa_error">Couldn\'t load the preview</string>
     <string name="abrir_navegador">Open in browser</string>
     <string name="actualizar_vista_previa">Refresh preview</string>
     <string name="convertir_texto">Turn into text</string>
     <string name="pista_parrafo">Type here or use / to insert blocks</string>
-    <string name="sigue_escribiendo">… keep typing to filter</string>
+    <string name="sigue_escribiendo">â€¦ keep typing to filter</string>
     <string name="enlace_no_abre">Couldn\'t open the link</string>
 
-    <!-- Racha, guía, avisos y piezas -->
+    <!-- Racha, guÃ­a, avisos y piezas -->
     <string name="racha_hoy_cuenta">%1$s streak, today already counts</string>
     <string name="racha_mantener">%1$s streak, hand in what\'s pending today to keep it</string>
     <string name="racha_sin">No streak yet</string>
@@ -482,10 +482,10 @@
     <string name="racha_mejor">Best streak</string>
     <string name="racha_dias_cumplidos">Days done</string>
     <string name="racha_tareas_hechas">Tasks done</string>
-    <string name="racha_ayuda_1">• A day with a due date counts if everything is handed in. A day with classes counts if you complete or add a task that day.</string>
-    <string name="racha_ayuda_2">• Days with no due dates or activity neither add to nor break the streak.</string>
-    <string name="racha_ayuda_3">• If you still have tasks due today, the streak stays alive until midnight: the flame turns gray with a “!”. Tasks without a date and events don\'t count.</string>
-    <string name="racha_ayuda_4">• At 8:00 PM we remind you if the streak is about to be lost (change it in Settings → Reminders).</string>
+    <string name="racha_ayuda_1">â€¢ A day with a due date counts if everything is handed in. A day with classes counts if you complete or add a task that day.</string>
+    <string name="racha_ayuda_2">â€¢ Days with no due dates or activity neither add to nor break the streak.</string>
+    <string name="racha_ayuda_3">â€¢ If you still have tasks due today, the streak stays alive until midnight: the flame turns gray with a â€œ!â€. Tasks without a date and events don\'t count.</string>
+    <string name="racha_ayuda_4">â€¢ At 8:00 PM we remind you if the streak is about to be lost (change it in Settings â†’ Reminders).</string>
     <string name="entendido">Got it</string>
     <string name="racha_estado_hecho">You\'re up to date! Come back tomorrow to keep going.</string>
     <string name="racha_estado_libre">Nothing due today: your streak is still alive.</string>
@@ -498,7 +498,7 @@
     <string name="racha_manana_2">Complete a task tomorrow to reach 2 days.</string>
     <string name="continuar">Continue</string>
     <string name="racha_iniciales">MO,TU,WE,TH,FR,SA,SU</string>
-    <string name="racha_no_pierdas">🔥 Don\'t lose your %1$s streak</string>
+    <string name="racha_no_pierdas">ðŸ”¥ Don\'t lose your %1$s streak</string>
     <string name="racha_aviso_texto">Hand in what\'s pending before midnight to keep it.</string>
     <string name="canal_racha">Streak</string>
     <string name="canal_racha_desc">Reminds you in the evening if your streak is about to be lost</string>
@@ -541,7 +541,7 @@
     <string name="guia_1_titulo">Welcome to Kiwu</string>
     <string name="guia_1_texto">Your tasks, notes and class schedule in one place. Everything is saved on your phone.</string>
     <string name="guia_2_titulo">Tasks in lists and folders</string>
-    <string name="guia_2_texto">Create a list per subject and group lists into folders. Open the ☰ menu to see them and tap a task\'s checkbox to complete it.</string>
+    <string name="guia_2_texto">Create a list per subject and group lists into folders. Open the â˜° menu to see them and tap a task\'s checkbox to complete it.</string>
     <string name="guia_3_titulo">Dates, reminders and events</string>
     <string name="guia_3_texto">Give a task a date and Kiwu reminds you beforehand. Events (birthdays, talks) show up in the calendar and don\'t need completing.</string>
     <string name="guia_4_titulo">Notes and schedule</string>
@@ -555,7 +555,7 @@
     <string name="guia_lista">Start here</string>
     <string name="guia_tarea_1">Tap the checkbox to complete me</string>
     <string name="guia_tarea_2">Open me to give me a date, a reminder or a note</string>
-    <string name="guia_tarea_3">Open the ☰ menu and create your first list with ＋</string>
+    <string name="guia_tarea_3">Open the â˜° menu and create your first list with ï¼‹</string>
     <string name="guia_tarea_4">In the menu, long-press a list to move it into a folder</string>
     <string name="guia_tarea_5">Add your first class in Schedule</string>
     <string name="anadir_hora">Add time</string>
@@ -574,7 +574,7 @@
     <string name="colores_solidos">Solid</string>
     <string name="colores_claros">Light</string>
     <string name="colores_pasteles">Pastel</string>
-    <string name="color_otro_mas">Other color…</string>
+    <string name="color_otro_mas">Other colorâ€¦</string>
     <string name="columna_por_hacer">To do</string>
     <string name="columna_en_curso">In progress</string>
     <string name="columna_hecho">Done</string>
@@ -603,16 +603,16 @@
     <string name="deberes">Homework</string>
     <string name="vencida">Overdue</string>
     <string name="w_crea_lista">Create a list and add tasks in Kiwu.</string>
-    <string name="w_sin_pendientes">Nothing pending 🎉</string>
+    <string name="w_sin_pendientes">Nothing pending ðŸŽ‰</string>
     <string name="w_crea_horario">Create your schedule in Kiwu.</string>
     <string name="w_ahora">NOW</string>
     <string name="w_siguiente">NEXT</string>
     <string name="w_sin_mas_clases">No more upcoming classes.</string>
     <string name="w_clases_hoy">Today\'s classes</string>
-    <string name="w_hoy_sin_clases">No classes today 🎉</string>
+    <string name="w_hoy_sin_clases">No classes today ðŸŽ‰</string>
     <string name="w_nueva">+ New</string>
     <string name="w_crea_cuaderno">Create a notebook in Notes.</string>
-    <string name="w_sin_notas">No notes yet. Tap “+ New”.</string>
+    <string name="w_sin_notas">No notes yet. Tap â€œ+ Newâ€.</string>
     <string name="w_todos_horarios">All schedules</string>
     <string name="w_titulo_deberes">Homework widget</string>
     <string name="w_titulo_horario">Schedule widget</string>
@@ -639,7 +639,7 @@
     <string name="cuenta_crear">Create account (6+ characters)</string>
     <string name="cuenta_olvide">Forgot my password</string>
     <string name="cuenta_recuperar_enviado">We emailed you a link to change your password.</string>
-    <string name="cuenta_sincronizando">Syncing…</string>
+    <string name="cuenta_sincronizando">Syncingâ€¦</string>
     <string name="cuenta_sincronizado">Synced %1$s</string>
     <string name="cuenta_sin_sincronizar">Not synced yet</string>
     <string name="cuenta_limite">Daily server limit reached. Kiwu keeps working and will retry later.</string>
@@ -661,7 +661,7 @@
     <string name="cuenta_google">Continue with Google</string>
     <string name="cuenta_err_cancelado">You cancelled the Google sign-in.</string>
     <string name="cuenta_err_google">Couldn\'t sign in with Google.</string>
-    <string name="drive_texto">You can also save the backup to your Google Drive: one file in “My Drive” that is overwritten each time. Kiwu only sees that file, not the rest of your Drive. Note images are included.</string>
+    <string name="drive_texto">You can also save the backup to your Google Drive: one file in â€œMy Driveâ€ that is overwritten each time. Kiwu only sees that file, not the rest of your Drive. Note images are included.</string>
     <string name="drive_guardar">Save to Drive</string>
     <string name="drive_restaurar">Restore from Drive</string>
     <string name="drive_subida_ok">Backup saved to your Google Drive.</string>
@@ -691,7 +691,7 @@
     <string name="prioridad_media">Medium priority</string>
     <string name="prioridad_alta">High priority</string>
     <string name="sin_prioridad">Priority</string>
-    <string name="etiqueta_anadir">Add a tag (exam, reading…)</string>
+    <string name="etiqueta_anadir">Add a tag (exam, readingâ€¦)</string>
     <string name="quitar_etiqueta">Remove tag</string>
     <string name="paso_anadir">Add a step</string>
     <string name="paso_eliminar">Remove step</string>
@@ -705,6 +705,18 @@
     <string name="temporizador_listo">Time is up!</string>
     <string name="temporizador_listo_texto">Your %1$d min timer finished.</string>
     <string name="canal_temporizador">Study timer</string>
+    <string name="canal_curso">Running timer</string>
+    <string name="temporizador_curso">Studying %1$d min</string>
+    <string name="temporizador_pausar">Pause</string>
+    <string name="temporizador_reanudar">Resume</string>
+    <string name="temporizador_descanso">5 min break</string>
+    <string name="temporizador_descanso_curso">%1$d min break</string>
+    <string name="temporizador_descanso_listo">Your break is over</string>
+    <string name="temporizador_descanso_listo_texto">Back to studying whenever you like.</string>
+    <string name="temporizador_no_molestar">Do not disturb while studying</string>
+    <string name="temporizador_no_molestar_ayuda">Silences the phone when the countdown starts. First time it opens Settings.</string>
+    <string name="temporizador_color">Number color</string>
+    <string name="temporizador_auto">Auto</string>
     <string name="calificaciones">Grades</string>
     <string name="promedio_n">Average: %1$s</string>
     <string name="sin_calificaciones">No grades yet. Add the first one below.</string>
