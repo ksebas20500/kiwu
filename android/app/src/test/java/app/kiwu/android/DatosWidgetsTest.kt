@@ -114,19 +114,27 @@ class DatosWidgetsTest {
     }
 
     @Test
-    fun elWidgetDeUnaListaNoMezclaEventosDeOtras() {
+    fun elWidgetDeUnaListaSacaSusTareasMasLosEventos() {
         val listas = listOf(materia("mate", "Cálculo"))
         val deberes = listOf(
-            deber("evento", ID_EVENTOS, "Parcial hoy", ms(lunes)),
-            deber("tarea", "mate", "Informe", ms(lunes)),
+            deber("pasado", ID_EVENTOS, "Charla que pasó", ms(lunes.minusDays(1))),
+            deber("evento", ID_EVENTOS, "Parcial hoy", ms(lunes, 10, 0)),
+            deber("tarea", "mate", "Informe", ms(lunes, 18, 0)),
         )
         val una = DatosWidgets.deberes(listas, emptyList(), deberes, ConfigWidget.lista("mate"), ahora, textos, zona)
-        assertEquals(listOf("tarea"), una.pendientes.map { it.id })
-        // un widget fijado a la lista «Eventos» enseña solo eventos
+        // las tareas de la lista van solas; los eventos se suman con las reglas de «Todas» (el pasado no sale)
+        assertEquals(listOf("evento", "tarea"), una.pendientes.map { it.id })
+        assertEquals(1, una.total)
+        // a un widget de carpeta le pasa lo mismo
+        val grupos = listOf(GrupoLista(id = "uni", nombre = "Universidad", creada = 0, actualizada = 0))
+        val uni = listOf(materia("mate", "Cálculo", grupo = "uni"))
+        val delGrupo = DatosWidgets.deberes(uni, grupos, deberes, ConfigWidget.grupo("uni"), ahora, textos, zona)
+        assertEquals(listOf("evento", "tarea"), delGrupo.pendientes.map { it.id })
+        // el widget fijado a la lista «Eventos» sigue enseñando solo eventos, también los pasados (como en la app)
         val conEventos = listOf(materia("mate", "Cálculo"), materia(ID_EVENTOS, "Eventos"))
         val soloEventos = DatosWidgets.deberes(conEventos, emptyList(), deberes, ConfigWidget.lista(ID_EVENTOS), ahora, textos, zona)
-        assertEquals(listOf("evento"), soloEventos.pendientes.map { it.id })
-        assertTrue(soloEventos.pendientes.single().esEvento)
+        assertEquals(listOf("pasado", "evento"), soloEventos.pendientes.map { it.id })
+        assertTrue(soloEventos.pendientes.all { it.esEvento })
     }
 
     @Test

@@ -10,6 +10,7 @@ import app.kiwu.android.domain.Deber
 import app.kiwu.android.domain.Elemento
 import app.kiwu.android.domain.GrupoLista
 import app.kiwu.android.domain.Horario
+import app.kiwu.android.domain.ID_EVENTOS
 import app.kiwu.android.domain.Materia
 import app.kiwu.android.domain.Reglas
 import app.kiwu.android.domain.ReglasHorario
@@ -118,8 +119,18 @@ object DatosWidgets {
         val (elemento, titulo, soloListas) = alcance(config, materias, grupos, textos)
         // Los eventos propios (lista «Eventos») se mezclan con las tareas por fecha, igual que en la app:
         // en «Hoy» solo los de hoy, en «Todas» sin los pasados, y nunca «Vencida» (un evento no vence, pasa).
+        // Con lista o carpeta elegida los eventos van TAMBIÉN, con las reglas de «Todas»; el widget fijado a la
+        // lista «Eventos» sigue como siempre (allí sí se ven los pasados, como en su vista de la app).
         val visibles = deberes.filter { soloListas == null || it.materiaId in soloListas }
-        val pendientes = reglas.pendientes(visibles, elemento, ahora).map {
+        val (tareas, eventos) = visibles.partition { !it.esEvento }
+        val ordenados = when {
+            soloListas == null || soloListas.singleOrNull() == ID_EVENTOS -> reglas.pendientes(visibles, elemento, ahora)
+            // Lista o carpeta: sus tareas + los eventos de siempre; juntos y ordenados por fecha, como en «Todas».
+            else ->
+                (reglas.pendientes(tareas, elemento, ahora) + eventos.filter { reglas.enAlcance(it, Elemento.Todos, ahora) })
+                    .sortedWith(compareBy<Deber> { it.fechaEntrega ?: Long.MAX_VALUE }.thenBy { it.creada })
+        }
+        val pendientes = ordenados.map {
             FilaDeber(
                 id = it.id,
                 titulo = it.titulo,
@@ -144,12 +155,13 @@ object DatosWidgets {
             valor == ConfigWidget.PROXIMOS -> Triple(Elemento.Proximos, textos.proximos, null)
             valor.startsWith(ConfigWidget.LISTA) -> {
                 val id = valor.removePrefix(ConfigWidget.LISTA)
+                // Los eventos propios van siempre con la lista elegida (el filtro de `deberes` los re-regla).
                 if (materias.none { it.id == id }) Triple(Elemento.Todos, textos.deberes, null)
-                else Triple(Elemento.DeMateria(id), materias.first { it.id == id }.nombre, setOf(id))
+                else Triple(Elemento.DeMateria(id), materias.first { it.id == id }.nombre, setOf(id, ID_EVENTOS))
             }
             valor.startsWith(ConfigWidget.GRUPO) -> {
                 val id = valor.removePrefix(ConfigWidget.GRUPO)
-                Triple(Elemento.DeGrupo(id), grupos.firstOrNull { it.id == id }?.nombre ?: textos.deberes, materias.filter { it.grupoId == id }.map { it.id }.toSet())
+                Triple(Elemento.DeGrupo(id), grupos.firstOrNull { it.id == id }?.nombre ?: textos.deberes, materias.filter { it.grupoId == id }.map { it.id }.toSet() + ID_EVENTOS)
             }
             else -> Triple(Elemento.Todos, textos.deberes, null)
         }
