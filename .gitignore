@@ -1,56 +1,31 @@
-# macOS
-.DS_Store
-
-# Xcode
-xcuserdata/
-*.xcuserstate
-*.xccheckout
-*.moved-aside
-DerivedData/
-.derivedData/
+# Android / Gradle
+.gradle/
+.kotlin/
 build/
-*.hmap
-*.ipa
-*.dSYM.zip
-*.dSYM
+local.properties
 
-# Swift Package Manager
-.swiftpm/
-.build/
-
-# Firma personal (cada persona usa su propio equipo de desarrollo)
-macos/Config/Signing.xcconfig
-
-# Editores
+# Rutas de Android Studio por proyecto (quedan junto a raíz y módulos)
 .idea/
-.vscode/
-*.swp
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
 
-# Instalador generado (se publica en GitHub Releases, no en el repositorio)
-dist/
-
-# Python (versión de Linux)
-__pycache__/
-*.pyc
-*.egg-info/
-linux/build/
-linux/dist/
-linux/*.pkg.tar.*
-linux/src/
-linux/pkg/
-
-# Android
-android/.gradle/
-android/build/
-android/app/build/
-android/local.properties
-android/.idea/
+# Artefactos de compilación que no van al repo
 *.apk
 *.aab
 *.keystore
 *.jks
 
-android/.kotlin/
+# Descargado de Firebase; Kiwu no usa el SDK, solo se copia de aquí el ID de cliente web a local.properties
+app/google-services.json
+
+# Editores
+.vscode/
+*.swp
+
+# macOS
+.DS_Store
 
 # Contexto privado (no se sube)
 CONTEXTO.md
