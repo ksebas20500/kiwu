@@ -181,19 +181,10 @@ fun TareasScreen(
 @Composable
 fun CabeceraMenu(titulo: String, subtitulo: String) {
     Row(Modifier.padding(start = 28.dp, end = 16.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier.size(48.dp).background(
-                // Mismo degradado morado y azul del icono de la app.
-                androidx.compose.ui.graphics.Brush.linearGradient(listOf(androidx.compose.ui.graphics.Color(0xFF8D51EF), androidx.compose.ui.graphics.Color(0xFF6E62F4), androidx.compose.ui.graphics.Color(0xFF3693F3))),
-                androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
-            ),
-            contentAlignment = Alignment.Center,
-        ) {
-            androidx.compose.foundation.Image(
-                androidx.compose.ui.res.painterResource(app.kiwu.android.R.drawable.ic_gato), null,
-                Modifier.size(38.dp),
-            )
-        }
+        androidx.compose.foundation.Image(
+            androidx.compose.ui.res.painterResource(app.kiwu.android.R.drawable.logotipo_kiwu), null,
+            Modifier.size(48.dp),
+        )
         Column(Modifier.padding(start = 14.dp)) {
             Text(titulo, style = MaterialTheme.typography.titleLarge)
             Text(subtitulo, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
