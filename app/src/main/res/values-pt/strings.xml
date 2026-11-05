@@ -837,4 +837,8 @@
     <string name="configuracion_calificaciones">Configuração de Notas</string>
     <string name="ajustes_guardar">Salvar configurações</string>
     <string name="dejar_vacio_peso">Deixar vazio se todas pesarem igual</string>
+    <string name="vencidas">Vencidas</string>
+    <string name="materia_editar">Editar matéria</string>
+    <string name="anadir_tarea_a">Adicionar tarefa em %1$s…</string>
+    <string name="proximos_dias">Próximos dias</string>
 </resources>

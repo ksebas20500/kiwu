@@ -97,6 +97,39 @@ fun MenuTarea(
     }
 }
 
+/** Bloque de agenda diferenciado para eventos de calendario. */
+@Composable
+fun TarjetaEventoAgenda(
+    d: Deber,
+    nombreLista: String?,
+    alAbrir: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp).clickable(onClick = alAbrir),
+        shape = RoundedCornerShape(12.dp),
+        color = AzulEvento.copy(alpha = 0.35f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, AzulEventoTexto.copy(alpha = 0.3f))
+    ) {
+        Row(
+            Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(Modifier.size(36.dp).background(AzulEvento, androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.Event, null, Modifier.size(20.dp), tint = AzulEventoTexto)
+            }
+            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                Text(d.titulo, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                if (nombreLista != null || d.fechaEntrega != null) {
+                    Row(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (nombreLista != null) Text(nombreLista, style = MaterialTheme.typography.bodySmall, color = AzulEventoTexto)
+                        d.fechaEntrega?.let { Text(fechaCorta(it, System.currentTimeMillis()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    }
+                }
+            }
+        }
+    }
+}
+
 /** Una fila de la lista de tareas. */
 @Composable
 fun FilaTarea(
@@ -106,9 +139,8 @@ fun FilaTarea(
     reglas: Reglas,
     alAbrir: () -> Unit,
     alMarcar: (Boolean) -> Unit,
-        alEliminar: () -> Unit,
+    alEliminar: () -> Unit = {},
 ) {
-    var menu by remember { mutableStateOf(false) }
     val columna = reglas.columnaDe(d)
     Row(
         Modifier.fillMaxWidth().clickable(onClick = alAbrir).padding(start = 4.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
@@ -162,10 +194,6 @@ fun FilaTarea(
                     }
                 }
             }
-        }
-        Box {
-            IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.tarea_opciones)) }
-            MenuTarea(menu, { menu = false }, alEliminar, esEvento = d.esEvento)
         }
     }
 }
@@ -252,7 +280,11 @@ fun CampoNuevaTarea(
                 }
             }
             IconButton(onClick = enviar, enabled = texto.isNotBlank() && elegida != null) {
-                Icon(Icons.AutoMirrored.Filled.Send, stringResource(R.string.anadir))
+                Icon(
+                    Icons.AutoMirrored.Filled.Send,
+                    stringResource(R.string.anadir),
+                    tint = if (texto.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                )
             }
         }
         }

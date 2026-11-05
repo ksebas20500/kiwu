@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
@@ -55,6 +56,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kiwu.android.domain.Elemento
@@ -98,11 +101,21 @@ fun TareasScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(tituloDe(estado.elemento, estado.materiaActual, estado.grupoActual)) },
+                title = {
+                    Text(
+                        tituloDe(estado.elemento, estado.materiaActual, estado.grupoActual),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                },
                 navigationIcon = {
-                    androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = alAbrirMenu) { Icon(Icons.Filled.Menu, stringResource(R.string.abrir_menu)) }
-                        insigniaRacha()
+                        if (estado.materiaActual == null) {
+                            insigniaRacha()
+                        }
                     }
                 },
                 actions = {
@@ -128,19 +141,7 @@ fun TareasScreen(
     ) { relleno ->
         Column(Modifier.padding(relleno).consumeWindowInsets(relleno).fillMaxSize()) {
             val materia = estado.materiaActual
-            if (materia != null && !estado.enEventos) {
-                TabRow(
-                    selectedTabIndex = if (estado.subvista == "archivos") 1 else 0,
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                ) {
-                    Tab(selected = estado.subvista != "archivos", onClick = { vm.cambiarSubvista("tareas") }, text = { Text(stringResource(R.string.tareas)) })
-                    Tab(selected = estado.subvista == "archivos", onClick = { vm.cambiarSubvista("archivos") }, text = { Text(stringResource(R.string.archivos)) })
-                }
-            }
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                // Fundido suave al cambiar de sección desde el menú (Calendario ↔ listas ↔ archivos). Solo cambia la clave
-                // al cambiar de tipo de vista, no al pasar de una lista a otra.
                 val tipo = when {
                     estado.elemento == Elemento.Calendario -> "calendario"
                     materia != null && estado.subvista == "archivos" -> "archivos"
@@ -160,7 +161,7 @@ fun TareasScreen(
                         "calendario" -> CalendarioScreen(vm, estado, alAbrirTarea)
                         "archivos" -> materia?.let { archivos(it) }
                         "tablero" -> Tablero(vm, estado, alAbrirTarea) { dialogoNuevaLista = true }
-                        else -> ListaTareas(vm, estado, alAbrirTarea) { dialogoNuevaLista = true }
+                        else -> ListaTareas(vm, estado, alCrearLista = { dialogoNuevaLista = true }, alAbrir = alAbrirTarea)
                     }
                 }
             }
@@ -168,7 +169,6 @@ fun TareasScreen(
     }
 
     if (dialogoNuevaLista) {
-        // Si se está viendo una carpeta, la lista nace dentro de ella.
         val carpeta = (estado.elemento as? Elemento.DeGrupo)?.id
         DialogoNuevoElemento(
             titulo = if (carpeta != null) stringResource(R.string.lista_nueva_en, estado.grupoActual?.nombre ?: stringResource(R.string.la_carpeta)) else stringResource(R.string.lista_nueva),

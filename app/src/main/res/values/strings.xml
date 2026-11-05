@@ -835,4 +835,8 @@
     <string name="configuracion_calificaciones">Configuración de Calificaciones</string>
     <string name="ajustes_guardar">Guardar ajustes</string>
     <string name="dejar_vacio_peso">Dejar vacío si todas pesan igual</string>
+    <string name="vencidas">Vencidas</string>
+    <string name="materia_editar">Editar materia</string>
+    <string name="anadir_tarea_a">Añadir tarea a %1$s…</string>
+    <string name="proximos_dias">Próximos días</string>
 </resources>
