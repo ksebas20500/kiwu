@@ -31,8 +31,8 @@ android {
         applicationId = "app.kiwu.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 24
-        versionName = "0.7.5"
+        versionCode = 26
+        versionName = "0.7.7"
         buildConfigField("String", "FIREBASE_API_KEY", "\"${propiedadesLocales.getProperty("firebase.apiKey", "")}\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${propiedadesLocales.getProperty("google.webClientId", "")}\"")
         buildConfigField("String", "FIREBASE_PROJECT_ID", "\"${propiedadesLocales.getProperty("firebase.projectId", "")}\"")
@@ -41,6 +41,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
         // Igual que release (con R8) pero firmada con la clave de depuración: sirve para probar la versión minificada.
@@ -106,6 +107,7 @@ dependencies {
     implementation(libs.credentials.play)
     implementation(libs.googleid)
     implementation(libs.play.auth)
+    implementation(libs.app.update)
     implementation(libs.mlkit.texto)
 
     testImplementation(libs.junit)

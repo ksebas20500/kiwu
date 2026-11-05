@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "286855375157",
+    "project_id": "kiwu-81b24",
+    "storage_bucket": "kiwu-81b24.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:286855375157:android:aa9ddb82404d339835c47c",
+        "android_client_info": {
+          "package_name": "app.kiwu.android"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "286855375157-29eke2j4hhpssu5g7uo8f3k1fupb35i3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.kiwu.android",
+            "certificate_hash": "4e12b82a1b281197b2cd7e7d03bb0b01e7fbe37e"
+          }
+        },
+        {
+          "client_id": "286855375157-knsqv5fis3qhrn29790ki6mt8e0cgs3u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.kiwu.android",
+            "certificate_hash": "704257ef4d787c1d8f71eb2410d56ea0c28b9cc6"
+          }
+        },
+        {
+          "client_id": "286855375157-sa3c0m980gueqtel10s91013uusb55v2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCwAlSbzfHTNF7itpKE7fO8UxRF5Ng-ryk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "286855375157-sa3c0m980gueqtel10s91013uusb55v2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

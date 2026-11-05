@@ -19,6 +19,7 @@ splash = "1.0.1"
 credentials = "1.3.0"
 googleid = "1.1.1"
 playAuth = "21.3.0"
+appUpdate = "2.1.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -48,6 +49,7 @@ credentials = { module = "androidx.credentials:credentials", version.ref = "cred
 credentials-play = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 play-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playAuth" }
+app-update = { module = "com.google.android.play:app-update-ktx", version.ref = "appUpdate" }
 # Reconocimiento de texto con el modelo de Play Services (se descarga solo; no engorda el APK).
 mlkit-texto = { module = "com.google.android.gms:play-services-mlkit-text-recognition", version = "19.0.1" }
 junit = { module = "junit:junit", version.ref = "junit" }

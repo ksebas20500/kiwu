@@ -220,6 +220,18 @@
     <string name="exportar">Export</string>
     <string name="importar">Import</string>
     <string name="ajustes_ver_guia">See the guide again</string>
+    <string name="buscar_actualizaciones">Check for updates</string>
+    <string name="buscando_actualizacion">Checking…</string>
+    <string name="actualizacion_descargando">The new version is downloading</string>
+    <string name="actualizacion_ultima">You already have the latest version</string>
+    <string name="actualizacion_titulo">There is a new version of Kiwu</string>
+    <string name="actualizacion_texto">It downloads while you keep using the app. When it finishes, just restart it.</string>
+    <string name="actualizacion_lista_titulo">The update is ready</string>
+    <string name="actualizacion_lista_texto">Restart Kiwu to use the new version. Your data is kept.</string>
+    <string name="actualizar">Update</string>
+    <string name="mas_tarde">Later</string>
+    <string name="reiniciar">Restart</string>
+    <string name="luego">Later</string>
     <string name="ajustes_privacidad">Your data is stored on this device. If you create an account, the text of your lists, tasks and notes syncs with your other devices through Google Firebase (never images or files). Without an account, nothing leaves the phone.</string>
     <string name="ajustes_error_fondo">Couldn\'t save the background</string>
     <string name="color_sistema">System colors</string>
@@ -772,5 +784,33 @@
     </plurals>
     <string name="tarjetas_anadir_n">Add (%1$d)</string>
     <string name="nota_ayuda">What you got, for example 4.5</string>
-    <string name="peso_ayuda">How much it counts (for example 30). Empty = all count the same</string>
+    <string name="peso_ayuda">How much it counts in %% (for example 20). Empty = all count the same</string>
+    <string name="nota_minima_aprobar">Minimum passing grade</string>
+    <string name="nota_acumulada">Accumulated grade: %1$.2f</string>
+    <string name="evaluado_porcentaje">Evaluated: %1$.0f%% of 100%%</string>
+    <string name="promedio_evaluado">Average of evaluated: %1$.2f</string>
+    <string name="tag_parcial">Midterm</string>
+    <string name="tag_quizzes_talleres">Quizzes &amp; Assignments</string>
+    <string name="ojo_suma_ponderaciones">Warning! The sum of weights (%1$.0f%%) is not 100%%</string>
+    <string name="ojo_suma_ponderaciones_supera">Warning! The sum of weights (%1$.0f%%) exceeds 100%%</string>
+    <string name="necesitaras_n_para_aprobar">You will need a %1$.2f in the remaining %2$.0f%% to pass the course with %3$.1f.</string>
+    <string name="desglose_ejemplo">Example for the remaining %1$.0f%%: minimum %2$.2f in Midterm (20%%) and %2$.2f in Quizzes &amp; Assignments (10%%).</string>
+    <string name="ya_aprobaste">You passed! Your total (%1$.2f) covers the minimum grade of %2$.1f.</string>
+    <string name="ponderaciones_iguales">Equal weights</string>
+    <string name="agregar_nota">Add grade</string>
+    <string name="porcentaje_simbolo">%%</string>
+    <string name="aporte_nota_final">Contribution to final grade</string>
+    <string name="promedio_calificado">Average of graded</string>
+    <string name="evaluado_formato">%1$.0f%% Graded</string>
+    <string name="restante_formato">%1$.0f%% Remaining</string>
+    <string name="materia_aprobada_garantizada">Course passed! You already secured %1$.1f</string>
+    <string name="meta_inalcanzable">Target not reachable with minimum grade of %1$.1f</string>
+    <string name="calificaciones_registradas">RECORDED GRADES (%1$d)</string>
+    <string name="sin_notas_intro">No grades recorded yet. Tap the «+» button to add your first grade and calculate your projection.</string>
+    <string name="nueva_calificacion">New Grade</string>
+    <string name="editar_calificacion">Edit Grade</string>
+    <string name="guardar_calificacion">Save grade</string>
+    <string name="configuracion_calificaciones">Grades Settings</string>
+    <string name="ajustes_guardar">Save settings</string>
+    <string name="dejar_vacio_peso">Leave empty if all count equally</string>
 </resources>

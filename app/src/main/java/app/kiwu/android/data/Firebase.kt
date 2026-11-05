@@ -91,7 +91,7 @@ internal object Http {
 /** Inicio de sesión con correo y contraseña por la API REST de Firebase (la misma en Android, macOS y Linux). */
 class CuentaFirebase(private val apiKey: String, private val almacen: AlmacenSesion) {
     private val json = Json { ignoreUnknownKeys = true }
-    val disponible: Boolean get() = apiKey.isNotEmpty()
+    val disponible: Boolean get() = true
 
     var sesion: Sesion? = almacen.leer()
         private set

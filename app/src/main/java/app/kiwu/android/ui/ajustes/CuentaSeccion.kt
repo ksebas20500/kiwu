@@ -102,8 +102,17 @@ fun SeccionCuenta(app: KiwuApp) {
                 OutlinedButton(onClick = { intentar { sync.registrar(correo, clave) } }, enabled = !ocupado && correo.isNotBlank() && clave.length >= 6, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.cuenta_crear))
                 }
-                if (sync.google.disponible && actividad != null) {
-                    OutlinedButton(onClick = { intentar { sync.entrarConGoogle(sync.google.token(actividad)) } }, enabled = !ocupado, modifier = Modifier.fillMaxWidth()) {
+                if (sync.google.disponible) {
+                    OutlinedButton(
+                        onClick = {
+                            val act = contexto.actividad()
+                            if (act != null) {
+                                intentar { sync.entrarConGoogle(sync.google.token(act)) }
+                            }
+                        },
+                        enabled = !ocupado,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
                         Text(stringResource(R.string.cuenta_google))
                     }
                 }

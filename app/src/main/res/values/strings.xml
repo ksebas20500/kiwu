@@ -228,6 +228,18 @@
     <string name="exportar">Exportar</string>
     <string name="importar">Importar</string>
     <string name="ajustes_ver_guia">Ver la guía de nuevo</string>
+    <string name="buscar_actualizaciones">Buscar actualizaciones</string>
+    <string name="buscando_actualizacion">Buscando…</string>
+    <string name="actualizacion_descargando">La versión nueva se está descargando</string>
+    <string name="actualizacion_ultima">Ya tienes la última versión</string>
+    <string name="actualizacion_titulo">Hay una versión nueva de Kiwu</string>
+    <string name="actualizacion_texto">Se descarga mientras sigues usando la app. Cuando termine, solo tendrás que reiniciarla.</string>
+    <string name="actualizacion_lista_titulo">La actualización está lista</string>
+    <string name="actualizacion_lista_texto">Reinicia Kiwu para usar la versión nueva. Tus datos se conservan.</string>
+    <string name="actualizar">Actualizar</string>
+    <string name="mas_tarde">Más tarde</string>
+    <string name="reiniciar">Reiniciar</string>
+    <string name="luego">Luego</string>
     <string name="ajustes_privacidad">Tus datos se guardan en este dispositivo. Si creas una cuenta, el texto de tus listas, tareas y notas se sincroniza con tus otros dispositivos mediante Google Firebase (nunca imágenes ni archivos). Sin cuenta, nada sale del teléfono.</string>
     <string name="ajustes_error_fondo">No se pudo guardar el fondo</string>
     <string name="color_sistema">Colores del sistema</string>
@@ -794,5 +806,33 @@
     </plurals>
     <string name="tarjetas_anadir_n">Añadir (%1$d)</string>
     <string name="nota_ayuda">Lo que sacaste, por ejemplo 4.5</string>
-    <string name="peso_ayuda">Cuánto vale (por ejemplo 30). Vacío = todas valen igual</string>
+    <string name="peso_ayuda">Cuánto vale en %% (por ejemplo 20). Vacío = todas valen igual</string>
+    <string name="nota_minima_aprobar">Nota mínima para aprobar</string>
+    <string name="nota_acumulada">Nota acumulada: %1$.2f</string>
+    <string name="evaluado_porcentaje">Evaluado: %1$.0f%% de 100%%</string>
+    <string name="promedio_evaluado">Promedio de lo evaluado: %1$.2f</string>
+    <string name="tag_parcial">Parcial</string>
+    <string name="tag_quizzes_talleres">Quizzes y talleres</string>
+    <string name="ojo_suma_ponderaciones">¡Ojo! La suma de las ponderaciones (%1$.0f%%) es distinta a 100%%</string>
+    <string name="ojo_suma_ponderaciones_supera">¡Ojo! La suma de las ponderaciones (%1$.0f%%) supera el 100%%</string>
+    <string name="necesitaras_n_para_aprobar">Necesitarás un %1$.2f en el %2$.0f%% restante para aprobar el curso con %3$.1f.</string>
+    <string name="desglose_ejemplo">Ejemplo para el %1$.0f%% restante: sacar mínimo %2$.2f tanto en Parcial (20%%) como en Quizzes y Talleres (10%%).</string>
+    <string name="ya_aprobaste">¡Ya aprobaste! Tu acumulado (%1$.2f) cubre la nota mínima de %2$.1f.</string>
+    <string name="ponderaciones_iguales">Ponderaciones iguales</string>
+    <string name="agregar_nota">Agregar nota</string>
+    <string name="porcentaje_simbolo">%%</string>
+    <string name="aporte_nota_final">Aporte a nota final</string>
+    <string name="promedio_calificado">Promedio de lo calificado</string>
+    <string name="evaluado_formato">%1$.0f%% Evaluado</string>
+    <string name="restante_formato">%1$.0f%% Restante</string>
+    <string name="materia_aprobada_garantizada">¡Materia aprobada! Ya aseguraste %1$.1f</string>
+    <string name="meta_inalcanzable">Meta no alcanzable con nota mínima de %1$.1f</string>
+    <string name="calificaciones_registradas">CALIFICACIONES REGISTRADAS (%1$d)</string>
+    <string name="sin_notas_intro">Aún no has registrado notas. Pulsa el botón «+» para agregar la primera y calcular tu proyección.</string>
+    <string name="nueva_calificacion">Nueva Calificación</string>
+    <string name="editar_calificacion">Editar Calificación</string>
+    <string name="guardar_calificacion">Guardar calificación</string>
+    <string name="configuracion_calificaciones">Configuración de Calificaciones</string>
+    <string name="ajustes_guardar">Guardar ajustes</string>
+    <string name="dejar_vacio_peso">Dejar vacío si todas pesan igual</string>
 </resources>

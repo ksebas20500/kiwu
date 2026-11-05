@@ -15,30 +15,82 @@ import java.time.temporal.ChronoUnit
 /** Una nota de una materia (lista): lo que sacaste y cuánto pesa en el promedio. La escala (5, 10, 100…) la pones tú. */
 data class Calificacion(val nombre: String, val nota: Double, val peso: Double = 1.0)
 
+/** Configuración de calificaciones de una materia: la nota mínima para aprobar y la lista de notas. */
+data class ConfigCalificaciones(
+    val minimaAprobacion: Double = 3.0,
+    val notas: List<Calificacion> = emptyList(),
+)
+
 object Calificaciones {
     fun leer(json: String): List<Calificacion> = try {
         if (json.isBlank()) emptyList()
-        else Json.parseToJsonElement(json).jsonArray.map {
-            val o = it.jsonObject
-            Calificacion(o.getValue("n").jsonPrimitive.content, o.getValue("v").jsonPrimitive.double, o["p"]?.jsonPrimitive?.double ?: 1.0)
+        else {
+            val element = Json.parseToJsonElement(json)
+            val array = if (element is JsonArray) element else element.jsonObject["notas"]?.jsonArray
+            array?.map {
+                val o = it.jsonObject
+                Calificacion(o.getValue("n").jsonPrimitive.content, o.getValue("v").jsonPrimitive.double, o["p"]?.jsonPrimitive?.double ?: 1.0)
+            } ?: emptyList()
         }
     } catch (e: Exception) {
         emptyList() // un texto dañado (p. ej. de otro dispositivo) no debe romper la pantalla
     }
 
+    fun leerConfig(json: String): ConfigCalificaciones = try {
+        if (json.isBlank()) ConfigCalificaciones()
+        else {
+            val element = Json.parseToJsonElement(json)
+            if (element is JsonObject) {
+                val min = element["minima"]?.jsonPrimitive?.double ?: 3.0
+                ConfigCalificaciones(minimaAprobacion = min, notas = leer(json))
+            } else {
+                ConfigCalificaciones(minimaAprobacion = 3.0, notas = leer(json))
+            }
+        }
+    } catch (e: Exception) {
+        ConfigCalificaciones(minimaAprobacion = 3.0, notas = leer(json))
+    }
+
     fun escribir(notas: List<Calificacion>): String =
         if (notas.isEmpty()) "" else JsonArray(notas.map { JsonObject(mapOf("n" to JsonPrimitive(it.nombre), "v" to JsonPrimitive(it.nota), "p" to JsonPrimitive(it.peso))) }).toString()
 
+    fun escribirConfig(config: ConfigCalificaciones): String =
+        JsonObject(mapOf(
+            "minima" to JsonPrimitive(config.minimaAprobacion),
+            "notas" to Json.parseToJsonElement(escribir(config.notas)),
+        )).toString()
+
+    fun sumaPesos(notas: List<Calificacion>): Double = notas.sumOf { it.peso }
+
+    fun puntosAcumulados(notas: List<Calificacion>): Double =
+        notas.sumOf { it.nota * (it.peso / 100.0) }
+
     /** Promedio ponderado por peso; null si no hay notas o los pesos suman cero. */
     fun promedio(notas: List<Calificacion>): Double? {
-        val pesos = notas.sumOf { it.peso }
+        val pesos = sumaPesos(notas)
         return if (notas.isEmpty() || pesos <= 0.0) null else notas.sumOf { it.nota * it.peso } / pesos
+    }
+
+    /** Promedio acumulado considerando el porcentaje evaluado hasta ahora. */
+    fun promedioAcumulado(notas: List<Calificacion>): Double? {
+        val pesos = sumaPesos(notas)
+        return if (notas.isEmpty() || pesos <= 0.0) null else puntosAcumulados(notas) / (pesos / 100.0)
     }
 
     /** Nota que hace falta en lo que queda (con peso [pesoRestante]) para terminar con promedio [meta]; null si no queda peso. */
     fun necesaria(notas: List<Calificacion>, meta: Double, pesoRestante: Double): Double? {
         if (pesoRestante <= 0.0) return null
         return (meta * (notas.sumOf { it.peso } + pesoRestante) - notas.sumOf { it.nota * it.peso }) / pesoRestante
+    }
+
+    /** Nota que hace falta en el % restante para aprobar con la nota [minimaAprobacion]. */
+    fun necesariaParaAprobar(notas: List<Calificacion>, minimaAprobacion: Double = 3.0): Double? {
+        val pesoRestante = (100.0 - sumaPesos(notas)).coerceAtLeast(0.0)
+        if (pesoRestante <= 0.0) return null
+        val acumulado = puntosAcumulados(notas)
+        val faltaPuntos = minimaAprobacion - acumulado
+        if (faltaPuntos <= 0.0) return 0.0
+        return faltaPuntos / (pesoRestante / 100.0)
     }
 }
 

@@ -166,6 +166,7 @@ fun Raiz(
                 composable("racha") { RachaScreen(app, alVolver = { nav.volver() }) }
             }
             CelebrarRacha(app, ajustes)
+            AvisoActualizacion(app)
         }
     }
 }

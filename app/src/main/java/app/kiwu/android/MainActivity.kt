@@ -6,11 +6,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.lifecycleScope
 import app.kiwu.android.data.AjustesUi
 import app.kiwu.android.domain.Guia
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,31 +32,47 @@ class MainActivity : ComponentActivity() {
     /** Sección que pidió abrir un widget («tareas», «notas» u «horario»). */
     private var seccion by mutableStateOf<String?>(null)
 
+    private var estadoInicial by mutableStateOf<Pair<AjustesUi, Boolean>?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        
+        splashScreen.setKeepOnScreenCondition { estadoInicial == null }
+        
         Textos.actualizar(this)
         enableEdgeToEdge()
         // Al girar la pantalla se conserva el estado: no se vuelve a leer el intent (crearía otra nota rápida).
         if (savedInstanceState == null) leer(intent)
         val app = application as KiwuApp
-        // Los ajustes (tema, color, fondo) se leen antes del primer fotograma: así no se ve un instante el aspecto por defecto.
-        val inicial = runBlocking { withTimeoutOrNull(1500) { app.ajustes.flujo.first() } } ?: AjustesUi()
-        // La guía de inicio solo sale la primera vez y con la app vacía; quien actualiza con datos ya no la ve.
-        val hayDatos = if (inicial.guiaVista) true else runBlocking { withTimeoutOrNull(1500) { app.repo.hayDatos() } }
-        if (!inicial.guiaVista && hayDatos == true) app.alcance.launch { app.ajustes.cambiar { it.copy(guiaVista = true) } }
-        val guia = Guia.debeMostrarse(inicial.guiaVista, hayDatos ?: true)
+
+        lifecycleScope.launch {
+            val (inicial, guia) = withContext(Dispatchers.IO) {
+                val ini = withTimeoutOrNull(1500) { app.ajustes.flujo.first() } ?: AjustesUi()
+                val hayDat = if (ini.guiaVista) true else (withTimeoutOrNull(1500) { app.repo.hayDatos() } ?: true)
+                if (!ini.guiaVista && hayDat) {
+                    runCatching { app.ajustes.cambiar { it.copy(guiaVista = true) } }
+                }
+                val g = Guia.debeMostrarse(ini.guiaVista, hayDat)
+                ini to g
+            }
+            estadoInicial = inicial to guia
+        }
+
         setContent {
-            Raiz(
-                app = app,
-                abrirTarea = abrirTarea,
-                abrirPagina = abrirPagina,
-                nuevaNota = nuevaNota,
-                seccion = seccion,
-                inicial = inicial,
-                guia = guia,
-                alAtender = ::olvidarPedido,
-            )
+            val estado = estadoInicial
+            if (estado != null) {
+                Raiz(
+                    app = app,
+                    abrirTarea = abrirTarea,
+                    abrirPagina = abrirPagina,
+                    nuevaNota = nuevaNota,
+                    seccion = seccion,
+                    inicial = estado.first,
+                    guia = estado.second,
+                    alAtender = ::olvidarPedido,
+                )
+            }
         }
     }
 

@@ -37,6 +37,7 @@ object Avisos {
     const val EXTRA_ID = "id"
     const val EXTRA_REAVISO = "reaviso"
     const val EXTRA_SEGUNDO = "segundo"
+    const val EXTRA_REFERENCIA = "referencia"
 
     /** Cuánto se pospone un aviso con el botón «Posponer». */
     const val POSPONER_MS = 3_600_000L
@@ -58,13 +59,20 @@ object Avisos {
 
     private fun identificador(id: String) = id.hashCode()
 
-    private fun difusion(contexto: Context, accion: String, id: String, extra: Boolean = false, segundo: Boolean = false): PendingIntent =
-        PendingIntent.getBroadcast(
-            contexto, identificador(id) * 31 + accion.hashCode() + if (segundo) 7 else 0,
+    private fun difusion(contexto: Context, accion: String, id: String, reaviso: Boolean = false, segundo: Boolean = false, referencia: Boolean = false): PendingIntent {
+        val tipo = when {
+            reaviso -> 1
+            segundo -> 2
+            referencia -> 3
+            else -> 0
+        }
+        return PendingIntent.getBroadcast(
+            contexto, identificador(id) * 37 + accion.hashCode() + tipo,
             Intent(contexto, if (accion == ACCION_AVISAR) AlarmaReceiver::class.java else AccionReceiver::class.java)
-                .setAction(accion).putExtra(EXTRA_ID, id).putExtra(EXTRA_REAVISO, extra).putExtra(EXTRA_SEGUNDO, segundo),
+                .setAction(accion).putExtra(EXTRA_ID, id).putExtra(EXTRA_REAVISO, reaviso).putExtra(EXTRA_SEGUNDO, segundo).putExtra(EXTRA_REFERENCIA, referencia),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
+    }
 
     /** Muestra el aviso de una tarea. Devuelve false si no se pudo (p. ej. sin permiso): entonces no cuenta como avisada. */
     fun mostrar(contexto: Context, d: Deber, texto: String, nombreLista: String?): Boolean {
@@ -76,10 +84,11 @@ object Avisos {
             Intent(contexto, MainActivity::class.java).putExtra(MainActivity.EXTRA_TAREA, d.id).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val notificacion = NotificationCompat.Builder(contexto, CANAL)
+        val ref = Recordatorios.referencia(d)
+        val ahora = System.currentTimeMillis()
+        val builder = NotificationCompat.Builder(contexto, CANAL)
             .setSmallIcon(R.drawable.ic_notificacion)
             .setContentTitle(d.titulo)
-            .setContentText(listOfNotNull(texto, nombreLista).joinToString(" · "))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
@@ -87,7 +96,19 @@ object Avisos {
             .addAction(0, t.getString(R.string.completar), difusion(contexto, ACCION_COMPLETAR, d.id))
             .addAction(0, t.getString(R.string.posponer_1h), difusion(contexto, ACCION_POSPONER, d.id))
             .addAction(0, t.getString(R.string.posponer_manana), difusion(contexto, ACCION_POSPONER_MANANA, d.id))
-            .build()
+
+        if (ref != null && ref > ahora && !Recordatorios.sinHora(d)) {
+            builder.setWhen(ref)
+                .setUsesChronometer(true)
+                .setChronometerCountDown(true)
+            if (nombreLista != null) {
+                builder.setSubText(nombreLista)
+            }
+        } else {
+            builder.setContentText(listOfNotNull(texto, nombreLista).joinToString(" · "))
+        }
+
+        val notificacion = builder.build()
         return try {
             NotificationManagerCompat.from(contexto).notify(identificador(d.id), notificacion)
             true
@@ -110,6 +131,7 @@ object Avisos {
         // El reaviso usa el mismo PendingIntent que el aviso normal (mismo código de petición): basta con cancelarlo.
         alarmas.cancel(alarmaAvisar(contexto, id))
         alarmas.cancel(alarmaAvisar(contexto, id, segundo = true))
+        alarmas.cancel(alarmaAvisar(contexto, id, referencia = true))
     }
 
     /** Quita de la barra los avisos del [canal] que ya no están en [vivos] (identificadores de notificación). */
@@ -122,7 +144,8 @@ object Avisos {
     fun quitarSobrantes(contexto: Context, canal: String = CANAL, pendientes: Collection<String>) =
         limpiarBarra(contexto, canal, pendientes.mapTo(HashSet()) { identificador(it) })
 
-    fun alarmaAvisar(contexto: Context, id: String, reaviso: Boolean = false, segundo: Boolean = false) = difusion(contexto, ACCION_AVISAR, id, reaviso, segundo)
+    fun alarmaAvisar(contexto: Context, id: String, reaviso: Boolean = false, segundo: Boolean = false, referencia: Boolean = false) =
+        difusion(contexto, ACCION_AVISAR, id, reaviso, segundo, referencia)
 }
 
 /**
@@ -144,6 +167,7 @@ class ProgramadorAvisos(private val contexto: Context) {
     private val alarmas = contexto.getSystemService(AlarmManager::class.java)
     private val programadas = HashSet<String>()
     private val programadasSegundo = HashSet<String>()
+    private val programadasReferencia = HashSet<String>()
 
     fun puedeExactas(): Boolean = Build.VERSION.SDK_INT < 31 || alarmas.canScheduleExactAlarms()
 
@@ -158,6 +182,7 @@ class ProgramadorAvisos(private val contexto: Context) {
     ) {
         val vigentes = HashSet<String>()
         val vigentesSegundo = HashSet<String>()
+        val vigentesReferencia = HashSet<String>()
         for (d in deberes) {
             Recordatorios.momentoDeDisparo(d, ahora, horaSinHora)?.let { programar(d.id, it); vigentes += d.id }
             val entrega = d.fechaEntrega
@@ -166,11 +191,17 @@ class ProgramadorAvisos(private val contexto: Context) {
                 val segundo = entrega - segundoMin * 60_000L
                 if (segundo > ahora) { programar(d.id, segundo, segundo = true); vigentesSegundo += d.id }
             }
+            val ref = Recordatorios.referencia(d)
+            if (ref != null && !d.completado && !Recordatorios.sinHora(d)) {
+                if (ref > ahora) { programar(d.id, ref, referencia = true); vigentesReferencia += d.id }
+            }
         }
         for (id in programadas - vigentes) alarmas.cancel(Avisos.alarmaAvisar(contexto, id))
         for (id in programadasSegundo - vigentesSegundo) alarmas.cancel(Avisos.alarmaAvisar(contexto, id, segundo = true))
+        for (id in programadasReferencia - vigentesReferencia) alarmas.cancel(Avisos.alarmaAvisar(contexto, id, referencia = true))
         programadas.clear(); programadas += vigentes
         programadasSegundo.clear(); programadasSegundo += vigentesSegundo
+        programadasReferencia.clear(); programadasReferencia += vigentesReferencia
         Avisos.quitarSobrantes(contexto, Avisos.CANAL, deberes.filter { !it.completado }.map { it.id })
         // Los avisos pospuestos a mañana siguen vivos aunque se haya reiniciado el teléfono; si la tarea ya no hace falta, se olvidan.
         for ((id, cuando) in Pospuestos.todos(contexto)) {
@@ -179,8 +210,8 @@ class ProgramadorAvisos(private val contexto: Context) {
         }
     }
 
-    fun programar(id: String, cuando: Long, reaviso: Boolean = false, segundo: Boolean = false) {
-        val pi = Avisos.alarmaAvisar(contexto, id, reaviso, segundo)
+    fun programar(id: String, cuando: Long, reaviso: Boolean = false, segundo: Boolean = false, referencia: Boolean = false) {
+        val pi = Avisos.alarmaAvisar(contexto, id, reaviso, segundo, referencia)
         try {
             if (puedeExactas()) alarmas.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cuando, pi)
             else alarmas.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cuando, pi)
@@ -196,9 +227,10 @@ private val alcanceReceptores = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 class AlarmaReceiver : BroadcastReceiver() {
     override fun onReceive(contexto: Context, intent: Intent) {
         val id = intent.getStringExtra(Avisos.EXTRA_ID) ?: return
-        val reaviso = intent.getBooleanExtra(Avisos.EXTRA_REAVISO, false) || intent.getBooleanExtra(Avisos.EXTRA_SEGUNDO, false)
+        val reaviso = intent.getBooleanExtra(Avisos.EXTRA_REAVISO, false) || intent.getBooleanExtra(Avisos.EXTRA_SEGUNDO, false) || intent.getBooleanExtra(Avisos.EXTRA_REFERENCIA, false)
         val segundo = intent.getBooleanExtra(Avisos.EXTRA_SEGUNDO, false)
-        if (reaviso) Pospuestos.quitar(contexto, id)
+        val referencia = intent.getBooleanExtra(Avisos.EXTRA_REFERENCIA, false)
+        if (intent.getBooleanExtra(Avisos.EXTRA_REAVISO, false)) Pospuestos.quitar(contexto, id)
         val app = contexto.applicationContext as KiwuApp
         val pendiente = goAsync()
         alcanceReceptores.launch {
@@ -206,11 +238,17 @@ class AlarmaReceiver : BroadcastReceiver() {
                 val ahora = System.currentTimeMillis()
                 val horaSinHora = app.ajustes.flujo.first().horaAvisoSinHora
                 val d = app.repo.deber(id)
-                val toca = d != null && !d.completado && if (reaviso) true else Recordatorios.pendientesDeAviso(listOf(d), ahora, horaSinHora).isNotEmpty()
+                val toca = if (referencia) {
+                    d != null && !d.completado
+                } else {
+                    d != null && !d.completado && if (reaviso) true else Recordatorios.pendientesDeAviso(listOf(d), ahora, horaSinHora).isNotEmpty()
+                }
                 if (d != null && toca) {
                     val lista = if (d.materiaId == ID_EVENTOS) Textos.eventos else app.repo.materia(d.materiaId)?.nombre
-                    // El segundo aviso no cambia el estado «avisada» del primero.
-                    if (Avisos.mostrar(contexto, d, Recordatorios.textoAviso(d, ahora, Idioma.contexto(contexto).resources), lista) && !segundo) app.repo.marcarAvisado(id, ahora)
+                    val texto = Recordatorios.textoAviso(d, ahora, Idioma.contexto(contexto).resources)
+                    if (Avisos.mostrar(contexto, d, texto, lista) && !segundo && !referencia) {
+                        app.repo.marcarAvisado(id, ahora)
+                    }
                 }
             } finally {
                 pendiente.finish()

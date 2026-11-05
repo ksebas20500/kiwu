@@ -42,6 +42,7 @@ class KiwuApp : Application() {
     }
     val ajustes by lazy { AjustesStore(this) }
     val sync by lazy { ServicioSync(this) }
+    val actualizaciones by lazy { Actualizaciones(this) }
     private val programadorAvisos by lazy { ProgramadorAvisos(this) }
 
     /** Alcance que sobrevive a las pantallas: para guardar lo pendiente cuando se cierra una (p. ej. una nota). */

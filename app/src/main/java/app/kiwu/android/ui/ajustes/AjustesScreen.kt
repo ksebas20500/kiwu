@@ -36,6 +36,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.Alignment
 import app.kiwu.android.ui.Acentos
+import app.kiwu.android.ui.abrirEnPlay
 import app.kiwu.android.ui.FondoArchivos
 import app.kiwu.android.ui.FondoEnVivo
 import app.kiwu.android.ui.tonoYSaturacion
@@ -75,6 +76,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kiwu.android.BuildConfig
+import app.kiwu.android.EstadoActualizacion
 import app.kiwu.android.KiwuApp
 import app.kiwu.android.data.AjustesUi
 import app.kiwu.android.data.AutorizacionDrive
@@ -432,6 +434,18 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit, alVerGuia: () -> Unit = {}
                     SeccionAjustes.ACERCA -> {
                         Seccion("") {
                             Text(stringResource(R.string.version_n, BuildConfig.VERSION_NAME), style = MaterialTheme.typography.bodyMedium)
+                            OutlinedButton(onClick = {
+                                mensaje = contexto.getString(R.string.buscando_actualizacion)
+                                app.actualizaciones.comprobar(forzar = true) { e ->
+                                    mensaje = when (e) {
+                                        is EstadoActualizacion.Disponible, EstadoActualizacion.Lista -> null
+                                        EstadoActualizacion.Descargando -> contexto.getString(R.string.actualizacion_descargando)
+                                        EstadoActualizacion.Nada -> contexto.getString(R.string.actualizacion_ultima)
+                                        // Google no respondió (por ejemplo, sin conexión): se abre la ficha de Play.
+                                        null -> { abrirEnPlay(contexto); null }
+                                    }
+                                }
+                            }) { Text(stringResource(R.string.buscar_actualizaciones)) }
                             OutlinedButton(onClick = alVerGuia) { Text(stringResource(R.string.ajustes_ver_guia)) }
                             Text(stringResource(R.string.ajustes_privacidad), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }

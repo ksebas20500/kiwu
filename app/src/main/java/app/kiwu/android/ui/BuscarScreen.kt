@@ -1,11 +1,13 @@
 package app.kiwu.android.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -32,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kiwu.android.KiwuApp
 import app.kiwu.android.R
+import app.kiwu.android.domain.Etiquetas
 
 /** Búsqueda en todo Kiwu: tareas (y eventos) por título, y notas por título o texto. */
 @Composable
@@ -40,12 +43,37 @@ fun BuscarScreen(app: KiwuApp, alVolver: () -> Unit, alAbrirTarea: (String) -> U
     val paginas by app.repo.paginas.collectAsStateWithLifecycle(emptyList())
     var q by rememberSaveable { mutableStateOf("") }
     val t = q.trim()
-    val tareas = remember(deberes, t) { if (t.isEmpty()) emptyList() else deberes.filter { it.titulo.contains(t, true) || it.etiquetas.contains(t.removePrefix("#"), true) }.take(50) }
-    val notas = remember(paginas, t) { if (t.isEmpty()) emptyList() else paginas.filter { it.titulo.contains(t, true) || it.textoPlano.contains(t, true) }.take(50) }
+    val query = t.removePrefix("#").trim()
+    val stringExamen = stringResource(R.string.examen)
+
+    val tareas = remember(deberes, t, stringExamen) {
+        if (query.isEmpty()) emptyList()
+        else deberes.filter { deber ->
+            val matchTitulo = deber.titulo.contains(query, true)
+            val matchEtiquetas = Etiquetas.leer(deber.etiquetas).any { tag -> tag.contains(query, true) }
+            val matchExamen = deber.examen && (
+                "examen".contains(query, true) ||
+                "exam".contains(query, true) ||
+                "prueba".contains(query, true) ||
+                "prova".contains(query, true) ||
+                stringExamen.contains(query, true)
+            )
+            matchTitulo || matchEtiquetas || matchExamen
+        }.take(50)
+    }
+
+    val notas = remember(paginas, t) {
+        if (query.isEmpty()) emptyList()
+        else paginas.filter { it.titulo.contains(query, true) || it.textoPlano.contains(query, true) }.take(50)
+    }
+
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 IconButton(onClick = alVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.cerrar_busqueda)) }
                 TextField(
                     q, { q = it }, Modifier.weight(1f).padding(end = 12.dp), singleLine = true,
@@ -60,9 +88,9 @@ fun BuscarScreen(app: KiwuApp, alVolver: () -> Unit, alAbrirTarea: (String) -> U
         }
         LazyColumn(Modifier.padding(relleno).fillMaxSize()) {
             if (tareas.isNotEmpty()) item { Encabezado(stringResource(R.string.tareas)) }
-            items(tareas, key = { "t" + it.id }) { Fila(it.titulo) { alAbrirTarea(it.id) } }
+            items(tareas, key = { "t" + it.id }) { Fila(it.titulo, it.etiquetas, it.examen) { alAbrirTarea(it.id) } }
             if (notas.isNotEmpty()) item { Encabezado(stringResource(R.string.notas)) }
-            items(notas, key = { "n" + it.id }) { Fila(it.titulo.ifBlank { stringResource(R.string.sin_titulo) }) { alAbrirPagina(it.id) } }
+            items(notas, key = { "n" + it.id }) { Fila(it.titulo.ifBlank { stringResource(R.string.sin_titulo) }, "", false) { alAbrirPagina(it.id) } }
         }
     }
 }
@@ -72,7 +100,28 @@ private fun Encabezado(texto: String) =
     Text(texto, Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
 
 @Composable
-private fun Fila(texto: String, alTocar: () -> Unit) =
+private fun Fila(titulo: String, etiquetas: String, esExamen: Boolean, alTocar: () -> Unit) {
+    val stringExamen = stringResource(R.string.examen)
     Column(Modifier.fillMaxWidth().clickable(onClick = alTocar).padding(horizontal = 16.dp, vertical = 12.dp)) {
-        Text(texto, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(titulo, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        val listaEtiquetas = remember(etiquetas, esExamen) {
+            val list = Etiquetas.leer(etiquetas).toMutableList()
+            if (esExamen && !list.any { it.equals(stringExamen, true) || it.equals("examen", true) }) {
+                list.add(0, stringExamen)
+            }
+            list
+        }
+        if (listaEtiquetas.isNotEmpty()) {
+            Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (e in listaEtiquetas) {
+                    val esChipExamen = e.equals(stringExamen, true) || e.equals("examen", true)
+                    Text(
+                        if (esChipExamen) e else "#$e",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+        }
     }
+}

@@ -224,6 +224,11 @@ class Repositorio(
         dao.guardarMateria(m.copy(calificaciones = app.kiwu.android.domain.Calificaciones.escribir(notas), actualizada = reloj()))
     }
 
+    suspend fun cambiarCalificacionesConfig(materiaId: String, config: app.kiwu.android.domain.ConfigCalificaciones) {
+        val m = dao.materia(materiaId) ?: return
+        dao.guardarMateria(m.copy(calificaciones = app.kiwu.android.domain.Calificaciones.escribirConfig(config), actualizada = reloj()))
+    }
+
     suspend fun cambiarPrioridad(id: String, prioridad: Int): Deber? = editar(id) { it.copy(prioridad = prioridad.coerceIn(0, 3)) }
 
     suspend fun cambiarEtiquetas(id: String, etiquetas: List<String>): Deber? = editar(id) { it.copy(etiquetas = Etiquetas.escribir(etiquetas)) }

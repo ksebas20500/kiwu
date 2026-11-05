@@ -24,6 +24,20 @@ class EstudioTest {
     }
 
     @Test
+    fun calculaCorrectamenteNotaNecesariaYPorcentajes() {
+        val notas = listOf(
+            Calificacion("Parcial 1", 2.5, 20.0),
+            Calificacion("Talleres 1", 4.0, 15.0),
+            Calificacion("Parcial 2", 3.0, 20.0),
+            Calificacion("Talleres 2", 3.33, 15.0)
+        )
+        assertEquals(70.0, Calificaciones.sumaPesos(notas), 1e-9)
+        assertEquals(2.1995, Calificaciones.puntosAcumulados(notas), 1e-4)
+        val req = Calificaciones.necesariaParaAprobar(notas, 3.0)!!
+        assertEquals(2.6683333333333334, req, 1e-4)
+    }
+
+    @Test
     fun lasNotasSeGuardanYSeLeenIgual() {
         val notas = listOf(Calificacion("Parcial \"1\"", 4.5, 2.0), Calificacion("Taller", 5.0))
         assertEquals(notas, Calificaciones.leer(Calificaciones.escribir(notas)))
