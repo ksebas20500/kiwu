@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
-        <shape android:shape="oval">
+        <shape android:shape="rectangle">
+            <corners android:radius="32dp"/>
             <solid android:color="@color/kiwu_splash_fondo"/>
         </shape>
     </item>
     <item android:drawable="@mipmap/ic_launcher_foreground"
           android:gravity="center"
-          android:width="112dp"
-          android:height="112dp"/>
+          android:width="128dp"
+          android:height="128dp"/>
 </layer-list>
