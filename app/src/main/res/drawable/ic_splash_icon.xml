@@ -2,7 +2,7 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <corners android:radius="32dp"/>
+            <corners android:radius="38dp"/>
             <solid android:color="@color/kiwu_splash_fondo"/>
         </shape>
     </item>
