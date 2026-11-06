@@ -2,12 +2,12 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <corners android:radius="38dp"/>
+            <corners android:radius="44dp"/>
             <solid android:color="@color/kiwu_splash_fondo"/>
         </shape>
     </item>
-    <item android:drawable="@mipmap/ic_launcher_foreground"
+    <item android:drawable="@drawable/logotipo_kiwu"
           android:gravity="center"
-          android:width="128dp"
-          android:height="128dp"/>
+          android:width="132dp"
+          android:height="132dp"/>
 </layer-list>
