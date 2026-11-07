@@ -819,4 +819,5 @@
     <string name="proximos_dias">Upcoming days</string>
     <string name="quitar_anuncios">Remove ads</string>
     <string name="anuncios_quitados">Ads removed!</string>
+    <string name="quitar_anuncios_descripcion">Remove ads permanently</string>
 </resources>

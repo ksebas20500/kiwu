@@ -841,4 +841,5 @@
     <string name="proximos_dias">Próximos días</string>
     <string name="quitar_anuncios">Quitar anuncios</string>
     <string name="anuncios_quitados">¡Anuncios eliminados!</string>
+    <string name="quitar_anuncios_descripcion">Elimina los anuncios para siempre</string>
 </resources>

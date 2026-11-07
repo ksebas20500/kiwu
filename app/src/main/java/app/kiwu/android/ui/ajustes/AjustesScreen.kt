@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.draw.clip
@@ -258,6 +259,18 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit, alVerGuia: () -> Unit = {}
                         FilaAjuste(Icons.Filled.Person, stringResource(SeccionAjustes.CUENTA.titulo), app.sync.estado.value.correo ?: stringResource(R.string.cuenta_sin_cuenta)) { elegida = SeccionAjustes.CUENTA.id }
                         FilaAjuste(Icons.Filled.Backup, stringResource(SeccionAjustes.COPIA.titulo), resumen.copia()) { elegida = SeccionAjustes.COPIA.id }
                         FilaAjuste(Icons.Filled.Delete, stringResource(SeccionAjustes.PAPELERA.titulo), stringResource(R.string.papelera_resumen)) { elegida = SeccionAjustes.PAPELERA.id }
+                        val comprado by app.billing.comprado.collectAsStateWithLifecycle()
+                        FilaAjuste(
+                            Icons.Filled.Star,
+                            stringResource(R.string.quitar_anuncios),
+                            if (comprado) stringResource(R.string.anuncios_quitados) else stringResource(R.string.quitar_anuncios_descripcion)
+                        ) {
+                            if (!comprado && actividad != null) {
+                                app.billing.comprar(actividad)
+                            } else if (comprado) {
+                                mensaje = contexto.getString(R.string.anuncios_quitados)
+                            }
+                        }
                         FilaAjuste(Icons.Filled.Info, stringResource(SeccionAjustes.ACERCA.titulo), resumen.acerca(BuildConfig.VERSION_NAME)) { elegida = SeccionAjustes.ACERCA.id }
                         mensaje?.let { Text(it, Modifier.padding(horizontal = 20.dp, vertical = 12.dp), color = MaterialTheme.colorScheme.primary) }
                     }
