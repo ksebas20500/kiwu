@@ -434,6 +434,14 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit, alVerGuia: () -> Unit = {}
                     SeccionAjustes.ACERCA -> {
                         Seccion("") {
                             Text(stringResource(R.string.version_n, BuildConfig.VERSION_NAME), style = MaterialTheme.typography.bodyMedium)
+                            val comprado by app.billing.comprado.collectAsStateWithLifecycle()
+                            OutlinedButton(
+                                onClick = {
+                                    if (!comprado && actividad != null) app.billing.comprar(actividad)
+                                }
+                            ) {
+                                Text(if (comprado) "⭐ " + stringResource(R.string.anuncios_quitados) else "⭐ " + stringResource(R.string.quitar_anuncios))
+                            }
                             OutlinedButton(onClick = {
                                 mensaje = contexto.getString(R.string.buscando_actualizacion)
                                 app.actualizaciones.comprobar(forzar = true) { e ->

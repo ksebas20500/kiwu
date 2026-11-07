@@ -817,4 +817,6 @@
     <string name="materia_editar">Edit subject</string>
     <string name="anadir_tarea_a">Add task to %1$s…</string>
     <string name="proximos_dias">Upcoming days</string>
+    <string name="quitar_anuncios">Remove ads</string>
+    <string name="anuncios_quitados">Ads removed!</string>
 </resources>

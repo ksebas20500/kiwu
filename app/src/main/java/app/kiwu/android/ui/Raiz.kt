@@ -249,7 +249,7 @@ private fun Principal(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             androidx.compose.foundation.layout.Column {
-                AdBanner()
+                AdBanner(app)
                 NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                     val colores = androidx.compose.material3.NavigationBarItemDefaults.colors(
                         indicatorColor = MaterialTheme.colorScheme.primaryContainer,

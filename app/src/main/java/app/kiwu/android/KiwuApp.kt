@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.CalendarContract
 import app.kiwu.android.data.AjustesStore
+import app.kiwu.android.data.BillingManager
 import app.kiwu.android.data.KiwuDb
 import app.kiwu.android.data.Repositorio
 import app.kiwu.android.data.ServicioSync
@@ -43,6 +44,7 @@ class KiwuApp : Application() {
     val ajustes by lazy { AjustesStore(this) }
     val sync by lazy { ServicioSync(this) }
     val actualizaciones by lazy { Actualizaciones(this) }
+    val billing by lazy { BillingManager(this) }
     private val programadorAvisos by lazy { ProgramadorAvisos(this) }
 
     /** Alcance que sobrevive a las pantallas: para guardar lo pendiente cuando se cierra una (p. ej. una nota). */

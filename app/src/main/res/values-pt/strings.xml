@@ -841,4 +841,6 @@
     <string name="materia_editar">Editar matéria</string>
     <string name="anadir_tarea_a">Adicionar tarefa em %1$s…</string>
     <string name="proximos_dias">Próximos dias</string>
+    <string name="quitar_anuncios">Remover anúncios</string>
+    <string name="anuncios_quitados">Anúncios removidos!</string>
 </resources>
