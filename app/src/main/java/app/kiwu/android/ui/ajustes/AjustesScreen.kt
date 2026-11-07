@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.draw.clip
@@ -271,6 +272,21 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit, alVerGuia: () -> Unit = {}
                                 mensaje = contexto.getString(R.string.anuncios_quitados)
                             }
                         }
+                        FilaAjuste(
+                            Icons.Filled.SystemUpdate,
+                            stringResource(R.string.buscar_actualizaciones),
+                            stringResource(R.string.version_n, BuildConfig.VERSION_NAME)
+                        ) {
+                            mensaje = contexto.getString(R.string.buscando_actualizacion)
+                            app.actualizaciones.comprobar(forzar = true) { e ->
+                                mensaje = when (e) {
+                                    is EstadoActualizacion.Disponible, EstadoActualizacion.Lista -> null
+                                    EstadoActualizacion.Descargando -> contexto.getString(R.string.actualizacion_descargando)
+                                    EstadoActualizacion.Nada -> contexto.getString(R.string.actualizacion_ultima)
+                                    null -> { abrirEnPlay(contexto); null }
+                                }
+                            }
+                        }
                         FilaAjuste(Icons.Filled.Info, stringResource(SeccionAjustes.ACERCA.titulo), resumen.acerca(BuildConfig.VERSION_NAME)) { elegida = SeccionAjustes.ACERCA.id }
                         mensaje?.let { Text(it, Modifier.padding(horizontal = 20.dp, vertical = 12.dp), color = MaterialTheme.colorScheme.primary) }
                     }
@@ -447,26 +463,6 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit, alVerGuia: () -> Unit = {}
                     SeccionAjustes.ACERCA -> {
                         Seccion("") {
                             Text(stringResource(R.string.version_n, BuildConfig.VERSION_NAME), style = MaterialTheme.typography.bodyMedium)
-                            val comprado by app.billing.comprado.collectAsStateWithLifecycle()
-                            OutlinedButton(
-                                onClick = {
-                                    if (!comprado && actividad != null) app.billing.comprar(actividad)
-                                }
-                            ) {
-                                Text(if (comprado) "⭐ " + stringResource(R.string.anuncios_quitados) else "⭐ " + stringResource(R.string.quitar_anuncios))
-                            }
-                            OutlinedButton(onClick = {
-                                mensaje = contexto.getString(R.string.buscando_actualizacion)
-                                app.actualizaciones.comprobar(forzar = true) { e ->
-                                    mensaje = when (e) {
-                                        is EstadoActualizacion.Disponible, EstadoActualizacion.Lista -> null
-                                        EstadoActualizacion.Descargando -> contexto.getString(R.string.actualizacion_descargando)
-                                        EstadoActualizacion.Nada -> contexto.getString(R.string.actualizacion_ultima)
-                                        // Google no respondió (por ejemplo, sin conexión): se abre la ficha de Play.
-                                        null -> { abrirEnPlay(contexto); null }
-                                    }
-                                }
-                            }) { Text(stringResource(R.string.buscar_actualizaciones)) }
                             OutlinedButton(onClick = alVerGuia) { Text(stringResource(R.string.ajustes_ver_guia)) }
                             Text(stringResource(R.string.ajustes_privacidad), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
