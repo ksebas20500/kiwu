@@ -36,7 +36,7 @@ import app.kiwu.android.KiwuApp
 import app.kiwu.android.R
 import app.kiwu.android.domain.Etiquetas
 
-/** Búsqueda en todo Kiwu: tareas (y eventos) por título, y notas por título o texto. */
+/** Búsqueda en todo Kiwu: tareas (y eventos) por título, y notas por título ou texto. */
 @Composable
 fun BuscarScreen(app: KiwuApp, alVolver: () -> Unit, alAbrirTarea: (String) -> Unit, alAbrirPagina: (String) -> Unit) {
     val deberes by app.repo.deberes.collectAsStateWithLifecycle(emptyList())
@@ -74,11 +74,25 @@ fun BuscarScreen(app: KiwuApp, alVolver: () -> Unit, alAbrirTarea: (String) -> U
                 Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = alVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.cerrar_busqueda)) }
+                IconButton(onClick = alVolver) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        stringResource(R.string.cerrar_busqueda),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
                 TextField(
                     q, { q = it }, Modifier.weight(1f).padding(end = 12.dp), singleLine = true,
-                    placeholder = { Text(stringResource(R.string.buscar_todo)) },
-                    colors = TextFieldDefaults.colors(focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
+                    placeholder = { Text(stringResource(R.string.buscar_todo), color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                    ),
                 )
             }
         },
@@ -103,7 +117,7 @@ private fun Encabezado(texto: String) =
 private fun Fila(titulo: String, etiquetas: String, esExamen: Boolean, alTocar: () -> Unit) {
     val stringExamen = stringResource(R.string.examen)
     Column(Modifier.fillMaxWidth().clickable(onClick = alTocar).padding(horizontal = 16.dp, vertical = 12.dp)) {
-        Text(titulo, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(titulo, maxLines = 2, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurface)
         val listaEtiquetas = remember(etiquetas, esExamen) {
             val list = Etiquetas.leer(etiquetas).toMutableList()
             if (esExamen && !list.any { it.equals(stringExamen, true) || it.equals("examen", true) }) {
