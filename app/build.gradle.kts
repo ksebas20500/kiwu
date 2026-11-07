@@ -31,7 +31,7 @@ android {
         applicationId = "app.kiwu.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 27
+        versionCode = 28
         versionName = "0.7.8"
         buildConfigField("String", "FIREBASE_API_KEY", "\"${propiedadesLocales.getProperty("firebase.apiKey", "")}\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${propiedadesLocales.getProperty("google.webClientId", "")}\"")
@@ -109,6 +109,7 @@ dependencies {
     implementation(libs.play.auth)
     implementation(libs.app.update)
     implementation(libs.mlkit.texto)
+    implementation("com.google.android.gms:play-services-ads:23.0.0")
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

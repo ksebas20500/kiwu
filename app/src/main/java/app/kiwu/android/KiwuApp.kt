@@ -61,6 +61,7 @@ class KiwuApp : Application() {
     override fun onCreate() {
         super.onCreate()
         Textos.actualizar(this)
+        com.google.android.gms.ads.MobileAds.initialize(this) {}
         iniciarAvisos()
         iniciarWidgets()
         iniciarObservadorCalendario()

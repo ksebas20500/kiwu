@@ -248,15 +248,18 @@ private fun Principal(
         // Las pantallas de dentro ya gestionan la barra de estado; la barra inferior gestiona la de navegación.
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-                val colores = androidx.compose.material3.NavigationBarItemDefaults.colors(
-                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                    selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
-                )
-                NavigationBarItem(colors = colores, selected = modulo == "tareas", onClick = { modulo = "tareas" }, icon = { Icon(Icons.Filled.CheckCircle, null) }, label = { Text(androidx.compose.ui.res.stringResource(R.string.tareas)) })
-                NavigationBarItem(colors = colores, selected = modulo == "notas", onClick = { modulo = "notas" }, icon = { Icon(Icons.Filled.Description, null) }, label = { Text(androidx.compose.ui.res.stringResource(R.string.notas)) })
-                NavigationBarItem(colors = colores, selected = modulo == "horario", onClick = { modulo = "horario" }, icon = { Icon(Icons.Filled.Schedule, null) }, label = { Text(androidx.compose.ui.res.stringResource(R.string.horario)) })
+            androidx.compose.foundation.layout.Column {
+                AdBanner()
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+                    val colores = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                    )
+                    NavigationBarItem(colors = colores, selected = modulo == "tareas", onClick = { modulo = "tareas" }, icon = { Icon(Icons.Filled.CheckCircle, null) }, label = { Text(androidx.compose.ui.res.stringResource(R.string.tareas)) })
+                    NavigationBarItem(colors = colores, selected = modulo == "notas", onClick = { modulo = "notas" }, icon = { Icon(Icons.Filled.Description, null) }, label = { Text(androidx.compose.ui.res.stringResource(R.string.notas)) })
+                    NavigationBarItem(colors = colores, selected = modulo == "horario", onClick = { modulo = "horario" }, icon = { Icon(Icons.Filled.Schedule, null) }, label = { Text(androidx.compose.ui.res.stringResource(R.string.horario)) })
+                }
             }
         },
     ) { relleno ->
