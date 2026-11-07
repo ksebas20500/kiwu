@@ -17,6 +17,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Kiwu">
 
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-6922015805223220~4975291708" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

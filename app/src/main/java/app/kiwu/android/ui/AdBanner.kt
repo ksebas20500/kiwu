@@ -9,7 +9,7 @@ import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 
 @Composable
-fun AdBanner(modifier: Modifier = Modifier, adUnitId: String = "ca-app-pub-6922015805223220/4342157887") {
+fun AdBanner(modifier: Modifier = Modifier, adUnitId: String = "ca-app-pub-6922015805223220/1097570531") {
     AndroidView(
         modifier = modifier.fillMaxWidth(),
         factory = { context ->
