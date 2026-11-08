@@ -1,18 +1,11 @@
 package app.kiwu.android.ui.horario
 
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import app.kiwu.android.ui.ajustes.DialogoColor
-import app.kiwu.android.domain.UrgenciaTarea
-import app.kiwu.android.domain.TareasDeClase
-import app.kiwu.android.domain.PuntoTarea
-import app.kiwu.android.domain.Deber
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.border
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -24,15 +17,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -43,22 +40,24 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ViewDay
 import androidx.compose.material.icons.filled.ViewWeek
-import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
+import app.kiwu.android.ui.diaEnFrase
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -75,56 +74,53 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.kiwu.android.R
 import app.kiwu.android.domain.Clase
+import app.kiwu.android.domain.ContadorFaltas
+import app.kiwu.android.domain.Deber
 import app.kiwu.android.domain.Horario
+import app.kiwu.android.domain.PuntoTarea
+import app.kiwu.android.domain.ReglasFaltas
 import app.kiwu.android.domain.ReglasHorario
+import app.kiwu.android.domain.TareasDeClase
+import app.kiwu.android.domain.UrgenciaTarea
 import app.kiwu.android.ui.ColorPastel
 import app.kiwu.android.ui.DialogoConfirmar
 import app.kiwu.android.ui.EstadoVacio
-import app.kiwu.android.ui.Pasteles
+import app.kiwu.android.ui.Fechas
 import app.kiwu.android.ui.SelectorHora
+import app.kiwu.android.ui.ajustes.DialogoColor
 import app.kiwu.android.ui.notas.SelectorEmoji
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.material3.AlertDialog
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.math.max
 import kotlin.math.min
-import app.kiwu.android.domain.ReglasFaltas
-import app.kiwu.android.domain.ContadorFaltas
-import app.kiwu.android.ui.diaEnFrase
-import app.kiwu.android.ui.Fechas
-import app.kiwu.android.R
-import androidx.compose.ui.res.stringResource
 
 val EmojisHorario = listOf("🎓", "💼", "🌴", "🏋️", "🎮", "🎵", "🧘", "🏠", "🚌", "🍽️", "📚", "🎨", "⚽", "🧪", "💻", "❤️", "🛒", "✈️", "🐶", "⭐")
 
-/** Qué se está editando en el formulario: una clase existente (por su grupo) o una nueva para un día. */
 private class Edicion(val grupo: String?, val dia: Int)
 
-/** Color de una clase: el mismo para todas las clases de una misma materia o grupo. */
 private fun colorDe(c: Clase): ColorPastel = ColoresClase.de(c)
 
-/** Módulo de horarios: varios horarios semanales (Universidad, Trabajo, Ocio…), vista por día o por semana. */
+/** Módulo de horarios: varios horarios semanales, vista por día o por semana. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HorarioScreen(vm: HorarioViewModel, alAbrirMenu: () -> Unit, alAbrirTarea: (String) -> Unit = {}, alAbrirLista: (String) -> Unit = {}) {
     val estado by vm.estado.collectAsStateWithLifecycle()
     val deberes by vm.deberes.collectAsStateWithLifecycle()
-    // Clase cuya hoja de tareas está abierta (se guarda su id: si la clase se edita o se borra, la hoja se actualiza o se cierra).
     var hojaId by rememberSaveable { mutableStateOf<String?>(null) }
     val hoy = remember(estado.ahora) { ReglasHorario.diaDe(LocalDate.now(ZoneId.systemDefault())) }
     var diaSel by rememberSaveable { mutableIntStateOf(hoy) }
-    // null = automática: semana en pantallas anchas, un día en el teléfono.
     var vistaElegida by rememberSaveable { mutableStateOf<String?>(null) }
     val ancha = LocalConfiguration.current.screenWidthDp >= 600
     val vista = vistaElegida ?: if (ancha) "semana" else "dia"
@@ -189,7 +185,6 @@ fun HorarioScreen(vm: HorarioViewModel, alAbrirMenu: () -> Unit, alAbrirTarea: (
             }
             TarjetaAhora(estado)
             AvisoFaltas(estado.enRiesgo) { hojaId = it.id }
-            // Al pasar de día a semana el contenido entra desde la derecha; al volver, desde la izquierda.
             androidx.compose.animation.AnimatedContent(
                 targetState = vista,
                 transitionSpec = {
@@ -201,7 +196,6 @@ fun HorarioScreen(vm: HorarioViewModel, alAbrirMenu: () -> Unit, alAbrirTarea: (
                 },
                 label = "vistaHorario",
             ) { v ->
-                // Cada vista tiene varias piezas seguidas (pestañas, título, lista): sin una columna se apilarían unas sobre otras.
                 Column(Modifier.fillMaxSize()) {
                     if (v == "semana") {
                         VistaSemana(estado, hoy, deberes, alAbrir = { hojaId = it.id }, alEditar = { edicion = Edicion(it.grupo, it.diaSemana) })
@@ -270,7 +264,6 @@ private fun SinHorarios(vm: HorarioViewModel, alOtro: () -> Unit) {
     }
 }
 
-/** «Ahora» y «Siguiente»: lo que toca en este momento y lo próximo. */
 @Composable
 private fun TarjetaAhora(estado: HorarioEstado) {
     val (dia, minuto) = estado.diaYMinuto()
@@ -297,20 +290,38 @@ private fun TarjetaAhora(estado: HorarioEstado) {
 
 @Composable
 private fun VistaDia(estado: HorarioEstado, hoy: Int, diaSel: Int, deberes: List<Deber>, alElegirDia: (Int) -> Unit, alAbrir: (Clase) -> Unit, alEditar: (Clase) -> Unit) {
-    TabRow(
-        selectedTabIndex = diaSel - 1,
-        containerColor = Color.Transparent, contentColor = MaterialTheme.colorScheme.onSurface,
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         for (d in 1..7) {
-            Tab(
-                selected = d == diaSel, onClick = { alElegirDia(d) },
-                text = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(Fechas.letraDia(d), fontWeight = if (d == hoy) FontWeight.ExtraBold else FontWeight.Normal)
-                        if (d == hoy) Text("•", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary)
+            val sel = d == diaSel
+            val tieneClases = remember(estado.clases, d) { ReglasHorario.deDia(estado.clases, d).isNotEmpty() }
+            Box(
+                Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(if (sel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { alElegirDia(d) },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        Fechas.letraDia(d),
+                        fontWeight = if (sel || d == hoy) FontWeight.Bold else FontWeight.Normal,
+                        color = if (sel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (tieneClases) {
+                        Text(
+                            "•",
+                            fontSize = 12.sp,
+                            lineHeight = 12.sp,
+                            color = if (sel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+                        )
                     }
-                },
-            )
+                }
+            }
         }
     }
     val delDia = remember(estado.clases, diaSel) { ReglasHorario.deDia(estado.clases, diaSel) }
@@ -342,31 +353,31 @@ private fun TarjetaClase(c: Clase, nombreHorario: String?, enCurso: Boolean, alC
         Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).combinedClickable(onClick = alClic, onLongClick = alLargo),
         shape = RoundedCornerShape(12.dp), color = color.fondo, contentColor = color.texto,
     ) {
-        Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.width(64.dp)) {
-                Text(ReglasHorario.hora(c.inicioMin), fontWeight = FontWeight.Bold)
-                Text(ReglasHorario.hora(c.finMin), fontSize = 13.sp, color = color.texto.copy(alpha = 0.75f))
+                Text(ReglasHorario.hora(c.inicioMin), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
+                Text(ReglasHorario.hora(c.finMin), fontSize = 12.sp, color = color.texto.copy(alpha = 0.7f))
             }
-            Column(Modifier.weight(1f)) {
-                Text(c.titulo, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
+                Text(c.titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 val detalle = listOfNotNull(c.aula.takeIf { it.isNotBlank() }, nombreHorario).joinToString(" · ")
-                if (detalle.isNotEmpty()) Text(detalle, fontSize = 13.sp, color = color.texto.copy(alpha = 0.8f))
-                faltas?.let { InsigniaFaltas(it, color.texto, Modifier.padding(top = 4.dp)) }
+                if (detalle.isNotBlank()) {
+                    Text(detalle, fontSize = 13.sp, color = color.texto.copy(alpha = 0.8f))
+                }
             }
+            faltas?.let { InsigniaFaltas(it, color.texto, Modifier.padding(start = 4.dp)) }
             if (puntos.isNotEmpty()) PuntosTareas(puntos, color.texto)
             if (enCurso) Text(stringResource(R.string.horario_ahora), Modifier.padding(start = 8.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
         }
     }
 }
 
-/** Color del punto de una tarea: rojo si está vencida, ámbar si vence pronto y neutro si no hay prisa. */
 private fun colorUrgencia(u: UrgenciaTarea, neutro: Color): Color = when (u) {
     UrgenciaTarea.Vencida -> Color(0xFFD32F2F)
     UrgenciaTarea.Pronto -> Color(0xFFF9A825)
     UrgenciaTarea.Normal -> neutro.copy(alpha = 0.6f)
 }
 
-/** Hasta tres puntos (uno por tarea pendiente, la más urgente primero) y «+N» si hay más. */
 @Composable
 private fun PuntosTareas(puntos: List<PuntoTarea>, neutro: Color) {
     Row(Modifier.padding(start = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -377,7 +388,6 @@ private fun PuntosTareas(puntos: List<PuntoTarea>, neutro: Color) {
     }
 }
 
-/** Vista de la semana: siete columnas con un eje de horas; las clases que coinciden se reparten el ancho. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun VistaSemana(estado: HorarioEstado, hoy: Int, deberes: List<Deber>, alAbrir: (Clase) -> Unit, alEditar: (Clase) -> Unit) {
@@ -410,7 +420,6 @@ private fun VistaSemana(estado: HorarioEstado, hoy: Int, deberes: List<Deber>, a
                     Box(Modifier.offset(y = altoHora * (h - primera)).fillMaxWidth().height(0.5.dp).background(linea))
                 }
                 val delDia = ReglasHorario.deDia(clases, d)
-                // Reparto en carriles: cada clase va al primer carril libre.
                 val finDeCarril = mutableListOf<Int>()
                 val carril = delDia.associate { c ->
                     var i = finDeCarril.indexOfFirst { it <= c.inicioMin }
@@ -426,9 +435,7 @@ private fun VistaSemana(estado: HorarioEstado, hoy: Int, deberes: List<Deber>, a
                         Modifier.offset(x = ancho * (carril.getValue(c.id)) / carriles, y = y).width(ancho / carriles).height(h).padding(1.dp)
                             .clip(RoundedCornerShape(5.dp)).background(color.fondo).combinedClickable(onClick = { alAbrir(c) }, onLongClick = { alEditar(c) }).padding(horizontal = 1.dp, vertical = 2.dp),
                     ) {
-                        // Las columnas de la semana son estrechas en el teléfono: letra pequeña para que las palabras no se partan.
                         Text(c.titulo, fontSize = 9.sp, lineHeight = 10.sp, color = color.texto, maxLines = 5, overflow = TextOverflow.Ellipsis)
-                        // Un solo punto con el número de tareas con fecha cercana (color de la más urgente).
                         val puntos = TareasDeClase.puntos(deberes, c.materiaId, estado.ahora)
                         TareasDeClase.masUrgente(puntos)?.let { u ->
                             Box(
@@ -436,7 +443,6 @@ private fun VistaSemana(estado: HorarioEstado, hoy: Int, deberes: List<Deber>, a
                                 contentAlignment = Alignment.Center,
                             ) { Text("${puntos.size}", fontSize = 8.sp, lineHeight = 8.sp, fontWeight = FontWeight.Bold, color = Color.White) }
                         }
-                        // Faltas que quedan (o las que lleva, sin máximo), abajo a la izquierda con el color del estado.
                         estado.contadores[c.grupo]?.takeIf { ReglasFaltas.seMuestra(it) }?.let { f ->
                             val fondo = colorFaltas(f.estado, color.texto.copy(alpha = 0.55f))
                             Box(Modifier.align(Alignment.BottomStart).background(fondo, RoundedCornerShape(4.dp)).padding(horizontal = 3.dp)) {
@@ -450,9 +456,6 @@ private fun VistaSemana(estado: HorarioEstado, hoy: Int, deberes: List<Deber>, a
     }
 }
 
-// --- diálogos -------------------------------------------------------------------------------------------
-
-/** Crear o editar un horario: nombre e icono. */
 @Composable
 internal fun DialogoHorario(horario: Horario?, alCerrar: () -> Unit, alConfirmar: (String, String) -> Unit) {
     var nombre by remember { mutableStateOf(horario?.nombre ?: "") }
@@ -475,8 +478,8 @@ internal fun DialogoHorario(horario: Horario?, alCerrar: () -> Unit, alConfirmar
     )
 }
 
-/** Formulario de clase a pantalla completa: materia, horario, días, horas, aula, aviso y notas. */
-@OptIn(ExperimentalLayoutApi::class)
+/** Formulario de clase a pantalla completa: autocompletado de materia, días, rango de horas, aula, aviso y faltas stepper. */
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun FormularioClase(vm: HorarioViewModel, estado: HorarioEstado, edicion: Edicion, alCerrar: () -> Unit) {
     val previas = remember(edicion) { edicion.grupo?.let { g -> estado.todas.filter { it.grupo == g } }.orEmpty() }
@@ -497,13 +500,14 @@ private fun FormularioClase(vm: HorarioViewModel, estado: HorarioEstado, edicion
     var confirmarEliminar by remember { mutableStateOf(false) }
     var menuHorario by remember { mutableStateOf(false) }
     var menuAviso by remember { mutableStateOf(false) }
+    var expandirMaterias by remember { mutableStateOf(false) }
 
     val horaValida = ReglasHorario.valida(inicio, fin)
     val choques = vm.choques(estado, edicion.grupo, dias, inicio, fin)
     val puedeGuardar = titulo.isNotBlank() && dias.isNotEmpty() && horaValida
 
     Dialog(onDismissRequest = alCerrar, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
+        Surface(Modifier.fillMaxSize().imePadding(), color = MaterialTheme.colorScheme.surface) {
             Column(Modifier.fillMaxSize()) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = alCerrar) { Icon(Icons.Filled.Close, stringResource(R.string.cerrar)) }
@@ -517,25 +521,42 @@ private fun FormularioClase(vm: HorarioViewModel, estado: HorarioEstado, edicion
                     ) { Text(stringResource(R.string.guardar)) }
                 }
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    OutlinedTextField(
-                        titulo, {
-                            titulo = it
-                            // Si el nombre coincide con una de tus listas se vincula sola; si ya no coincide, se desvincula.
-                            val coincide = estado.materias.firstOrNull { m -> m.nombre.trim().equals(it.trim(), ignoreCase = true) }
-                            if (coincide != null) materiaId = coincide.id
-                            else if (materiaId != null) materiaId = null
-                        },
-                        label = { Text(stringResource(R.string.clase_materia)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
-                    )
-                    if (estado.materias.isNotEmpty()) {
-                        Text(stringResource(R.string.clase_elige_lista), style = MaterialTheme.typography.labelMedium)
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            for (m in estado.materias.take(12)) {
-                                FilterChip(materiaId == m.id, { titulo = m.nombre; materiaId = m.id }, { Text(m.nombre, maxLines = 1) })
+                    // Campo unificado autocompletado de materia
+                    ExposedDropdownMenuBox(expanded = expandirMaterias, onExpandedChange = { expandirMaterias = it }) {
+                        OutlinedTextField(
+                            value = titulo,
+                            onValueChange = {
+                                titulo = it
+                                expandirMaterias = true
+                                val coincide = estado.materias.firstOrNull { m -> m.nombre.trim().equals(it.trim(), ignoreCase = true) }
+                                if (coincide != null) materiaId = coincide.id else if (materiaId != null) materiaId = null
+                            },
+                            label = { Text(stringResource(R.string.clase_materia)) },
+                            singleLine = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandirMaterias) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable),
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
+                        )
+                        val filtradas = remember(titulo, estado.materias) {
+                            if (titulo.isBlank()) estado.materias
+                            else estado.materias.filter { it.nombre.contains(titulo, ignoreCase = true) }
+                        }
+                        if (filtradas.isNotEmpty()) {
+                            ExposedDropdownMenu(expanded = expandirMaterias, onDismissRequest = { expandirMaterias = false }) {
+                                for (m in filtradas) {
+                                    DropdownMenuItem(
+                                        text = { Text(m.nombre) },
+                                        onClick = {
+                                            titulo = m.nombre
+                                            materiaId = m.id
+                                            expandirMaterias = false
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
+
                     if (estado.horarios.size > 1) {
                         Text(stringResource(R.string.horario), style = MaterialTheme.typography.labelMedium)
                         Box {
@@ -546,32 +567,53 @@ private fun FormularioClase(vm: HorarioViewModel, estado: HorarioEstado, edicion
                             }
                         }
                     }
+
+                    // Botones circulares/píldoras L M X J V S D
                     Text(stringResource(R.string.clase_dias), style = MaterialTheme.typography.labelMedium)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         for (d in 1..7) {
-                            FilterChip(d in dias, { dias = if (d in dias) dias - d else dias + d }, { Text(Fechas.diaCorto(d)) })
+                            val sel = d in dias
+                            Box(
+                                Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(if (sel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                                    .clickable { dias = if (sel) dias - d else dias + d },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    Fechas.letraDia(d),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (sel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
+
+                    // Selector de horas Inicio / Fin
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedButton(onClick = { elegirHora = "inicio" }, Modifier.weight(1f)) { Text("Inicio  ${ReglasHorario.hora(inicio)}") }
                         OutlinedButton(onClick = { elegirHora = "fin" }, Modifier.weight(1f)) { Text("Fin  ${ReglasHorario.hora(fin)}") }
                     }
                     if (!horaValida) Text(stringResource(R.string.clase_hora_invalida), color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
                     if (choques.isNotEmpty()) {
-                        Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer) {
-                            Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                                Text(stringResource(R.string.clase_coincide), fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                for (c in choques.take(4)) {
-                                    val dondeEs = estado.nombres[c.horarioId]?.let { " ($it)" } ?: ""
-                                    Text("${c.titulo} · ${Fechas.diaCorto(c.diaSemana)} ${ReglasHorario.rango(c)}$dondeEs", fontSize = 13.sp)
-                                }
-                                if (choques.size > 4) Text(stringResource(R.string.clase_y_mas, choques.size - 4), fontSize = 13.sp)
-                            }
-                        }
+                        val c = choques.first()
+                        val dondeEs = estado.nombres[c.horarioId]?.let { " ($it)" } ?: ""
+                        Text(
+                            "⚠️ Cruce con ${c.titulo} (${Fechas.diaCorto(c.diaSemana)} ${ReglasHorario.rango(c)}$dondeEs)",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
                     }
+
                     OutlinedTextField(aula, { aula = it }, label = { Text(stringResource(R.string.clase_aula)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+
                     Text(stringResource(R.string.clase_color), style = MaterialTheme.typography.labelMedium)
                     SelectorColorClase(color, alElegir = { color = it }, alOtro = { otroColor = true })
+
                     Text(stringResource(R.string.clase_aviso), style = MaterialTheme.typography.labelMedium)
                     Box {
                         OutlinedButton(onClick = { menuAviso = true }) { Text(aviso?.let { textoAviso(it) } ?: stringResource(R.string.clase_sin_aviso)) }
@@ -580,16 +622,42 @@ private fun FormularioClase(vm: HorarioViewModel, estado: HorarioEstado, edicion
                             for (m in ReglasHorario.avisos) DropdownMenuItem(text = { Text(textoAviso(m)) }, onClick = { aviso = m; menuAviso = false })
                         }
                     }
-                    OutlinedTextField(
-                        maxFaltas, { t -> maxFaltas = t.filter { it.isDigit() }.take(3) }, label = { Text(stringResource(R.string.clase_max_faltas)) },
-                        supportingText = { Text(stringResource(R.string.clase_max_faltas_ayuda)) },
-                        singleLine = true, modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+
+                    // Stepper para Máximo de faltas [-] N [+]
+                    Text("Máximo de faltas", style = MaterialTheme.typography.labelMedium)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        val valorActual = maxFaltas.toIntOrNull() ?: 0
+                        OutlinedButton(
+                            onClick = {
+                                val nuevo = max(0, valorActual - 1)
+                                maxFaltas = if (nuevo == 0) "" else nuevo.toString()
+                            },
+                            enabled = valorActual > 0
+                        ) { Text("–", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+
+                        Text(
+                            if (valorActual == 0) "Sin límite" else "$valorActual faltas",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+
+                        OutlinedButton(
+                            onClick = {
+                                val nuevo = valorActual + 1
+                                maxFaltas = nuevo.toString()
+                            }
+                        ) { Text("+", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+                    }
+                    Text(
+                        "Límite de inasistencias permitidas en el semestre/periodo",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    OutlinedTextField(
-                        notas, { notas = it }, label = { Text(stringResource(R.string.clase_notas)) }, minLines = 2, modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                    )
+
                     if (edicion.grupo != null) {
                         TextButton(onClick = { confirmarEliminar = true }) { Text(stringResource(R.string.clase_eliminar), color = MaterialTheme.colorScheme.error) }
                     }

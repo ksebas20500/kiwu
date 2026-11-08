@@ -1,24 +1,24 @@
 package app.kiwu.android.ui.horario
 
-import app.kiwu.android.ui.casillaDe
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -33,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -43,26 +44,30 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.kiwu.android.R
 import app.kiwu.android.domain.Clase
 import app.kiwu.android.domain.Deber
+import app.kiwu.android.domain.EstadoFaltas
+import app.kiwu.android.domain.ReglasFaltas
 import app.kiwu.android.domain.ReglasHorario
 import app.kiwu.android.domain.SeccionTarea
 import app.kiwu.android.domain.TareasDeClase
 import app.kiwu.android.ui.DialogoConfirmar
 import app.kiwu.android.ui.Fechas
+import app.kiwu.android.ui.casillaDe
 import app.kiwu.android.ui.fechaCorta
 import app.kiwu.android.ui.tareas.CampoNuevaTarea
 import java.time.LocalDate
-import app.kiwu.android.R
-import androidx.compose.ui.res.stringResource
 
 /**
- * Hoja de tareas de una clase: se abre al tocarla en el horario. Muestra las tareas de la lista vinculada (pendientes y hechas),
- * deja añadir una y completarlas; editar la clase está en el menú de tres puntitos.
+ * Hoja de tareas de una clase: se abre al tocarla en el horario. Muestra widget de faltas,
+ * tareas de la lista vinculada (pendientes y hechas) y enlace a la materia completa.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,7 +94,6 @@ internal fun HojaTareasClase(
     var menu by remember { mutableStateOf(false) }
     var elegirLista by remember { mutableStateOf(false) }
     var confirmarEliminar by remember { mutableStateOf(false) }
-    // Qué se ve debajo de la cabecera: las tareas pendientes, las hechas o las faltas.
     var vista by remember { mutableStateOf(VistaHoja.Pendientes) }
     val contador = estado.contadores[clase.grupo]
 
@@ -116,9 +120,54 @@ internal fun HojaTareasClase(
                     }
                 }
             }
-            Spacer(Modifier.height(8.dp))
 
-            // Pestañas: Pendientes y Hechas (si hay lista) y siempre Faltas.
+            // Widget destacado de Control de Faltas
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    val c = contador ?: ReglasFaltas.contador(estado.faltasDe(clase.grupo), ReglasFaltas.maximo(estado.todas.filter { it.grupo == clase.grupo }))
+                    val hoy = LocalDate.now()
+                    val hoyFaltas = estado.faltasDe(clase.grupo).filter { it.dia == hoy.toEpochDay() }
+
+                    OutlinedButton(
+                        onClick = {
+                            val ultimaFalta = hoyFaltas.lastOrNull()
+                            if (ultimaFalta != null) quitarFalta(ultimaFalta.id)
+                        },
+                        enabled = hoyFaltas.isNotEmpty(),
+                        modifier = Modifier.size(38.dp),
+                        contentPadding = PaddingValues(0.dp)
+                    ) { Text("–", fontWeight = FontWeight.Bold, fontSize = 18.sp) }
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        val textoFaltas = if (c.maximo != null) "${c.cuentan} de ${c.maximo} faltas registradas" else "${c.cuentan} faltas registradas"
+                        Text(textoFaltas, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        val subtext = if (c.maximo != null) {
+                            if (c.estado == EstadoFaltas.Superado) "⚠️ Límite de faltas superado"
+                            else "Quedan ${c.quedan ?: 0} inasistencias permitidas"
+                        } else "Sin límite de faltas configurado"
+                        Text(subtext, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+
+                    Button(
+                        onClick = { marcarFalta(hoy) },
+                        modifier = Modifier.size(38.dp),
+                        contentPadding = PaddingValues(0.dp)
+                    ) { Text("+", fontWeight = FontWeight.Bold, fontSize = 18.sp) }
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            // Pestañas: Pendientes y Hechas (si hay lista) y Faltas detalhado.
             val pendientes = materia?.let { TareasDeClase.pendientes(deberes, it.id) }.orEmpty()
             val hechas = materia?.let { TareasDeClase.hechas(deberes, it.id) }.orEmpty()
             Row(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -145,7 +194,7 @@ internal fun HojaTareasClase(
                     if (estado.materias.isNotEmpty()) OutlinedButton(onClick = { elegirLista = true }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.hoja_vincular)) }
                 }
             } else {
-                Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 6.dp)) {
+                Column(Modifier.heightIn(max = 340.dp).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 6.dp)) {
                     if (vista == VistaHoja.Pendientes) {
                         if (pendientes.isEmpty()) Text(stringResource(R.string.hoja_nada_pendiente), Modifier.padding(8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         for ((seccion, filas) in TareasDeClase.agrupadas(pendientes, estado.ahora)) {
@@ -165,9 +214,11 @@ internal fun HojaTareasClase(
                     alCrear = { titulo, materiaId, fecha -> crearTarea(titulo, materiaId, fecha) },
                     marcador = stringResource(R.string.hoja_anadir_a, materia.nombre),
                 )
-                TextButton(onClick = { alAbrirLista(materia.id) }, Modifier.align(Alignment.CenterHorizontally)) {
-                    Text(stringResource(R.string.hoja_abrir_lista))
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
+                TextButton(
+                    onClick = { alAbrirLista(materia.id) },
+                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 4.dp)
+                ) {
+                    Text("Abrir lista completa de ${materia.nombre} →", fontWeight = FontWeight.Bold)
                 }
             }
             Spacer(Modifier.height(8.dp))

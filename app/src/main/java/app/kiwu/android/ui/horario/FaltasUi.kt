@@ -80,14 +80,23 @@ internal fun textoCortoFaltas(c: ContadorFaltas, r: Resources): String {
  */
 @Composable
 internal fun InsigniaFaltas(c: ContadorFaltas, @Suppress("UNUSED_PARAMETER") neutro: Color, modifier: Modifier = Modifier) {
-    val texto = when (c.estado) {
-        EstadoFaltas.Tranquilo -> Color(0xFF1B5E20)
-        EstadoFaltas.Aviso -> Color(0xFFB45309)
-        EstadoFaltas.Superado -> Color(0xFFC62828)
-        EstadoFaltas.SinLimite -> Color(0xFF424242)
+    val (fondo, textoColor) = when (c.estado) {
+        EstadoFaltas.Tranquilo -> Color(0xFFE8F5E9) to Color(0xFF1B5E20)
+        EstadoFaltas.Aviso -> Color(0xFFFEF3C7) to Color(0xFFB45309)
+        EstadoFaltas.Superado -> Color(0xFFFFEBEE) to Color(0xFFC62828)
+        EstadoFaltas.SinLimite -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
     }
-    Surface(modifier, shape = RoundedCornerShape(50), color = Color.White.copy(alpha = 0.92f), contentColor = texto) {
-        Text(textoCortoFaltas(c, LocalContext.current.resources), Modifier.padding(horizontal = 8.dp, vertical = 2.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+    val texto = if (c.maximo != null) {
+        when (c.estado) {
+            EstadoFaltas.Superado -> "⚠️ Excedido (${c.cuentan}/${c.maximo})"
+            EstadoFaltas.Aviso -> "⚠️ ${c.quedan} restantes"
+            else -> "${c.cuentan}/${c.maximo} fallas"
+        }
+    } else {
+        "${c.cuentan} fallas"
+    }
+    Surface(modifier, shape = RoundedCornerShape(50), color = fondo, contentColor = textoColor) {
+        Text(texto, Modifier.padding(horizontal = 8.dp, vertical = 2.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
 
