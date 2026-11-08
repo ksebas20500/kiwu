@@ -17,7 +17,7 @@ data class AjustesUi(
     /** sistema | claro | oscuro */
     val tema: String = "sistema",
     /** Color de la app: nombre de un acento predefinido, `sistema` (colores dinámicos) o `#RRGGBB`. */
-    val acento: String = "coral",
+    val acento: String = "morado",
     /** lista | tablero */
     val vistaTareas: String = "lista",
     /** Imagen de fondo: dirección `content://` con permiso persistente, o null. */
@@ -73,7 +73,7 @@ class AjustesStore(private val contexto: Context) {
 
     private fun leer(p: Preferences) = AjustesUi(
         tema = p[Claves.tema] ?: "sistema",
-        acento = p[Claves.acento] ?: "coral",
+        acento = p[Claves.acento] ?: "morado",
         vistaTareas = p[Claves.vista] ?: "lista",
         fondoUri = p[Claves.fondo],
         fondoVisibilidad = (p[Claves.visibilidad] ?: 0.5f).coerceIn(0f, 1f),

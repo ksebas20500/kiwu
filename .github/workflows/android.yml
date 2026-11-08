@@ -17,8 +17,10 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
-      - name: Dar permiso de ejecuciÃ³n al wrapper
+      - name: Dar permiso de ejecución al wrapper
         run: chmod +x gradlew
+      - name: Crear local.properties para CI
+        run: touch local.properties
       - name: Pruebas, lint y APK de depuraciÃ³n
         run: ./gradlew testDebugUnitTest lintDebug assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4

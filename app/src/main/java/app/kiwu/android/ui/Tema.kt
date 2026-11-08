@@ -177,7 +177,7 @@ fun esquemaDe(acento: String, oscuro: Boolean): ColorScheme {
 }
 
 @Composable
-fun KiwuTheme(oscuro: Boolean = isSystemInDarkTheme(), acento: String = Acentos.CORAL, contenido: @Composable () -> Unit) {
+fun KiwuTheme(oscuro: Boolean = isSystemInDarkTheme(), acento: String = "morado", contenido: @Composable () -> Unit) {
     val contexto = LocalContext.current
     val esquema = if (acento == Acentos.SISTEMA && Build.VERSION.SDK_INT >= 31) {
         if (oscuro) dynamicDarkColorScheme(contexto) else dynamicLightColorScheme(contexto)

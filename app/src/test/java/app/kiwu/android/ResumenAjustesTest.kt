@@ -17,7 +17,7 @@ class ResumenAjustesTest {
 
     @Test
     fun aparienciaResumeTemaColorYFondo() {
-        assertEquals("Del sistema · color coral", ResumenAjustes.apariencia(AjustesUi()))
+        assertEquals("Del sistema · color morado", ResumenAjustes.apariencia(AjustesUi()))
         assertEquals("Oscuro · color azul · con fondo", ResumenAjustes.apariencia(AjustesUi(tema = "oscuro", acento = "azul", fondoUri = "x")))
         assertEquals("Claro · color propio", ResumenAjustes.apariencia(AjustesUi(tema = "claro", acento = "#FF8800")))
         assertEquals("Claro · color del sistema", ResumenAjustes.apariencia(AjustesUi(tema = "claro", acento = "sistema")))
