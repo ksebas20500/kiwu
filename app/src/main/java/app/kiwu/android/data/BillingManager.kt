@@ -7,16 +7,29 @@ import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
+import com.android.billingclient.api.queryProductDetails
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-/** Gestiona los pagos y compras dentro de la app (Google Play Billing Library) para «Quitar anuncios». */
+/** Gestiona los pagos y compras dentro de la app (Google Play Billing Library v8) para «Quitar anuncios». */
 class BillingManager(private val context: Context) {
     private val _comprado = MutableStateFlow(false)
     val comprado: StateFlow<Boolean> = _comprado
+
+    private val alcance = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    private val pendingPurchasesParams = PendingPurchasesParams.newBuilder()
+        .enableOneTimeProducts()
+        .build()
 
     private val billingClient = BillingClient.newBuilder(context)
         .setListener { billingResult, purchases ->
@@ -26,7 +39,7 @@ class BillingManager(private val context: Context) {
                 }
             }
         }
-        .enablePendingPurchases()
+        .enablePendingPurchases(pendingPurchasesParams)
         .build()
 
     init {
@@ -83,18 +96,26 @@ class BillingManager(private val context: Context) {
                 .build()
         )
         val params = QueryProductDetailsParams.newBuilder().setProductList(productList).build()
-        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
-            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && productDetailsList.isNotEmpty()) {
-                val productDetails = productDetailsList[0]
-                val productDetailsParamsList = listOf(
-                    BillingFlowParams.ProductDetailsParams.newBuilder()
-                        .setProductDetails(productDetails)
+        alcance.launch {
+            try {
+                val result = billingClient.queryProductDetails(params)
+                val list = result.productDetailsList
+                if (result.billingResult.responseCode == BillingClient.BillingResponseCode.OK && !list.isNullOrEmpty()) {
+                    val productDetails = list[0]
+                    val productDetailsParamsList = listOf(
+                        BillingFlowParams.ProductDetailsParams.newBuilder()
+                            .setProductDetails(productDetails)
+                            .build()
+                    )
+                    val billingFlowParams = BillingFlowParams.newBuilder()
+                        .setProductDetailsParamsList(productDetailsParamsList)
                         .build()
-                )
-                val billingFlowParams = BillingFlowParams.newBuilder()
-                    .setProductDetailsParamsList(productDetailsParamsList)
-                    .build()
-                billingClient.launchBillingFlow(activity, billingFlowParams)
+                    withContext(Dispatchers.Main) {
+                        billingClient.launchBillingFlow(activity, billingFlowParams)
+                    }
+                }
+            } catch (_: Exception) {
+                // Si falla la consulta de detalles, no debe romper la app
             }
         }
     }

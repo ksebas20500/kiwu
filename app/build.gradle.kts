@@ -31,7 +31,7 @@ android {
         applicationId = "app.kiwu.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 29
+        versionCode = 30
         versionName = "0.8.0"
         buildConfigField("String", "FIREBASE_API_KEY", "\"${propiedadesLocales.getProperty("firebase.apiKey", "")}\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${propiedadesLocales.getProperty("google.webClientId", "")}\"")
@@ -110,7 +110,7 @@ dependencies {
     implementation(libs.app.update)
     implementation(libs.mlkit.texto)
     implementation("com.google.android.gms:play-services-ads:23.0.0")
-    implementation("com.android.billingclient:billing-ktx:7.1.1")
+    implementation("com.android.billingclient:billing-ktx:8.0.0")
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
