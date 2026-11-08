@@ -297,7 +297,6 @@ private fun VistaDia(estado: HorarioEstado, hoy: Int, diaSel: Int, deberes: List
     ) {
         for (d in 1..7) {
             val sel = d == diaSel
-            val tieneClases = remember(estado.clases, d) { ReglasHorario.deDia(estado.clases, d).isNotEmpty() }
             Box(
                 Modifier
                     .size(42.dp)
@@ -306,21 +305,12 @@ private fun VistaDia(estado: HorarioEstado, hoy: Int, diaSel: Int, deberes: List
                     .clickable { alElegirDia(d) },
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        Fechas.letraDia(d),
-                        fontWeight = if (sel || d == hoy) FontWeight.Bold else FontWeight.Normal,
-                        color = if (sel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    if (tieneClases) {
-                        Text(
-                            "•",
-                            fontSize = 12.sp,
-                            lineHeight = 12.sp,
-                            color = if (sel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
+                Text(
+                    Fechas.letraDia(d),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = if (sel || d == hoy) FontWeight.Bold else FontWeight.Normal,
+                    color = if (sel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
