@@ -90,21 +90,56 @@ import java.util.Base64
 import app.kiwu.android.R
 import androidx.compose.ui.res.stringResource
 
-/** Menú de un bloque: mover, duplicar, eliminar y lo propio de cada tipo. */
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+
+/** Menú de un bloque: mover, duplicar, eliminar y lo propio de cada tipo con soporte de Drag & Drop (⠿). */
 @Composable
 internal fun MenuBloque(ed: EstadoEditor, b: BloqueEd, extra: @Composable (cerrar: () -> Unit) -> Unit = {}) {
     var abierto by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { abierto = true }, modifier = Modifier.size(36.dp)) { Icon(Icons.Filled.MoreVert, stringResource(R.string.bloque_opciones)) }
-        DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
-            extra { abierto = false }
-            DropdownMenuItem(text = { Text(stringResource(R.string.mover_arriba)) }, onClick = { abierto = false; ed.mover(b, -1) })
-            DropdownMenuItem(text = { Text(stringResource(R.string.mover_abajo)) }, onClick = { abierto = false; ed.mover(b, 1) })
-            DropdownMenuItem(text = { Text(stringResource(R.string.duplicar)) }, onClick = { abierto = false; ed.duplicar(b) })
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.bloque_eliminar), color = MaterialTheme.colorScheme.error) },
-                onClick = { abierto = false; ed.eliminar(b) },
-            )
+    var dragOffset by remember { mutableStateOf(0f) }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .pointerInput(b.id) {
+                detectDragGestures(
+                    onDragStart = { dragOffset = 0f },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        dragOffset += dragAmount.y
+                        if (dragOffset < -50f) {
+                            ed.mover(b, -1)
+                            dragOffset = 0f
+                        } else if (dragOffset > 50f) {
+                            ed.mover(b, 1)
+                            dragOffset = 0f
+                        }
+                    },
+                    onDragEnd = { dragOffset = 0f },
+                    onDragCancel = { dragOffset = 0f }
+                )
+            }
+    ) {
+        // Tirador de arrastre (Drag handle ⠿)
+        Text(
+            text = "⠿",
+            fontSize = 18.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+            modifier = Modifier.padding(horizontal = 4.dp)
+        )
+        Box {
+            IconButton(onClick = { abierto = true }, modifier = Modifier.size(36.dp)) { Icon(Icons.Filled.MoreVert, stringResource(R.string.bloque_opciones)) }
+            DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
+                extra { abierto = false }
+                DropdownMenuItem(text = { Text(stringResource(R.string.mover_arriba)) }, onClick = { abierto = false; ed.mover(b, -1) })
+                DropdownMenuItem(text = { Text(stringResource(R.string.mover_abajo)) }, onClick = { abierto = false; ed.mover(b, 1) })
+                DropdownMenuItem(text = { Text(stringResource(R.string.duplicar)) }, onClick = { abierto = false; ed.duplicar(b) })
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.bloque_eliminar), color = MaterialTheme.colorScheme.error) },
+                    onClick = { abierto = false; ed.eliminar(b) },
+                )
+            }
         }
     }
 }
@@ -164,11 +199,12 @@ internal fun BloqueCodigoUi(ed: EstadoEditor, b: BloqueEd) {
         }
     }
     Surface(
-        Modifier.fillMaxWidth().padding(vertical = 4.dp), shape = RoundedCornerShape(10.dp),
-        color = if (oscuro) Color(0xFF1E1E1E) else Color(0xFFF5F5F5),
+        Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
     ) {
-        Column {
-            Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.padding(10.dp)) {
+            Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box {
                     TextButton(onClick = { menuLenguaje = true }) {
                         Text(if (automatico) stringResource(R.string.automatico_n, nombreLenguaje(lenguaje)) else nombreLenguaje(lenguaje), fontSize = 12.sp)

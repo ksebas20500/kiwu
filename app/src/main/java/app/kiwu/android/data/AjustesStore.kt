@@ -40,6 +40,10 @@ data class AjustesUi(
     val rachaVisible: Boolean = true,
     /** Aviso «No pierdas tu racha» a las 20:00 si hoy aún no se ha completado nada. */
     val rachaAviso: Boolean = true,
+    /** Resumen semanal: un aviso el domingo a la tarde con lo que se logró en la semana. */
+    val resumenSemanal: Boolean = true,
+    /** Aviso diario (18:00) si hay tarjetas vencidas en «Repasar hoy». */
+    val repasoAviso: Boolean = true,
     /** Si ya se vio (o se saltó) la guía de inicio. */
     val guiaVista: Boolean = false,
     /** Último día (ISO) en que se celebró la racha: la celebración sale una vez al día. */
@@ -65,6 +69,8 @@ class AjustesStore(private val contexto: Context) {
         val menuContadores = androidx.datastore.preferences.core.booleanPreferencesKey("menu_contadores")
         val rachaVisible = androidx.datastore.preferences.core.booleanPreferencesKey("racha_visible")
         val rachaAviso = androidx.datastore.preferences.core.booleanPreferencesKey("racha_aviso")
+        val resumenSemanal = androidx.datastore.preferences.core.booleanPreferencesKey("resumen_semanal")
+        val repasoAviso = androidx.datastore.preferences.core.booleanPreferencesKey("repaso_aviso")
         val guiaVista = androidx.datastore.preferences.core.booleanPreferencesKey("guia_vista")
         val rachaCelebrada = stringPreferencesKey("racha_celebrada")
         val calendarioGoogle = androidx.datastore.preferences.core.booleanPreferencesKey("calendario_google")
@@ -85,6 +91,8 @@ class AjustesStore(private val contexto: Context) {
         menuContadores = p[Claves.menuContadores] ?: true,
         rachaVisible = p[Claves.rachaVisible] ?: true,
         rachaAviso = p[Claves.rachaAviso] ?: true,
+        resumenSemanal = p[Claves.resumenSemanal] ?: true,
+        repasoAviso = p[Claves.repasoAviso] ?: true,
         guiaVista = p[Claves.guiaVista] ?: false,
         rachaCelebrada = p[Claves.rachaCelebrada],
         calendarioGoogle = p[Claves.calendarioGoogle] ?: false,
@@ -109,6 +117,8 @@ class AjustesStore(private val contexto: Context) {
             p[Claves.menuContadores] = nuevo.menuContadores
             p[Claves.rachaVisible] = nuevo.rachaVisible
             p[Claves.rachaAviso] = nuevo.rachaAviso
+            p[Claves.resumenSemanal] = nuevo.resumenSemanal
+            p[Claves.repasoAviso] = nuevo.repasoAviso
             p[Claves.guiaVista] = nuevo.guiaVista
             p[Claves.calendarioGoogle] = nuevo.calendarioGoogle
             p[Claves.tareasGoogle] = nuevo.tareasGoogle

@@ -21,6 +21,7 @@ import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.currentState
+import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
@@ -52,11 +53,12 @@ class HorarioWidget : GlanceAppWidget() {
         val clases = app.repo.clases.first()
         val deberes = app.repo.deberes.first()
         val faltas = app.repo.faltas.first()
+        val materias = app.repo.materias.first()
         val colores = coloresDelWidget(context)
         TextosWidget.de(context) // deja «Eventos» y los demás nombres fijos en el idioma de Kiwu
         provideContent {
             val config = currentState<Preferences>().configWidget()
-            val datos = DatosWidgets.horario(horarios, clases, deberes, config, System.currentTimeMillis(), faltas = faltas)
+            val datos = DatosWidgets.horario(horarios, clases, deberes, config, System.currentTimeMillis(), faltas = faltas, materias = materias)
             ContenidoHorario(datos, colores)
         }
     }
@@ -123,7 +125,14 @@ private fun TarjetaClase(clase: FilaClase, etiqueta: String, colores: ColoresWid
     Column(
         GlanceModifier.fillMaxWidth().cornerRadius(12.dp).background(colorDeClase(clase.color)).padding(horizontal = 12.dp, vertical = 9.dp),
     ) {
-        Text(etiqueta, style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Bold, color = texto))
+        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(etiqueta, style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Bold, color = texto), modifier = GlanceModifier.defaultWeight())
+            clase.faltas?.let { f ->
+                if (app.kiwu.android.domain.ReglasFaltas.seMuestra(f)) {
+                    FaltasWidget(f, colores)
+                }
+            }
+        }
         Text(
             clase.titulo,
             style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = texto),

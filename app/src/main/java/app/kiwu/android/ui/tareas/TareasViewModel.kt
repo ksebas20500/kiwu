@@ -1,6 +1,7 @@
 package app.kiwu.android.ui.tareas
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.kiwu.android.data.AjustesStore
 import app.kiwu.android.data.Repositorio
@@ -57,7 +58,7 @@ data class TareasEstado(
     val nombres: Map<String, String> get() = materias.associate { it.id to it.nombre } + (ID_EVENTOS to ListaEventos.nombre)
 }
 
-class TareasViewModel(private val repo: Repositorio, private val ajustes: AjustesStore) : ViewModel() {
+class TareasViewModel(application: Application, private val repo: Repositorio, private val ajustes: AjustesStore) : AndroidViewModel(application) {
     /** Lo que se está mirando: el elemento del menú y, dentro de una lista, la pestaña (tareas | archivos). */
     private val seleccion = MutableStateFlow<Pair<Elemento, String>>(Elemento.Hoy to "tareas")
     private val reloj = flow {
@@ -79,16 +80,42 @@ class TareasViewModel(private val repo: Repositorio, private val ajustes: Ajuste
             elemento is Elemento.DeGrupo && grupos.none { it.id == elemento.id } -> Elemento.Todos
             else -> elemento
         }
+        
+        // Cargar eventos de Google Calendar si estamos en la lista Eventos
+        val enEventos = actual is Elemento.DeMateria && actual.id == ID_EVENTOS
+        val conPermiso = app.kiwu.android.data.CalendarioTelefono.permitido(getApplication())
+        val eventosExt = if (enEventos && aj.calendarioGoogle && conPermiso) {
+            // Obtenemos los eventos de hoy y hacia el futuro como lo hace el widget
+            val hoy = java.time.Instant.ofEpochMilli(ahora).atZone(ZoneId.systemDefault()).toLocalDate()
+            val enUnMes = hoy.plusMonths(1)
+            app.kiwu.android.data.CalendarioTelefono.eventos(getApplication(), hoy, enUnMes)
+        } else emptyList()
+        // Lo mismo para Google Tasks
+        val eventosExtTasks = if (enEventos && aj.tareasGoogle) {
+            val hoy = java.time.Instant.ofEpochMilli(ahora).atZone(ZoneId.systemDefault()).toLocalDate()
+            app.kiwu.android.data.TareasGoogle.leer(getApplication()).filter { !it.dia(ZoneId.systemDefault()).isBefore(hoy) }
+        } else emptyList()
+        val todosEventosExternos = eventosExt + eventosExtTasks
+        
         // Las tareas de una carpeta son las de sus listas: se filtran y se tratan como «todas».
         val deLaCarpeta = (actual as? Elemento.DeGrupo)?.let { MenuListas.listasDe(materias, it.id) }
         val base = if (deLaCarpeta != null) deberes.filter { it.materiaId in deLaCarpeta } else deberes
         val efectivo = if (deLaCarpeta != null) Elemento.Todos else actual
         val items = listOf(Elemento.Hoy, Elemento.Proximos, Elemento.Todos) + materias.map { Elemento.DeMateria(it.id) }
         val cuentas = items.associateWith { repo.reglas.conteo(deberes, it, ahora) }
+        
+        val pendientesBase = repo.reglas.pendientes(base, efectivo, ahora)
+        val pendientesMasExt = if (enEventos && todosEventosExternos.isNotEmpty()) {
+            val deGoogle = todosEventosExternos.map { ext ->
+                Deber(id = ext.id.toString(), titulo = ext.titulo, materiaId = ID_EVENTOS, creada = 0, actualizada = 0, esExterno = true, fechaEntrega = ext.fin, repite = 0)
+            }
+            (pendientesBase + deGoogle).sortedBy { it.fechaEntrega ?: Long.MAX_VALUE }
+        } else pendientesBase
+        
         TareasEstado(
             materias = materias, deberes = deberes, elemento = actual, subvista = sub, vista = aj.vistaTareas,
             ahora = ahora,
-            pendientes = repo.reglas.pendientes(base, efectivo, ahora),
+            pendientes = pendientesMasExt,
             completados = repo.reglas.completados(base, efectivo, ahora),
             cuentas = cuentas,
             cargado = true,
@@ -127,6 +154,8 @@ class TareasViewModel(private val repo: Repositorio, private val ajustes: Ajuste
 
     fun marcar(id: String, completado: Boolean) = viewModelScope.launch { repo.marcar(id, completado) }
 
+    fun posponer(id: String) = viewModelScope.launch { repo.posponer(id) }
+
     fun mover(id: String, columna: Columna) = viewModelScope.launch { repo.mover(id, columna) }
 
     fun moverAMateria(id: String, materiaId: String) = viewModelScope.launch { repo.moverAMateria(id, materiaId) }
@@ -134,12 +163,13 @@ class TareasViewModel(private val repo: Repositorio, private val ajustes: Ajuste
     fun eliminarTarea(id: String) = viewModelScope.launch { repo.eliminarDeber(id) }
 
     /** Crea una lista (con emoji opcional), suelta o ya dentro de una carpeta, y la abre. */
-    fun crearLista(nombre: String, emoji: String? = null, grupoId: String? = null) = viewModelScope.launch {
-        val m = repo.crearMateria(nombre, emoji, grupoId)
+    fun crearLista(nombre: String, emoji: String? = null, grupoId: String? = null, color: String? = null) = viewModelScope.launch {
+        val m = repo.crearMateria(nombre, emoji, grupoId, color)
         ir(Elemento.DeMateria(m.id))
     }
 
-    fun editarLista(id: String, nombre: String, emoji: String?) = viewModelScope.launch { repo.editarMateria(id, nombre, emoji) }
+    fun editarLista(id: String, nombre: String, emoji: String?, color: String? = null) =
+        viewModelScope.launch { repo.editarMateria(id, nombre, emoji, color) }
 
     fun renombrarLista(id: String, nombre: String) = viewModelScope.launch { repo.renombrarMateria(id, nombre) }
 

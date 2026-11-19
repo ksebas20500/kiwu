@@ -1,5 +1,14 @@
 package app.kiwu.android.ui.tareas
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SwipeToDismissBoxState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.text.font.FontWeight
 import app.kiwu.android.ui.casillaDe
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Schedule
 import app.kiwu.android.ui.SelectorHora
@@ -30,10 +40,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,6 +66,9 @@ import app.kiwu.android.domain.Columna
 import app.kiwu.android.domain.Deber
 import app.kiwu.android.domain.esEvento
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.draw.clip
 import app.kiwu.android.domain.Materia
 import app.kiwu.android.domain.Reglas
 import app.kiwu.android.ui.Chip
@@ -104,8 +120,12 @@ fun TarjetaEventoAgenda(
     nombreLista: String?,
     alAbrir: () -> Unit,
 ) {
+    val esSoloLectura = d.esExterno
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp).clickable(onClick = alAbrir),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .then(if (!esSoloLectura) Modifier.clickable(onClick = alAbrir) else Modifier),
         shape = RoundedCornerShape(12.dp),
         color = AzulEvento.copy(alpha = 0.35f),
         border = androidx.compose.foundation.BorderStroke(1.dp, AzulEventoTexto.copy(alpha = 0.3f))
@@ -119,15 +139,77 @@ fun TarjetaEventoAgenda(
             }
             Column(Modifier.weight(1f).padding(start = 12.dp)) {
                 Text(d.titulo, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                if (nombreLista != null || d.fechaEntrega != null) {
-                    Row(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        if (nombreLista != null) Text(nombreLista, style = MaterialTheme.typography.bodySmall, color = AzulEventoTexto)
+                if (nombreLista != null || d.fechaEntrega != null || esSoloLectura) {
+                    Row(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (esSoloLectura) {
+                            Text(stringResource(R.string.ver_google_calendar), style = MaterialTheme.typography.labelSmall, color = AzulEventoTexto, fontWeight = FontWeight.Bold)
+                        } else if (nombreLista != null) {
+                            Text(nombreLista, style = MaterialTheme.typography.bodySmall, color = AzulEventoTexto)
+                        }
                         d.fechaEntrega?.let { Text(fechaCorta(it, System.currentTimeMillis()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     }
                 }
             }
         }
     }
+}
+
+/**
+ * Envoltorio de gestos para una fila de tarea: deslizar a la derecha completa (o reabre una completada); a la
+ * izquierda pospone la entrega a mañana (se ignora si la tarea es un evento, se repite, está completada o no
+ * se pasa `alPosponer`). La fila siempre vuelve a su sitio.
+ */
+@Composable
+fun ConGestosTarea(
+    d: Deber,
+    alMarcar: () -> Unit,
+    alPosponer: () -> Unit = {},
+    contenido: @Composable () -> Unit,
+) {
+    // El estado del swipe recuerda la primera lambda que recibe: se le dan las actuales con rememberUpdatedState.
+    val marcarAhora by rememberUpdatedState(alMarcar)
+    val posponerAhora by rememberUpdatedState(alPosponer)
+    val deslizar = rememberSwipeToDismissBoxState(
+        positionalThreshold = { tamano -> tamano * 0.4f },
+        confirmValueChange = { valor ->
+            when (valor) {
+                SwipeToDismissBoxValue.StartToEnd -> { marcarAhora(); false } // siempre vuelve a su sitio
+                SwipeToDismissBoxValue.EndToStart -> { if (d.repite == 0) posponerAhora(); false }
+                else -> false
+            }
+        },
+    )
+    val deslizable = !d.esEvento && !d.esExterno
+    // La izquierda solo se habilita si la tarea no está completada, no se repite y hay acción de posponer.
+    val puedeIzquierda = deslizable && d.repite == 0 && !d.completado && alPosponer != {}
+    SwipeToDismissBox(
+        state = deslizar,
+        enableDismissFromStartToEnd = deslizable,
+        enableDismissFromEndToStart = puedeIzquierda,
+        backgroundContent = {
+            val dir = deslizar.dismissDirection
+            // Solo pintar el fondo cuando hay un deslizamiento activo. Settled = en reposo, no mostrar nada.
+            // Además, no mostrar el fondo de izquierda si la tarea completada lo inhabilitó: evita el flash rojo.
+            if (dir == SwipeToDismissBoxValue.Settled) return@SwipeToDismissBox
+            val haciaIzquierda = dir == SwipeToDismissBoxValue.EndToStart
+            if (haciaIzquierda && !puedeIzquierda) return@SwipeToDismissBox
+            if (haciaIzquierda) {
+                Box(
+                    Modifier.fillMaxSize().padding(vertical = 2.dp).clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.tertiaryContainer),
+                    contentAlignment = Alignment.CenterEnd,
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
+                        Icon(Icons.Filled.Schedule, null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
+                        Text(stringResource(R.string.posponer_manana), color = MaterialTheme.colorScheme.onTertiaryContainer, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+            } else {
+                FondoCompletar(deslizar, d.completado)
+            }
+        },
+        content = { contenido() },
+    )
 }
 
 /** Una fila de la lista de tareas. */
@@ -140,60 +222,87 @@ fun FilaTarea(
     alAbrir: () -> Unit,
     alMarcar: (Boolean) -> Unit,
     alEliminar: () -> Unit = {},
+    /** Deslizar la fila a la izquierda: pospone la entrega a mañana (se ignora si está vacío o la tarea se repite). */
+    alPosponer: () -> Unit = {},
 ) {
     val columna = reglas.columnaDe(d)
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = alAbrir).padding(start = 4.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (d.esEvento) {
-            // Un evento no se completa: en lugar del círculo lleva el icono de calendario.
-            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                Box(Modifier.size(30.dp).background(AzulEvento, androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Filled.Event, stringResource(R.string.evento), Modifier.size(18.dp), tint = AzulEventoTexto)
+    val esSoloLectura = d.esExterno
+    
+    // Si es externo (Google Calendar), no permitimos swipe
+    val contenidoFila = @Composable {
+        androidx.compose.material3.Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 2.dp),
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+            onClick = { if (!esSoloLectura) alAbrir() },
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (d.esEvento) {
+                    // Un evento no se completa: en lugar del círculo lleva el icono de calendario.
+                    Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(30.dp).background(AzulEvento, androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Filled.Event, stringResource(R.string.evento), Modifier.size(18.dp), tint = AzulEventoTexto)
+                        }
+                    }
+                } else {
+                    Checkbox(checked = d.completado, onCheckedChange = alMarcar, modifier = Modifier.casillaDe(d.titulo))
+                }
+                Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
+                    Text(
+                        d.titulo,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        textDecoration = if (d.completado) TextDecoration.LineThrough else null,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (d.completado) 0.5f else 1f),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    val hayExtras = d.fechaEntrega != null || nombreLista != null || columna == Columna.EN_CURSO || d.repite != 0 ||
+                        d.prioridad != 0 || d.etiquetas.isNotEmpty() || d.pasos.isNotEmpty() || d.examen || esSoloLectura
+                    if (hayExtras) {
+                        Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            if (columna == Columna.EN_CURSO) {
+                                Chip(stringResource(R.string.en_curso), MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
+                            }
+                            if (d.examen && !d.completado && d.fechaEntrega != null) {
+                                val dias = app.kiwu.android.domain.Examenes.diasRestantes(d.fechaEntrega, ahora)
+                                Chip(
+                                    when {
+                                        dias < 0 -> stringResource(R.string.examen)
+                                        dias == 0L -> stringResource(R.string.examen_hoy)
+                                        dias == 1L -> stringResource(R.string.examen_manana)
+                                        else -> stringResource(R.string.examen_dias, dias.toInt())
+                                    },
+                                    fondo = MaterialTheme.colorScheme.tertiaryContainer, color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                )
+                            } else if (d.examen) Chip(stringResource(R.string.examen))
+                            if (d.prioridad != 0) colorPrioridad(d.prioridad).let { Chip(textoPrioridad(d.prioridad), fondo = it.copy(alpha = 0.12f), color = it) }
+                            app.kiwu.android.domain.Pasos.progreso(d.pasos)?.let { Chip("☑ $it") }
+                            for (e in app.kiwu.android.domain.Etiquetas.leer(d.etiquetas).take(2)) Chip("#$e")
+                            if (d.repite != 0) Chip("↻ " + textoRepeticion(d.repite))
+                            ChipFecha(d, ahora, reglas)
+                            if (nombreLista != null) {
+                                Chip(nombreLista, fondo = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f), color = MaterialTheme.colorScheme.onSecondaryContainer)
+                            }
+                            if (esSoloLectura) {
+                                Chip("Google", fondo = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f), color = MaterialTheme.colorScheme.onTertiaryContainer)
+                            }
+                        }
+                    }
                 }
             }
-        } else {
-            Checkbox(checked = d.completado, onCheckedChange = alMarcar, modifier = Modifier.casillaDe(d.titulo))
         }
-        Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
-            Text(
-                d.titulo,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                textDecoration = if (d.completado) TextDecoration.LineThrough else null,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (d.completado) 0.5f else 1f),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            val hayExtras = d.fechaEntrega != null || nombreLista != null || columna == Columna.EN_CURSO || d.repite != 0 ||
-                d.prioridad != 0 || d.etiquetas.isNotEmpty() || d.pasos.isNotEmpty() || d.examen
-            if (hayExtras) {
-                Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    if (columna == Columna.EN_CURSO) {
-                        Chip(stringResource(R.string.en_curso), MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
-                    }
-                    if (d.examen && !d.completado && d.fechaEntrega != null) {
-                        val dias = app.kiwu.android.domain.Examenes.diasRestantes(d.fechaEntrega, ahora)
-                        Chip(
-                            when {
-                                dias < 0 -> stringResource(R.string.examen)
-                                dias == 0L -> stringResource(R.string.examen_hoy)
-                                dias == 1L -> stringResource(R.string.examen_manana)
-                                else -> stringResource(R.string.examen_dias, dias.toInt())
-                            },
-                            fondo = MaterialTheme.colorScheme.tertiaryContainer, color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        )
-                    } else if (d.examen) Chip(stringResource(R.string.examen))
-                    if (d.prioridad != 0) colorPrioridad(d.prioridad).let { Chip(textoPrioridad(d.prioridad), fondo = it.copy(alpha = 0.12f), color = it) }
-                    app.kiwu.android.domain.Pasos.progreso(d.pasos)?.let { Chip("☑ $it") }
-                    for (e in app.kiwu.android.domain.Etiquetas.leer(d.etiquetas).take(2)) Chip("#$e")
-                    if (d.repite != 0) Chip("↻ " + textoRepeticion(d.repite))
-                    ChipFecha(d, ahora, reglas)
-                    if (nombreLista != null) {
-                        Chip(nombreLista, fondo = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f), color = MaterialTheme.colorScheme.onSecondaryContainer)
-                    }
-                }
-            }
+    }
+    
+    if (esSoloLectura) {
+        contenidoFila()
+    } else {
+        ConGestosTarea(d, alMarcar = { alMarcar(!d.completado) }, alPosponer = alPosponer) {
+            contenidoFila()
         }
     }
 }
@@ -292,5 +401,76 @@ fun CampoNuevaTarea(
     if (selector) {
         if (diaFijo != null) SelectorHora(hora?.first ?: 18, hora?.second ?: 0, alCerrar = { selector = false }) { h, m -> hora = h to m }
         else SelectorFechaHora(fecha, alCerrar = { selector = false }, alElegir = { fecha = it })
+    }
+}
+
+/**
+ * Fondo del swipe derecha: el color va de `primaryContainer` suave a `primary` pleno conforme aumenta el
+ * progreso del arrastre. Al superar el umbral, el ícono hace un rebote con spring y crece para confirmar
+ * que la acción se ejecutará. El texto cambia de color junto al fondo para mantener el contraste.
+ * Colores del tema: legible en modo claro y oscuro.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FondoCompletar(deslizar: SwipeToDismissBoxState, completado: Boolean) {
+    val superaUmbral = deslizar.targetValue == SwipeToDismissBoxValue.StartToEnd
+
+    // Escala del ícono: rebote al superar el umbral, retorno suave si el usuario retrocede.
+    val escalaIcono by animateFloatAsState(
+        targetValue = if (superaUmbral) 1.4f else 1f,
+        animationSpec = if (superaUmbral)
+            spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+        else
+            tween(180),
+        label = "escala_icono",
+    )
+
+    // Progreso del arrastre (0..1): anima el color de fondo entre tenue y pleno.
+    val progreso = try {
+        (deslizar.requireOffset() / 1f).coerceIn(0f, 1f)
+    } catch (_: Exception) { 0f }
+    // Interpolar entre primaryContainer (inicio) y primary (superado el umbral).
+    val colorFondo = MaterialTheme.colorScheme.primaryContainer
+    val colorFondoFull = MaterialTheme.colorScheme.primary
+    val colorTexto = MaterialTheme.colorScheme.onPrimaryContainer
+    val colorTextoFull = MaterialTheme.colorScheme.onPrimary
+
+    // La mezcla se basa en si ya superó el umbral (animado) para no depender del offset raw.
+    val mezcla by animateFloatAsState(
+        targetValue = if (superaUmbral) 1f else 0f,
+        animationSpec = tween(220),
+        label = "mezcla_color",
+    )
+    val fondo = androidx.compose.ui.graphics.lerp(colorFondo, colorFondoFull, mezcla)
+    val contenido = androidx.compose.ui.graphics.lerp(colorTexto, colorTextoFull, mezcla)
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .padding(vertical = 2.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(fondo),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Row(
+            Modifier.padding(horizontal = 20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                Icons.Filled.CheckCircle,
+                contentDescription = null,
+                tint = contenido,
+                modifier = Modifier
+                    .size(28.dp)
+                    .graphicsLayer { scaleX = escalaIcono; scaleY = escalaIcono },
+            )
+            Text(
+                stringResource(if (completado) R.string.deslizar_reabrir else R.string.completar),
+                color = contenido,
+                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.labelLarge,
+            )
+        }
     }
 }

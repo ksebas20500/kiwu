@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kiwu.android.KiwuApp
 import app.kiwu.android.data.AjustesUi
+import app.kiwu.android.ui.Acentos
 import app.kiwu.android.ui.KiwuTheme
 import app.kiwu.android.ui.tareas.CampoNuevaTarea
 import kotlinx.coroutines.flow.first
@@ -50,11 +51,11 @@ class NuevaTareaActivity : ComponentActivity() {
         val ajustes = runBlocking { withTimeoutOrNull(1500) { app.ajustes.flujo.first() } } ?: AjustesUi()
         val oscuro = when (ajustes.tema) {
             "claro" -> false
-            "oscuro" -> true
+            "oscuro", Acentos.NEGRO -> true
             else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         }
         setContent {
-            KiwuTheme(oscuro, ajustes.acento) {
+            KiwuTheme(oscuro, ajustes.acento, amoled = false) {
                 val materias by app.repo.materias.collectAsStateWithLifecycle(emptyList())
                 Box(
                     Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f))

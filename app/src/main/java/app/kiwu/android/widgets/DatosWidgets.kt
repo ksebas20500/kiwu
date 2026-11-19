@@ -191,6 +191,7 @@ object DatosWidgets {
         ahora: Long,
         zona: ZoneId = ZoneId.systemDefault(),
         faltas: List<Falta> = emptyList(),
+        materias: List<Materia> = emptyList(),
     ): DatosHorario {
         val elegido = config?.takeIf { it.startsWith(ConfigWidget.HORARIO) }
             ?.removePrefix(ConfigWidget.HORARIO)
@@ -210,7 +211,7 @@ object DatosWidgets {
             diaSemana = c.diaSemana,
             inicioMin = c.inicioMin,
             finMin = c.finMin,
-            color = ColoresClase.de(c),
+            color = ColoresClase.de(c, materias.firstOrNull { it.id == c.materiaId }?.color),
             urgencia = TareasDeClase.masUrgente(TareasDeClase.puntos(deberes, c.materiaId, ahora)),
             faltas = contadores[c.grupo]?.takeIf { ReglasFaltas.seMuestra(it) },
         )

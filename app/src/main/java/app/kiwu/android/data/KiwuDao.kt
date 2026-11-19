@@ -17,11 +17,13 @@ import app.kiwu.android.domain.Clase
 import app.kiwu.android.domain.Cuaderno
 import app.kiwu.android.domain.Deber
 import app.kiwu.android.domain.Falta
+import app.kiwu.android.domain.SesionEstudio
 import app.kiwu.android.domain.Horario
 import app.kiwu.android.domain.TareaRacha
 import app.kiwu.android.domain.GrupoLista
 import app.kiwu.android.domain.Materia
 import app.kiwu.android.domain.Pagina
+import app.kiwu.android.domain.PaginaTarjetas
 import kotlinx.coroutines.flow.Flow
 
 /** Lo necesario para listar páginas sin cargar todo su contenido. */
@@ -183,6 +185,10 @@ abstract class KiwuDao {
     )
     abstract fun paginas(): Flow<List<ResumenPagina>>
 
+    /** Solo las páginas con tarjetas guardadas y los campos que necesita la cola global de repaso. */
+    @Query("SELECT id, cuaderno_id, titulo, tarjetas FROM pagina WHERE eliminada IS NULL AND tarjetas != ''")
+    abstract fun paginasConTarjetas(): Flow<List<PaginaTarjetas>>
+
     @Query("SELECT * FROM pagina WHERE eliminada IS NULL")
     abstract suspend fun paginasAhora(): List<Pagina>
 
@@ -260,32 +266,48 @@ abstract class KiwuDao {
 
     // --- faltas de clase --------------------------------------------------------------------------
 
-    @Query("SELECT * FROM falta ORDER BY dia DESC, creada DESC")
+    @Query("SELECT * FROM falta WHERE eliminada IS NULL ORDER BY dia DESC, creada DESC")
     abstract fun faltas(): Flow<List<Falta>>
 
-    @Query("SELECT * FROM falta")
+    @Query("SELECT * FROM falta WHERE eliminada IS NULL")
     abstract suspend fun faltasAhora(): List<Falta>
 
     @Upsert
     abstract suspend fun guardarFalta(f: Falta)
 
-    @Query("DELETE FROM falta WHERE id = :id")
-    abstract suspend fun quitarFalta(id: String)
+    /** El borrado es lógico: la fila se queda (con marca) para que el sync la borre en los demás dispositivos. */
+    @Query("UPDATE falta SET eliminada = :ahora, actualizada = :ahora WHERE id = :id AND eliminada IS NULL")
+    abstract suspend fun quitarFalta(id: String, ahora: Long)
 
-    @Query("UPDATE falta SET justificada = :justificada WHERE id = :id")
-    abstract suspend fun justificarFalta(id: String, justificada: Boolean)
+    @Query("UPDATE falta SET justificada = :justificada, actualizada = :ahora WHERE id = :id AND eliminada IS NULL")
+    abstract suspend fun justificarFalta(id: String, justificada: Boolean, ahora: Long)
 
-    @Query("DELETE FROM falta WHERE horario_id = :horarioId")
-    abstract suspend fun vaciarFaltas(horarioId: String)
+    @Query("UPDATE falta SET eliminada = :ahora, actualizada = :ahora WHERE horario_id = :horarioId AND eliminada IS NULL")
+    abstract suspend fun vaciarFaltas(horarioId: String, ahora: Long)
 
-    @Query("DELETE FROM falta WHERE grupo = :grupo")
-    abstract suspend fun quitarFaltasDeGrupo(grupo: String)
+    @Query("UPDATE falta SET eliminada = :ahora, actualizada = :ahora WHERE grupo = :grupo AND eliminada IS NULL")
+    abstract suspend fun quitarFaltasDeGrupo(grupo: String, ahora: Long)
 
     @Query("UPDATE clase SET max_faltas = :maximo, actualizada = :ahora WHERE grupo = :grupo AND eliminada IS NULL")
     abstract suspend fun ponerMaximoFaltas(grupo: String, maximo: Int?, ahora: Long)
 
     @Query("SELECT DISTINCT grupo FROM clase WHERE eliminada IS NULL")
     abstract suspend fun gruposDeClases(): List<String>
+
+    // --- sesiones de estudio (temporizador Pomodoro) ----------------------------------------------
+
+    @Query("SELECT * FROM sesion WHERE eliminada IS NULL ORDER BY creada")
+    abstract fun sesiones(): Flow<List<SesionEstudio>>
+
+    @Query("SELECT * FROM sesion WHERE eliminada IS NULL")
+    abstract suspend fun sesionesAhora(): List<SesionEstudio>
+
+    @Upsert
+    abstract suspend fun guardarSesiones(s: List<SesionEstudio>)
+
+    /** Las sesiones de más de 8 semanas se van con borrado lógico (el sync las quita en los demás dispositivos). */
+    @Query("UPDATE sesion SET eliminada = :ahora, actualizada = :ahora WHERE dia < :limite AND eliminada IS NULL")
+    abstract suspend fun podarSesiones(limite: Long, ahora: Long)
 
     // --- importación (no pisa lo existente ni resucita lo eliminado) ------------------------------
 
@@ -310,6 +332,9 @@ abstract class KiwuDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     abstract suspend fun insertarFaltas(filas: List<Falta>): List<Long>
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    abstract suspend fun insertarSesiones(filas: List<SesionEstudio>): List<Long>
+
     @Query("SELECT id FROM horario WHERE eliminada IS NULL")
     abstract suspend fun idsHorarios(): List<String>
 
@@ -321,8 +346,8 @@ abstract class KiwuDao {
 }
 
 @Database(
-    entities = [Materia::class, Deber::class, Cuaderno::class, Pagina::class, Horario::class, Clase::class, GrupoLista::class, Falta::class],
-    version = 9,
+    entities = [Materia::class, Deber::class, Cuaderno::class, Pagina::class, Horario::class, Clase::class, GrupoLista::class, Falta::class, SesionEstudio::class],
+    version = 13,
     exportSchema = true,
 )
 abstract class KiwuDb : RoomDatabase() {
@@ -401,9 +426,47 @@ abstract class KiwuDb : RoomDatabase() {
             }
         }
 
+        /**
+         * v9 → v10: las faltas de clase viajan en el sync. Llevan marca de tiempo (`actualizada`) y borrado lógico
+         * (`eliminada`); las que ya había cuentan su `creada` como marca (la encolada inicial la hace `SyncSql.instalar`).
+         */
+        val MIGRACION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `falta` ADD COLUMN `actualizada` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `falta` ADD COLUMN `eliminada` INTEGER")
+                db.execSQL("UPDATE `falta` SET `actualizada` = `creada`")
+            }
+        }
+
+        /**
+         * v10 → v11: las sesiones de estudio viajan en el sync y entran al respaldo (tabla `sesion`).
+         * Las que vivían en preferencias las importa la app al arrancar (no se puede leer `SharedPreferences` aquí).
+         */
+        val MIGRACION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `sesion` (`id` TEXT NOT NULL, `materia_id` TEXT, `dia` INTEGER NOT NULL, `minutos` INTEGER NOT NULL, `creada` INTEGER NOT NULL, `actualizada` INTEGER NOT NULL, `eliminada` INTEGER, PRIMARY KEY(`id`))")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_sesion_dia` ON `sesion` (`dia`)")
+            }
+        }
+
+        /** v11 → v12: color propio de cada lista (`#RRGGBB`); las existentes se quedan con el automático. */
+        val MIGRACION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `materia` ADD COLUMN `color` TEXT")
+            }
+        }
+
+        /** v12 → v13: foto de portada y color opcionales para cuadernos (`cover_image_path` y `cover_color_hex`). */
+        val MIGRACION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `cuaderno` ADD COLUMN `cover_image_path` TEXT")
+                db.execSQL("ALTER TABLE `cuaderno` ADD COLUMN `cover_color_hex` TEXT")
+            }
+        }
+
         fun obtener(contexto: Context): KiwuDb = instancia ?: synchronized(this) {
             instancia ?: Room.databaseBuilder(contexto.applicationContext, KiwuDb::class.java, "kiwu.db")
-                .addMigrations(MIGRACION_1_2, MIGRACION_2_3, MIGRACION_3_4, MIGRACION_4_5, MIGRACION_5_6, MIGRACION_6_7, MIGRACION_7_8, MIGRACION_8_9)
+                .addMigrations(MIGRACION_1_2, MIGRACION_2_3, MIGRACION_3_4, MIGRACION_4_5, MIGRACION_5_6, MIGRACION_6_7, MIGRACION_7_8, MIGRACION_8_9, MIGRACION_9_10, MIGRACION_10_11, MIGRACION_11_12, MIGRACION_12_13)
                 // Las tablas y triggers de sincronización no son entidades de Room: se instalan en cada apertura.
                 .addCallback(object : RoomDatabase.Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) = SyncSql.instalar(db)

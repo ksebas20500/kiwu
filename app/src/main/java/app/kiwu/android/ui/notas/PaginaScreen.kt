@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AlertDialog
@@ -35,15 +36,18 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kiwu.android.domain.Documento
 import app.kiwu.android.ui.Fechas
@@ -53,7 +57,18 @@ import app.kiwu.android.ui.editor.OrigenAdjuntos
 import app.kiwu.android.ui.editor.rememberEstadoEditor
 import app.kiwu.android.R
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.background
+import app.kiwu.android.KiwuApp
+import app.kiwu.android.data.AjustesUi
 import androidx.compose.runtime.LaunchedEffect
+import android.content.Context
+import android.content.ClipData
+import android.content.Intent
+import android.widget.Toast
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Una página de nota: icono, título y editor por bloques. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,6 +81,8 @@ fun PaginaScreen(vm: PaginaViewModel, adjuntos: OrigenAdjuntos, alVolver: () -> 
     var menu by remember { mutableStateOf(false) }
     var mover by remember { mutableStateOf(false) }
     var elegirIcono by remember { mutableStateOf(false) }
+    val contexto = LocalContext.current
+    val alcance = rememberCoroutineScope()
 
     DisposableEffect(vm) { onDispose { vm.alSalir() } }
 
@@ -77,8 +94,16 @@ fun PaginaScreen(vm: PaginaViewModel, adjuntos: OrigenAdjuntos, alVolver: () -> 
         if (editor.accionPendiente?.tipo == app.kiwu.android.ui.editor.ACCION_REPASAR) { editor.accionPendiente = null; irATarjetas() }
     }
 
-    Scaffold(
-        topBar = {
+    val app = contexto.applicationContext as? KiwuApp
+    val ajustes by (app?.ajustes?.flujo?.collectAsStateWithLifecycle(AjustesUi()) ?: remember { mutableStateOf(AjustesUi()) })
+
+    Box(Modifier.fillMaxSize()) {
+        if (ajustes.fondoUri != null) {
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background.copy(alpha = 0.90f)))
+        }
+
+        Scaffold(
+            topBar = {
             TopAppBar(
                 title = {},
                 navigationIcon = { IconButton(onClick = alVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.volver)) } },
@@ -93,6 +118,24 @@ fun PaginaScreen(vm: PaginaViewModel, adjuntos: OrigenAdjuntos, alVolver: () -> 
                         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.mas_opciones)) }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                             DropdownMenuItem(text = { Text(stringResource(R.string.repasar_tarjetas)) }, onClick = { menu = false; irATarjetas() })
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.compartir_pdf)) },
+                                leadingIcon = { Icon(Icons.Filled.Share, null) },
+                                onClick = {
+                                    menu = false
+                                    val nombre = titulo.ifBlank { contexto.getString(R.string.sin_titulo) }
+                                    val cuaderno = cuadernos.firstOrNull { it.id == p.cuadernoId }?.nombre
+                                    val documento = editor.documento()
+                                    alcance.launch {
+                                        runCatching {
+                                            withContext(Dispatchers.IO) {
+                                                PdfNota.generar(contexto, documento, PdfNota.Datos(nombre, cuaderno))
+                                            }
+                                        }.onSuccess { compartirPdf(contexto, it, nombre) }
+                                            .onFailure { Toast.makeText(contexto, R.string.pdf_error, Toast.LENGTH_SHORT).show() }
+                                    }
+                                },
+                            )
                             if (cuadernos.size > 1) DropdownMenuItem(text = { Text(stringResource(R.string.mover_otro_cuaderno)) }, onClick = { menu = false; mover = true })
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.nota_eliminar), color = MaterialTheme.colorScheme.error) },
@@ -152,4 +195,19 @@ fun PaginaScreen(vm: PaginaViewModel, adjuntos: OrigenAdjuntos, alVolver: () -> 
             confirmButton = {}, dismissButton = { TextButton(onClick = { mover = false }) { Text(stringResource(R.string.cancelar)) } },
         )
     }
+    }
+}
+
+/** Abre el diálogo del sistema para compartir el PDF ya generado (correo, Drive, mensajería…). */
+private fun compartirPdf(contexto: Context, archivo: File, titulo: String) {
+    val uri = FileProvider.getUriForFile(contexto, "${contexto.packageName}.archivos", archivo)
+    val enviar = Intent(Intent.ACTION_SEND).apply {
+        type = "application/pdf"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        putExtra(Intent.EXTRA_SUBJECT, titulo)
+        // Algunos clientes (Gmail, Drive) solo leen el permiso del ClipData.
+        clipData = ClipData.newRawUri(titulo, uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    contexto.startActivity(Intent.createChooser(enviar, contexto.getString(R.string.compartir_pdf)))
 }

@@ -102,6 +102,20 @@ object Recordatorios {
         return if (entrega != null && antes != null && entrega < aLas8 && antes >= inicioManana) antes else aLas8
     }
 
+    /**
+     * La nueva entrega al posponer una tarea a mañana (el gesto de deslizar la fila): misma hora de entrega,
+     * o a las 8:00 si no tenía fecha. Si la tarea ya es para el futuro, suma un día a su entrega actual.
+     */
+    fun entregaPospuesta(d: Deber, ahora: Long, zona: ZoneId = ZoneId.systemDefault()): Long {
+        val hoy = Instant.ofEpochMilli(ahora).atZone(zona).toLocalDate()
+        val entregaZDT = d.fechaEntrega?.let { Instant.ofEpochMilli(it).atZone(zona) }
+        val base = if (entregaZDT != null && entregaZDT.toLocalDate().isAfter(hoy)) entregaZDT.toLocalDate() else hoy
+        val despues = base.plusDays(1)
+        val hora = entregaZDT?.toLocalTime()
+        return hora?.let { despues.atTime(it).atZone(zona).toInstant().toEpochMilli() }
+            ?: despues.atTime(HORA_MANANA).atZone(zona).toInstant().toEpochMilli()
+    }
+
     /** Tareas cuyo aviso ya llegó y todavía no se ha notificado. */
     fun pendientesDeAviso(deberes: List<Deber>, ahora: Long, horaSinHora: Int = HORA_SIN_HORA_POR_DEFECTO, zona: ZoneId = ZoneId.systemDefault()): List<Deber> =
         deberes.filter { d ->

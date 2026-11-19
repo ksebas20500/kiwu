@@ -1,15 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Kiwu</string>
+
     <string name="widget_deberes">Tarefas</string>
     <string name="widget_deberes_descripcion">Suas tarefas pendentes, com a lista e a data. Toque no círculo para concluí-las.</string>
+
     <string name="widget_horario">Horário</string>
     <string name="widget_horario_descripcion">A aula de agora e a próxima, e as aulas de hoje com as tarefas pendentes.</string>
+
     <string name="widget_notas">Nota rápida</string>
     <string name="widget_notas_descripcion">Crie uma nota com um toque e veja as mais recentes de um caderno.</string>
     <string name="widget_calendario">Calendário</string>
     <string name="widget_calendario_descripcion">O mês com as tarefas e eventos pendentes de todas as suas listas. Toque em um dia para ver o que há e adicionar uma tarefa; toque no nome do mês para voltar a hoje.</string>
     <string name="dia_sin_pendientes">Nada pendente neste dia</string>
+
     <string name="widget_configuracion">Configurar widget do Kiwu</string>
 
     <!-- Fechas e idioma -->
@@ -155,6 +159,7 @@
     <string name="tema_sistema">Sistema</string>
     <string name="tema_claro">Claro</string>
     <string name="tema_oscuro">Escuro</string>
+    <string name="tema_negro">Preto</string>
     <string name="resumen_tema_sistema">Do sistema</string>
     <string name="resumen_color_sistema">do sistema</string>
     <string name="resumen_color_propio">personalizada</string>
@@ -213,6 +218,10 @@
     <string name="ajustes_hora_sin_hora">Hora das tarefas sem hora</string>
     <string name="ajustes_hora_sin_hora_texto">As tarefas com data mas sem hora são avisadas nesse mesmo dia a esta hora.</string>
     <string name="antes_de">%1$s antes</string>
+    <string name="ajustes_resumen">Resumo semanal</string>
+    <string name="ajustes_resumen_texto">Um aviso no domingo com o que você conseguiu na semana: tarefas, estudo e sequência.</string>
+    <string name="ajustes_aviso_repaso">Lembrete de revisão</string>
+    <string name="ajustes_aviso_repaso_texto">Todos os dias às 18:00, se tiver cartões para revisar.</string>
     <string name="ajustes_aviso_racha">Aviso da sequência</string>
     <string name="ajustes_aviso_racha_texto">Às 20:00, se ainda houver tarefas para entregar ou atrasadas hoje</string>
     <string name="ajustes_notif_on">As notificações estão ativadas.</string>
@@ -297,8 +306,653 @@
     <string name="carpeta_nueva">Nova pasta</string>
     <string name="carpeta_nombre">Nome da pasta</string>
     <string name="lista_editar">Editar lista</string>
+    <string name="lista_color">Cor</string>
     <string name="carpeta_editar">Editar pasta</string>
     <string name="quitar_anuncios">Remover anúncios</string>
     <string name="anuncios_quitados">Anúncios removidos!</string>
     <string name="quitar_anuncios_descripcion">Remover anúncios permanentemente</string>
+
+    <!-- Canales y avisos -->
+    <string name="canal_racha">Sequência</string>
+    <string name="canal_racha_desc">Avisa à tarde se sua sequência estiver prestes a ser perdida</string>
+    <string name="canal_resumen">Resumo semanal</string>
+    <string name="canal_resumen_desc">O que você conseguiu nesta semana: tarefas concluídas, estudo e sequência</string>
+    <string name="canal_repaso">Revisão diária</string>
+    <string name="canal_repaso_desc">Um aviso por dia quando há cartões para revisar</string>
+    <string name="canal_tareas">Lembretes de tarefas</string>
+    <string name="canal_tareas_desc">Avisos antes da data de entrega de suas tarefas</string>
+    <string name="canal_horario">Avisos do horário</string>
+    <string name="canal_horario_desc">Avisos antes do início das suas aulas e atividades</string>
+    <string name="completar">Concluir</string>
+    <string name="posponer_1h">Adiar 1 h</string>
+    <string name="resumen_titulo">Sua semana no Kiwu</string>
+    <string name="repaso_titulo">Cartões para hoje</string>
+    <plurals name="repaso_texto">
+        <item quantity="one">Você tem %1$d cartão para revisar.</item>
+        <item quantity="many">Você tem %1$d cartões para revisar.</item>
+        <item quantity="other">Você tem %1$d cartões para revisar.</item>
+    </plurals>
+    <string name="resumen_min_estudio">%1$d min de estudo</string>
+    <string name="posponer_manana">Amanhã</string>
+    <string name="resumen_horas_estudio">%1$d h %2$d min de estudo</string>
+    <string name="resumen_sin_resumen">sem resumo semanal</string>
+    <string name="resumen_sin_repaso">sem lembrete de revisão</string>
+    <string name="deslizar_reabrir">Reabrir</string>
+    <plurals name="resumen_tareas">
+        <item quantity="one">%d tarefa concluída</item>
+        <item quantity="many">%d tarefas concluídas</item>
+        <item quantity="other">%d tarefas concluídas</item>
+    </plurals>
+    <plurals name="resumen_racha">
+        <item quantity="one">Sequência de %d dia</item>
+        <item quantity="many">Sequência de %d dias</item>
+        <item quantity="other">Sequência de %d dias</item>
+    </plurals>
+    <string name="aviso_evento_ya">Acabou de começar</string>
+    <string name="aviso_evento_hace">Começou há %1$d min</string>
+    <string name="aviso_tarea_ya">Acabou de vencer</string>
+    <string name="aviso_tarea_hace">Venceu há %1$d min</string>
+    <plurals name="aviso_evento_hace_h">
+        <item quantity="one">Começou há %1$d hora</item>
+        <item quantity="many">Começou há %1$d horas</item>
+        <item quantity="other">Começou há %1$d horas</item>
+    </plurals>
+    <plurals name="aviso_tarea_hace_h">
+        <item quantity="one">Venceu há %1$d hora</item>
+        <item quantity="many">Venceu há %1$d horas</item>
+        <item quantity="other">Venceu há %1$d horas</item>
+    </plurals>
+    <plurals name="aviso_evento_hace_d">
+        <item quantity="one">Começou há %1$d dia</item>
+        <item quantity="many">Começou há %1$d dias</item>
+        <item quantity="other">Começou há %1$d dias</item>
+    </plurals>
+    <plurals name="aviso_tarea_hace_d">
+        <item quantity="one">Venceu há %1$d dia</item>
+        <item quantity="many">Venceu há %1$d dias</item>
+        <item quantity="other">Venceu há %1$d dias</item>
+    </plurals>
+    <string name="aviso_evento_min">Começa em %1$d min</string>
+    <string name="aviso_evento_h">Começa em %1$d h</string>
+    <string name="aviso_evento_manana">Começa amanhã</string>
+    <string name="aviso_evento_dias">Começa em %1$d dias</string>
+    <string name="aviso_tarea_min">Vence em %1$d min</string>
+    <string name="aviso_tarea_hoy">Vence hoje</string>
+    <string name="aviso_tarea_h">Vence em %1$d h</string>
+    <string name="aviso_tarea_manana">Vence amanhã</string>
+    <string name="aviso_tarea_dias">Vence em %1$d dias</string>
+
+    <!-- Guía / Onboarding -->
+    <string name="guia_1_titulo">Boas-vindas ao Kiwu</string>
+    <string name="guia_1_texto">Suas tarefas, suas anotações e seu horário de aulas em um só lugar. Tudo fica salvo no seu telefone.</string>
+    <string name="guia_2_titulo">Tarefas em listas e pastas</string>
+    <string name="guia_2_texto">Crie uma lista por matéria e agrupe as listas em pastas. Abra o menu ☰ para vê-las e toque na caixa de uma tarefa para concluí-la.</string>
+    <string name="guia_3_titulo">Datas, avisos e eventos</string>
+    <string name="guia_3_texto">Defina uma data para uma tarefa e o Kiwu avisa você antes. Os eventos (aniversários, palestras) aparecem no calendário e não precisam ser concluídos.</string>
+    <string name="guia_4_titulo">Notas e horário</string>
+    <string name="guia_4_texto">Em Notas você escreve anotações com títulos, listas, código e imagens. Em Horário você adiciona suas aulas e vê as tarefas de cada uma.</string>
+    <string name="guia_5_titulo">Sua sequência</string>
+    <string name="guia_5_texto">Mantenha suas entregas em dia para acumular sequência: um dia com aula conta se você concluir ou adicionar uma tarefa, e os dias livres não a quebram. À tarde avisamos se estiver prestes a ser perdida.</string>
+    <string name="saltar">Pular</string>
+    <string name="pagina_n_de">Página %1$d de %2$d</string>
+    <string name="empezar">Começar</string>
+    <string name="siguiente">Próximo</string>
+    <string name="guia_lista">Comece aqui</string>
+    <string name="guia_tarea_1">Toque na caixa para me concluir</string>
+    <string name="guia_tarea_2">Abra-me para definir uma data, um aviso ou uma nota</string>
+    <string name="guia_tarea_3">Abra o menu ☰ e crie sua primeira lista com ＋</string>
+    <string name="guia_tarea_4">No menu, mantenha pressionada uma lista para levá-la para uma pasta</string>
+    <string name="guia_tarea_5">Adicione sua primeira aula em Horário</string>
+    <string name="anadir_hora">Adicionar hora</string>
+    <string name="aceptar">Aceitar</string>
+    <string name="hora_entrega">Horário de entrega</string>
+    <string name="sin_hora">Sem hora específica.</string>
+    <string name="atras">Voltar</string>
+    <string name="horas">Horas</string>
+    <string name="minutos">Minutos</string>
+    <string name="color_ambar">Âmbar</string>
+    <string name="color_turquesa">Turquesa</string>
+    <string name="color_indigo">Índigo</string>
+    <string name="color_claro_n">%1$s claro</string>
+    <string name="color_pastel_n">Pastel %1$d</string>
+    <string name="color_automatico">Automático (segundo a matéria)</string>
+    <string name="colores_solidos">Sólidos</string>
+    <string name="colores_claros">Claros</string>
+    <string name="colores_pasteles">Pastéis</string>
+    <string name="color_otro_mas">Outra cor…</string>
+    <string name="columna_por_hacer">A fazer</string>
+    <string name="columna_en_curso">Em andamento</string>
+    <string name="columna_hecho">Concluído</string>
+    <string name="seccion_vencidas">Atrasadas</string>
+    <string name="seccion_esta_semana">Esta semana</string>
+    <string name="seccion_proximas">Próximas</string>
+    <string name="seccion_sin_fecha">Sem data</string>
+    <plurals name="racha_dias">
+        <item quantity="one">%d dia</item>
+        <item quantity="many">%d dias</item>
+        <item quantity="other">%d dias</item>
+    </plurals>
+    <plurals name="racha_te_faltan">
+        <item quantity="one">Falta apenas %d dia!</item>
+        <item quantity="many">Faltam %d dias seguidos.</item>
+        <item quantity="other">Faltam %d dias seguidos.</item>
+    </plurals>
+    <plurals name="racha_n_dias">
+        <item quantity="one">%d dia de sequência!</item>
+        <item quantity="many">%d dias de sequência!</item>
+        <item quantity="other">%d dias de sequência!</item>
+    </plurals>
+    <plurals name="racha_manana_llegas">
+        <item quantity="one">Continue assim: amanhã você chega a %d dia.</item>
+        <item quantity="many">Continue assim: amanhã você chega a %d dias.</item>
+        <item quantity="other">Continue assim: amanhã você chega a %d dias.</item>
+    </plurals>
+
+    <!-- Widgets -->
+    <string name="deberes">Tarefas</string>
+    <string name="vencida">Atrasada</string>
+    <string name="w_crea_lista">Crie uma lista e adicione tarefas no Kiwu.</string>
+    <string name="w_sin_pendientes">Sem pendências 🎉</string>
+    <string name="w_crea_horario">Crie seu horário no Kiwu.</string>
+    <string name="w_ahora">AGORA</string>
+    <string name="w_siguiente">PRÓXIMA</string>
+    <string name="w_sin_mas_clases">Sem mais aulas próximas.</string>
+    <string name="w_clases_hoy">Aulas de hoje</string>
+    <string name="w_hoy_sin_clases">Hoje você não tem aulas 🎉</string>
+    <string name="w_nueva">+ Nova</string>
+    <string name="w_crea_cuaderno">Crie um caderno em Notas.</string>
+    <string name="w_sin_notas">Sem notas ainda. Toque em «+ Nova».</string>
+    <string name="w_todos_horarios">Todos os horários</string>
+    <string name="w_titulo_deberes">Widget de tarefas</string>
+    <string name="w_titulo_horario">Widget de horário</string>
+    <string name="w_titulo_notas">Widget de nota rápida</string>
+    <string name="w_ayuda_deberes">Escolha quais tarefas quer ver. O círculo as conclui sem abrir o Kiwu.</string>
+    <string name="w_ayuda_horario">Escolha um horário ou mostre todos juntos.</string>
+    <string name="w_ayuda_notas">Escolha o caderno onde serão criadas as novas notas.</string>
+
+    <!-- Copia y accesibilidad -->
+    <string name="copia_ilegible">Não foi possível ler o backup: %1$s</string>
+    <string name="copia_no_es_kiwu">O arquivo não é um backup do Kiwu</string>
+    <string name="copia_nueva">O backup é de uma versão mais recente do Kiwu</string>
+    <string name="elegido_n">%1$s (escolhido)</string>
+    <string name="racha_dia_titulo">Dia de sequência</string>
+    <string name="racha_dias_titulo">Dias de sequência</string>
+    <string name="ver_por_dia">Ver por dia</string>
+    <string name="ver_semana">Ver a semana</string>
+    <string name="cuenta_sin_cuenta">Sem conta</string>
+    <string name="cuenta_texto">Faça login para ver as mesmas tarefas, notas e horários no seu celular e tablet. Apenas o texto é sincronizado: imagens e arquivos permanecem no dispositivo. Sem conta, o Kiwu funciona igual.</string>
+    <string name="cuenta_correo">E-mail</string>
+    <string name="cuenta_clave">Senha</string>
+    <string name="cuenta_entrar">Entrar</string>
+    <string name="cuenta_crear">Criar conta (mínimo de 6 caracteres)</string>
+    <string name="cuenta_olvide">Esqueci minha senha</string>
+    <string name="cuenta_recuperar_enviado">Enviamos um e-mail para redefinir a senha.</string>
+    <string name="cuenta_sincronizando">Sincronizando…</string>
+    <string name="cuenta_sincronizado">Sincronizado %1$s</string>
+    <string name="cuenta_sin_sincronizar">Ainda não sincronizado</string>
+    <string name="cuenta_limite">Limite diário do servidor. O Kiwu continua funcionando e tentará novamente mais tarde.</string>
+    <string name="cuenta_pendientes">Alterações para enviar: %1$d</string>
+    <string name="cuenta_sincronizar_ahora">Sincronizar agora</string>
+    <string name="cuenta_salir">Sair</string>
+    <string name="cuenta_salir_nota">Sair não apaga nada deste dispositivo.</string>
+    <string name="cuenta_borrar">Excluir conta e dados da nuvem</string>
+    <string name="cuenta_borrar_texto">Sua conta e tudo salvo na nuvem serão excluídos. Os dados neste dispositivo permanecem. Não pode ser desfeito.</string>
+    <string name="cuenta_borrar_confirmar">Excluir</string>
+    <string name="cuenta_no_disponible">A conta não está disponível nesta versão.</string>
+    <string name="cuenta_err_existe">Já existe uma conta com este e-mail.</string>
+    <string name="cuenta_err_credenciales">E-mail ou senha incorretos.</string>
+    <string name="cuenta_err_clave_debil">A senha é muito fraca (mínimo de 6 caracteres).</string>
+    <string name="cuenta_err_correo">O e-mail não é válido.</string>
+    <string name="cuenta_err_muchos">Muitas tentativas. Aguarde um momento.</string>
+    <string name="cuenta_err_red">Sem conexão com o servidor.</string>
+    <string name="cuenta_err_generico">Não foi possível concluir a ação.</string>
+    <string name="cuenta_google">Continuar com o Google</string>
+    <string name="cuenta_err_cancelado">Você cancelou o login com o Google.</string>
+    <string name="cuenta_err_google">Não foi possível fazer login com o Google.</string>
+    <string name="drive_texto">Você também pode salvar o backup no seu Google Drive: um arquivo fica em «Meu Drive» e é sobrescrito a cada salvamento. O Kiwu só vê esse arquivo, nada mais do seu Drive. As imagens das notas estão incluídas.</string>
+    <string name="drive_guardar">Salvar no Drive</string>
+    <string name="drive_restaurar">Restaurar do Drive</string>
+    <string name="drive_subida_ok">Backup salvo no seu Google Drive.</string>
+    <string name="drive_sin_copia">Nenhum backup do Kiwu foi encontrado nesse Drive.</string>
+    <string name="drive_err_permiso">O Kiwu não tem permissão para usar seu Drive.</string>
+    <string name="drive_err_api">O Google Drive não está ativado para este app (é necessário ativar a API do Drive no Google Cloud).</string>
+    <string name="drive_err_lleno">Seu Google Drive está cheio.</string>
+    <string name="ajustes_google_calendar">Google Agenda</string>
+    <string name="ajustes_google_calendar_texto">Mostra no widget de calendário os eventos do Google Agenda deste telefone (somente leitura).</string>
+    <string name="google_calendar">Google Agenda</string>
+    <string name="restaurar">Restaurar</string>
+    <string name="el_lunes">Na segunda-feira</string>
+    <string name="buscar_todo">Buscar em tarefas e notas</string>
+    <string name="ajustes_google_tareas">Google Tarefas</string>
+    <string name="ajustes_google_tareas_texto">Mostra no widget as tarefas com data do Google Tarefas (somente leitura). Solicita permissão da sua conta do Google.</string>
+    <string name="google_tareas">Google Tarefas</string>
+    <string name="google_tareas_error">Não foi possível ler as tarefas do Google. Verifique a conexão e a permissão.</string>
+    <string name="no_se_repite">Não se repete</string>
+    <string name="todos_los_dias">Todos os dias</string>
+    <string name="lunes_a_viernes">De segunda a sexta</string>
+    <string name="fines_de_semana">Finais de semana</string>
+    <string name="se_repite">Repete-se</string>
+    <string name="sin_prioridad">Prioridade</string>
+    <string name="paso_anadir">Adicionar passo</string>
+    <string name="paso_eliminar">Remover passo</string>
+
+    <!-- Temporizador y Estudio -->
+    <string name="temporizador">Temporizador</string>
+    <string name="temporizador_parar">Parar</string>
+    <string name="temporizador_ayuda">Escolha quanto tempo quer estudar. Avisaremos quando terminar, mesmo que feche o app.</string>
+    <string name="temporizador_listo">Tempo!</string>
+    <string name="temporizador_listo_texto">Seu temporizador de %1$d min terminou.</string>
+    <string name="canal_temporizador">Temporizador de estudo</string>
+    <string name="canal_curso">Temporizador em andamento</string>
+    <string name="temporizador_curso">Estudando %1$d min</string>
+    <string name="temporizador_pausar">Pausar</string>
+    <string name="temporizador_reanudar">Retomar</string>
+    <string name="temporizador_descanso">Pausa de 5 min</string>
+    <string name="temporizador_descanso_curso">Pausa de %1$d min</string>
+    <string name="temporizador_descanso_listo">Sua pausa terminou</string>
+    <string name="temporizador_descanso_listo_texto">Continue estudando quando quiser.</string>
+    <string name="temporizador_no_molestar">Não perturbe enquanto estuda</string>
+    <string name="temporizador_no_molestar_ayuda">Silencia o telefone ao iniciar a contagem regressiva. Na primeira vez, envia para as Configurações.</string>
+    <string name="temporizador_color">Cor do número</string>
+    <string name="temporizador_auto">Auto</string>
+    <string name="temporizador_lista">De qual lista você está estudando?</string>
+    <string name="estudio_semana">Estudado esta semana</string>
+    <string name="estudio_sin_lista">Sem lista</string>
+    <string name="duracion_h_min">%1$d h %2$d min</string>
+
+    <!-- Calificaciones y Notas -->
+    <string name="calificaciones">Notas</string>
+    <string name="promedio_n">Média: %1$s</string>
+    <string name="sin_calificaciones">Ainda não há notas. Adicione a primeira abaixo.</string>
+    <string name="calificacion_quitar">Remover nota</string>
+    <string name="nota">Nota</string>
+    <string name="peso">Peso (opcional)</string>
+    <string name="cuanto_necesito">Quanto preciso?</string>
+    <string name="meta_promedio">Média desejada</string>
+    <string name="peso_que_falta">Peso do que falta</string>
+    <string name="necesitas_n">Você precisa de %1$s no que falta</string>
+    <string name="necesitas_nada">Você já conseguiu, mesmo tirando 0</string>
+    <string name="nota_minima_aprobar">Nota mínima para aprovação</string>
+    <string name="nota_acumulada">Nota acumulada: %1$.2f</string>
+    <string name="evaluado_porcentaje">Avaliado: %1$.0f%% de 100%%</string>
+    <string name="promedio_evaluado">Média do avaliado: %1$.2f</string>
+    <string name="tag_parcial">Parcial</string>
+    <string name="tag_quizzes_talleres">Quizzes e trabalhos</string>
+    <string name="ojo_suma_ponderaciones">Atenção! A soma das ponderações (%1$.0f%%) é diferente de 100%%</string>
+    <string name="ojo_suma_ponderaciones_supera">Atenção! A soma das ponderações (%1$.0f%%) ultrapassa 100%%</string>
+    <string name="necesitaras_n_para_aprobar">Você precisará de um %1$.2f nos %2$.0f%% restantes para aprovar o curso com %3$.1f.</string>
+    <string name="desglose_ejemplo">Exemplo para os %1$.0f%% restantes: tirar no mínimo %2$.2f tanto na Parcial (20%%) quanto em Quizzes e Trabalhos (10%%).</string>
+    <string name="ya_aprobaste">Você já foi aprovado! Seu acumulado (%1$.2f) atinge a nota mínima de %2$.1f.</string>
+    <string name="ponderaciones_iguales">Ponderações iguais</string>
+    <string name="agregar_nota">Adicionar nota</string>
+    <string name="porcentaje_simbolo">%%</string>
+    <string name="aporte_nota_final">Contribuição para a nota final</string>
+    <string name="promedio_calificado">Média das avaliadas</string>
+    <string name="evaluado_formato">%1$.0f%% Avaliado</string>
+    <string name="restante_formato">%1$.0f%% Restante</string>
+    <string name="materia_aprobada_garantizada">Matéria aprovada! Você já garantiu %1$.1f</string>
+    <string name="meta_inalcanzable">Meta inatingível com nota mínima de %1$.1f</string>
+    <string name="calificaciones_registradas">NOTAS REGISTRADAS (%1$d)</string>
+    <string name="sin_notas_intro">Você ainda não registrou notas. Toque no botão \"+\" para adicionar a primeira e calcular sua projeção.</string>
+    <string name="nueva_calificacion">Nova Nota</string>
+    <string name="editar_calificacion">Editar Nota</string>
+    <string name="guardar_calificacion">Salvar nota</string>
+    <string name="configuracion_calificaciones">Configuração de Notas</string>
+    <string name="ajustes_guardar">Salvar configurações</string>
+    <string name="dejar_vacio_peso">Deixar vazio se todas tiverem o mesmo peso</string>
+    <string name="nota_ayuda">O que você tirou, por exemplo 4.5</string>
+    <string name="peso_ayuda">Quanto vale em %% (por exemplo 20). Vazio = todas valem igual</string>
+
+    <!-- Tarjetas de Repaso -->
+    <string name="tarjetas">Cartões de revisão</string>
+    <string name="repasar_tarjetas">Cartões de revisão</string>
+    <string name="tarjetas_ayuda">Escreva linhas na nota como «pergunta :: resposta» e elas se convertem em cartões aqui.</string>
+    <string name="tarjetas_quedan">Restam %1$d</string>
+    <string name="tarjetas_terminado">Pronto! Você revisou %1$d cartões.</string>
+    <string name="tarjeta_ver">Ver resposta</string>
+    <string name="tarjeta_repasar">Revisar novamente</string>
+    <string name="tarjeta_sabida">Eu sei</string>
+    <string name="repetir">Repetir</string>
+    <string name="etiqueta">Etiqueta</string>
+    <string name="etiqueta_nueva">Nova etiqueta</string>
+    <string name="etiqueta_ejemplo">Por exemplo: exame</string>
+    <string name="paso_ejemplo">Escreva o passo e pressione Enter</string>
+    <string name="pregunta">Pergunta</string>
+    <string name="respuesta">Resposta</string>
+    <string name="tarjeta_anadir">Adicionar cartão</string>
+    <string name="tarjeta_quitar">Remover cartão</string>
+    <string name="editar_tarjeta">Editar cartão</string>
+    <string name="tarjetas_empezar">Iniciar sessão (%1$d cartões)</string>
+    <string name="tarjetas_hoy">Iniciar sessão (%1$d cartões hoje)</string>
+    <string name="tarjetas_al_dia">Tudo em dia! Os cartões voltam quando chegar a sua hora.</string>
+    <string name="tarjetas_intro">Cada cartão tem uma pergunta e sua resposta. Adicione quantos quiser e toque em «Iniciar sessão».</string>
+    <string name="tarjetas_volver">Voltar aos meus cartões</string>
+    <string name="bloque_tarjeta">Cartão de revisão</string>
+    <string name="slash_repasar">Revisar cartões</string>
+    <string name="slash_texto_foto">Texto da foto</string>
+    <string name="texto_foto_error">Não foi possível ler a foto. Verifique a conexão e tente novamente.</string>
+    <string name="texto_foto_nada">Nenhum texto encontrado na foto.</string>
+    <string name="repaso_de">Revisar: %1$s</string>
+    <plurals name="plan_repaso">
+        <item quantity="one">Criar plano de revisão (%1$d sessão)</item>
+        <item quantity="many">Criar plano de revisão (%1$d sessões)</item>
+        <item quantity="other">Criar plano de revisão (%1$d sessões)</item>
+    </plurals>
+    <string name="casilla_de">Concluir %1$s</string>
+    <string name="tarjeta_en_apunte">Na anotação</string>
+    <string name="tarjetas_generar">Gerar a partir da anotação</string>
+    <string name="tarjetas_generar_nada">Não encontrei cartões na anotação. Tente usar títulos com explicação abaixo, perguntas terminadas em «?» seguidas da resposta, linhas «Termo: definição» ou palavras em negrito.</string>
+    <plurals name="tarjetas_propuestas">
+        <item quantity="one">%1$d cartão proposto. Remova se não quiser.</item>
+        <item quantity="many">%1$d cartões propostos. Remova os que não quiser.</item>
+        <item quantity="other">%1$d cartões propostos. Remova os que não quiser.</item>
+    </plurals>
+    <string name="tarjetas_anadir_n">Adicionar (%1$d)</string>
+    <string name="tarjetas_fecha_examen">Data do exame</string>
+    <string name="tarjetas_poner_fecha">Definir data</string>
+    <string name="repaso_hoy">Revisar hoje</string>
+    <string name="repaso_hoy_intro">Todos os cartões das suas notas que já podem ser revisados. Os de matérias com prova em 7, 3 ou 1 dias vêm primeiro.</string>
+    <string name="repaso_examen_chip">Exame em %2$d dias</string>
+    <plurals name="repaso_hoy_notas">
+        <item quantity="one">%1$d nota</item>
+        <item quantity="many">%1$d notas</item>
+        <item quantity="other">%1$d notas</item>
+    </plurals>
+
+    <!-- Varios y Anuncios -->
+    <string name="vencidas">Vencidas</string>
+    <string name="materia_editar">Editar matéria</string>
+    <string name="anadir_tarea_a">Adicionar tarefa a %1$s…</string>
+    <string name="proximos_dias">Próximos dias</string>
+
+    <!-- Elementos del menú y barra inferior -->
+    <string name="ajustes_cuenta">Conta e sincronização</string>
+    <string name="papelera">Lixeira</string>
+    <string name="papelera_resumen">Restaura o que você apagou</string>
+    <string name="menu_tareas_sub">Tarefas e listas</string>
+    <string name="racha_empieza">Comece sua sequência</string>
+    <string name="hoy">Hoje</string>
+    <string name="proximos_7">Próximos 7 dias</string>
+    <string name="calendario">Calendário</string>
+    <string name="todas_tareas">Todas as tarefas</string>
+    <string name="eventos">Eventos</string>
+    <string name="notas_rapidas">Notas rápidas</string>
+    <string name="completadas">Concluídas</string>
+    <string name="tareas">Tarefas</string>
+    <string name="notas">Notas</string>
+
+    <!-- Bloques del editor y comandos / -->
+    <string name="bloque_texto">Texto</string>
+    <string name="bloque_titulo1">Título 1</string>
+    <string name="bloque_titulo2">Título 2</string>
+    <string name="bloque_vinetas">Lista com marcadores</string>
+    <string name="bloque_numerada">Lista numerada</string>
+    <string name="bloque_tareas">Lista de tarefas</string>
+    <string name="bloque_cita">Citação</string>
+    <string name="bloque_destacado">Destaque</string>
+    <string name="bloque_codigo">Código</string>
+    <string name="bloque_imagen">Imagem</string>
+    <string name="bloque_archivo">Arquivo anexo (PDF, Word)</string>
+    <string name="bloque_divisor">Divisor</string>
+    <string name="bloque_enlace">Link com pré-visualização (web ou vídeo)</string>
+    <string name="bloque_enlace_corto">Link com pré-visualização</string>
+    <string name="bloque_codigo_largo">Bloco de código</string>
+    <string name="bloque_mas_opciones">Mais opções do bloco</string>
+    <string name="bloque_eliminar">Excluir bloco</string>
+    <string name="bloque_opciones">Opções do bloco</string>
+    <string name="pista_parrafo">Escreva aqui ou use / para inserir blocos</string>
+
+    <!-- Prioridades, Examen y Etiquetas -->
+    <string name="prioridad_baja">Baixa prioridade</string>
+    <string name="prioridad_media">Prioridade média</string>
+    <string name="prioridad_alta">Alta prioridade</string>
+    <string name="etiqueta_anadir">Adicionar etiqueta (exame, leitura…)</string>
+    <string name="quitar_etiqueta">Remover etiqueta</string>
+    <string name="examen">Exame</string>
+    <string name="examen_hoy">Exame hoje</string>
+    <string name="examen_manana">Exame amanhã</string>
+    <string name="examen_dias">Exame em %1$d dias</string>
+    <string name="ver_google_calendar">Mostrar eventos do Google Agenda</string>
+    <string name="conceder_permiso">Permitir</string>
+
+    <!-- Ações e arquivos -->
+    <string name="abrir">Abrir</string>
+    <string name="abrir_navegador">Abrir no navegador</string>
+    <string name="actualizar_vista_previa">Atualizar pré-visualização</string>
+    <string name="anadir">Adicionar</string>
+    <string name="anadir_evento">Adicionar evento</string>
+    <string name="anadir_favoritas">Adicionar às favoritas</string>
+    <string name="anadir_tarea">Adicionar tarefa</string>
+    <string name="anadir_tarea_dia">Adicionar tarefa a este dia</string>
+    <string name="aplicar">Aplicar</string>
+    <string name="archivo">Arquivo</string>
+    <string name="archivos">Arquivos</string>
+    <string name="archivos_vincular">Vincule uma pasta do seu dispositivo com os arquivos desta lista</string>
+    <string name="automatico">Automático</string>
+    <string name="automatico_n">Automático · %1$s</string>
+    <string name="bajar">Descer</string>
+    <string name="buscar">Buscar</string>
+    <string name="cambiar_carpeta">Mudar de pasta</string>
+    <string name="cargando_vista_previa">Carregando pré-visualização…</string>
+    <string name="cerrar_busqueda">Fechar a busca</string>
+    <string name="continuar">Continuar</string>
+    <string name="convertir_en">Converter em…</string>
+    <string name="convertir_texto">Converter em texto</string>
+    <string name="copiar_codigo">Copiar código</string>
+    <string name="crear_y_mover">Criar e mover</string>
+    <string name="duplicar">Duplicar</string>
+    <string name="elegir_carpeta">Escolher pasta</string>
+    <string name="elegir_de_nuevo">Escolher novamente</string>
+    <string name="elegir_dia">Escolher dia…</string>
+    <string name="elegir_fecha_entrega">Escolher a data de entrega</string>
+    <string name="elegir_hora">Escolher hora…</string>
+    <string name="elegir_hora_entrega">Escolher a hora de entrega</string>
+    <string name="en_curso">Em andamento</string>
+    <string name="en_una_semana">Em uma semana</string>
+    <string name="enlace">Link</string>
+    <string name="enlace_no_abre">Não foi possível abrir o link</string>
+    <string name="entendido">Entendido</string>
+    <string name="fecha_entrega">Data de entrega</string>
+    <string name="fecha_evento">Data do evento</string>
+    <string name="imagen_no_se_muestra">Não é possível mostrar a imagem</string>
+    <string name="imagen_nota">Imagem da nota</string>
+    <string name="insertar">Inserir</string>
+    <string name="reproducir">Reproduzir</string>
+    <string name="sin_app_abrir">Não há um app para abrir este arquivo</string>
+    <string name="toca_abrir">Toque para abrir</string>
+    <string name="vista_previa_error">Não foi possível carregar a pré-visualização</string>
+
+    <!-- Pastas -->
+    <string name="carpeta">Pasta</string>
+    <string name="carpeta_eliminar">Excluir pasta</string>
+    <string name="carpeta_eliminar_texto">Suas listas e tarefas não são apagadas: elas ficam soltas.</string>
+    <string name="carpeta_eliminar_titulo">Excluir a pasta %1$s?</string>
+    <string name="carpeta_esta_vacia">Esta pasta está vazia</string>
+    <string name="carpeta_la_vacia">A pasta está vazia</string>
+    <string name="carpeta_no_disponible">A pasta vinculada não está disponível</string>
+    <string name="carpeta_nueva_mas">＋ Nova pasta…</string>
+    <string name="carpeta_opciones">Opções da pasta</string>
+    <string name="carpeta_vacia">Pasta vazia</string>
+    <string name="desvincular">Desvincular (não apaga nada)</string>
+    <string name="la_carpeta">a pasta</string>
+    <string name="lista_o_carpeta_nueva">Nova lista ou pasta</string>
+    <string name="menu_soltar_aqui">Solte aqui para tirá-la da pasta</string>
+    <string name="mover_a_carpeta">Mover para uma pasta…</string>
+    <string name="sacar_de_carpeta">Tirar da pasta</string>
+    <string name="sin_carpeta">Sem pasta</string>
+
+    <!-- Listas -->
+    <string name="crea_lista_empezar">Crie uma lista para começar</string>
+    <string name="crea_lista_primero">Crie uma lista primeiro</string>
+    <string name="crear_lista">Criar lista</string>
+    <string name="crear_lista_aqui">Criar uma lista aqui</string>
+    <string name="lista">Lista</string>
+    <string name="lista_eliminar">Excluir lista</string>
+    <string name="lista_eliminar_boton">Excluir lista e suas tarefas</string>
+    <string name="lista_eliminar_texto">Todas as suas tarefas também serão excluídas. Os arquivos da pasta vinculada não são afetados.</string>
+    <string name="lista_eliminar_titulo">Excluir %1$s?</string>
+    <string name="lista_nueva_aqui">Nova lista aqui</string>
+    <string name="lista_nueva_mas">＋ Nova lista</string>
+    <string name="listas">Listas</string>
+    <string name="tarea_eliminar">Excluir tarefa</string>
+    <string name="tarea_opciones">Opções da tarefa</string>
+    <string name="sin_tareas">Sem tarefas</string>
+    <string name="ver_como_lista">Ver como lista</string>
+    <string name="ver_como_tablero">Ver como quadro</string>
+
+    <!-- Cuadernos y notas -->
+    <string name="cuaderno_editar">Editar caderno</string>
+    <string name="cuaderno_eliminar">Excluir caderno</string>
+    <string name="cuaderno_eliminar_boton">Excluir caderno e suas notas</string>
+    <string name="cuaderno_eliminar_texto">Todas as suas notas também serão excluídas.</string>
+    <string name="cuaderno_eliminar_titulo">Excluir %1$s?</string>
+    <string name="cuaderno_mas">+ Caderno</string>
+    <string name="cuaderno_nuevo">Novo caderno</string>
+    <string name="cuaderno_opciones">Opções do caderno</string>
+    <string name="cuadernos">Cadernos</string>
+    <string name="favoritas">Favoritas</string>
+    <string name="favoritas_estrella">★ Favoritas</string>
+    <string name="mover_otro_cuaderno">Mover para outro caderno…</string>
+    <string name="nota_eliminar">Excluir nota</string>
+    <string name="compartir_pdf">Compartilhar PDF</string>
+    <string name="pdf_error">Não foi possível criar o PDF</string>
+    <string name="nota_eliminar_titulo">Excluir esta nota?</string>
+    <string name="nota_icono">Ícone da nota</string>
+    <string name="nota_nueva">Nova nota</string>
+    <string name="nota_opciones">Opções da nota</string>
+    <string name="notas_buscar_en">Buscar nas notas</string>
+    <string name="notas_menu_sub">Cadernos e páginas</string>
+    <string name="papelera_vacia">A lixeira está vazia.</string>
+    <string name="quitar_favoritas">Remover das favoritas</string>
+    <string name="sin_notas">Sem notas</string>
+    <string name="sin_titulo">Sem título</string>
+    <string name="todas">Todas</string>
+    <string name="todas_notas">Todas as notas</string>
+    <string name="no_se_recupera">Não será possível recuperá-la.</string>
+    <string name="nombre">Nome</string>
+    <string name="titulo">Título</string>
+    <string name="editar_nombre_emoji">Editar (nome e emoji)</string>
+    <string name="editar_nombre_emoji_color">Editar (nome, emoji e cor)</string>
+    <string name="mover_n">Mover “%1$s”</string>
+    <string name="mover_a">Mover para…</string>
+    <string name="mover_abajo">Mover para baixo</string>
+    <string name="mover_arriba">Mover para cima</string>
+    <string name="subir_nivel">Subir um nível</string>
+
+    <!-- Editor de blocos -->
+    <string name="cursiva">Itálico</string>
+    <string name="negrita">Negrito</string>
+    <string name="subrayado">Sublinhado</string>
+    <string name="tachado">Riscado</string>
+    <string name="resaltado">Destaque</string>
+    <string name="sin_resaltado">Sem destaque</string>
+    <string name="color_texto">Cor do texto</string>
+    <string name="sin_color">Sem cor</string>
+    <string name="codigo_en_linea">Código em linha</string>
+    <string name="texto_plano">Texto simples</string>
+    <string name="mas_sangria">Mais recuo</string>
+    <string name="menos_sangria">Menos recuo</string>
+    <string name="desplegar_n">Expandir %1$s</string>
+    <string name="plegar_n">Recolher %1$s</string>
+    <string name="quitar_enlace">Remover link</string>
+    <string name="quitar_adjunto">Remover anexo (não apaga o arquivo)</string>
+    <string name="quitar_fecha">Remover data</string>
+    <string name="quitar_icono">Remover ícone</string>
+    <string name="pega_enlace">Cole um link (web, YouTube ou Vimeo)</string>
+    <string name="direccion_web">Endereço web</string>
+    <string name="sin_vincular_archivo">Sem vincular: toque para escolher o arquivo neste dispositivo</string>
+    <string name="sigue_escribiendo">… continue digitando para filtrar</string>
+
+    <!-- Calendário -->
+    <string name="mes_anterior">Mês anterior</string>
+    <string name="mes_siguiente">Mês seguinte</string>
+    <string name="evento">Evento</string>
+    <string name="evento_eliminar">Excluir evento</string>
+    <string name="todo_el_dia">O dia inteiro</string>
+    <string name="todo_el_dia_sin_hora">O dia inteiro (sem hora)</string>
+    <string name="sin_eventos">Sem eventos</string>
+    <string name="sin_entregas_dia">Sem entregas neste dia</string>
+    <string name="manana">Amanhã</string>
+    <string name="sin_aviso">Sem aviso</string>
+
+    <!-- Racha (sequência) -->
+    <string name="racha_aviso_texto">Entregue o que está pendente antes da meia-noite para mantê-la.</string>
+    <string name="racha_ayuda_1">• Um dia com entrega conta se estiver tudo entregue. Um dia com aula conta se nesse dia você concluir ou adicionar uma tarefa.</string>
+    <string name="racha_ayuda_2">• Dias sem entregas nem atividade não somam nem quebram a sequência.</string>
+    <string name="racha_ayuda_3">• Se hoje ainda há tarefas a entregar, a sequência fica viva até a meia-noite: a chama aparece em cinza com um “!”. Tarefas sem data e eventos não contam.</string>
+    <string name="racha_ayuda_4">• Às 20:00 avisamos se a sequência estiver prestes a se perder (muda em Configurações → Avisos).</string>
+    <string name="racha_como_funciona">Como funciona a sequência</string>
+    <string name="racha_dia_cumplido">%1$s, cumprido</string>
+    <string name="racha_dias_cumplidos">Dias cumpridos</string>
+    <string name="racha_empezaste">Você começou uma sequência!</string>
+    <string name="racha_estado_empezar">Mantenha suas entregas em dia para começar uma sequência.</string>
+    <string name="racha_estado_hecho">Você está em dia! Volte amanhã para continuar somando.</string>
+    <string name="racha_estado_libre">Hoje não há entregas pendentes: sua sequência continua viva.</string>
+    <string name="racha_estado_riesgo">Sua sequência está em risco: entregue o que está pendente antes da meia-noite.</string>
+    <string name="racha_hoy_cuenta">Sequência de %1$s, hoje já conta</string>
+    <string name="racha_hoy_cuenta_abrir">Sequência de %1$s, hoje já conta. Abrir a sequência</string>
+    <string name="racha_hoy_falta">Falta hoje</string>
+    <string name="racha_iniciales">LU,MA,MI,JU,VI,SÁ,DO</string>
+    <string name="racha_manana_2">Conclua uma tarefa amanhã para chegar a 2 dias.</string>
+    <string name="racha_mantener">Sequência de %1$s, entregue o que está pendente hoje para mantê-la</string>
+    <string name="racha_mejor">Melhor sequência</string>
+    <string name="racha_meta_alcanzada">Você alcançou a meta de %1$s!</string>
+    <string name="racha_no_pierdas">🔥 Não perca sua sequência de %1$s</string>
+    <string name="racha_riesgo_abrir">Sequência de %1$s em risco. Abrir a sequência</string>
+    <string name="racha_siguiente_meta">Próxima meta: %1$s</string>
+    <string name="racha_sin">Sem sequência ainda</string>
+    <string name="racha_sin_abrir">Sem sequência ainda. Abrir a sequência</string>
+    <string name="racha_tareas_hechas">Tarefas concluídas</string>
+    <string name="editado_n">Editado %1$s</string>
+    <string name="mas_opciones">Mais opções</string>
+    <string name="sin_resultados">Sem resultados</string>
+    <string name="subir">Subir</string>
+
+    <!-- Avisos de entrega -->
+    <plurals name="aviso_dias_antes">
+        <item quantity="one">%d dia antes</item>
+        <item quantity="many">%d dias antes</item>
+        <item quantity="other">%d dias antes</item>
+    </plurals>
+    <plurals name="aviso_horas_antes">
+        <item quantity="one">%d hora antes</item>
+        <item quantity="many">%d horas antes</item>
+        <item quantity="other">%d horas antes</item>
+    </plurals>
+    <plurals name="aviso_semanas_antes">
+        <item quantity="one">%d semana antes</item>
+        <item quantity="many">%d semanas antes</item>
+        <item quantity="other">%d semanas antes</item>
+    </plurals>
+
+    <string name="hechas">Feitas</string>
+    <string name="ajustes_seccion_personalizacion">Personalização e uso</string>
+    <string name="ajustes_seccion_cuenta_datos">Conta e dados</string>
+    <string name="ajustes_seccion_aplicacion">Aplicativo</string>
+    <string name="ajustes_comprobar_actualizacion">Verificar se há atualizações</string>
+    <string name="ajustes_o_con_correo">ou com e-mail</string>
+    <string name="ajustes_min_caracteres">Mínimo de 6 caracteres</string>
+    <string name="ajustes_recomendado">Recomendado</string>
+    <string name="ajustes_integraciones">Integrações</string>
+    <string name="ajustes_confirmar_restaurar_titulo">Restaurar backup?</string>
+    <string name="ajustes_confirmar_restaurar_texto">Os dados atuais do app serão sobrescritos com o backup do Google Drive. Deseja continuar?</string>
+    <string name="ajustes_confirmar_importar_titulo">Importar dados?</string>
+    <string name="ajustes_confirmar_importar_texto">Os dados atuais do app podem ser sobrescritos com o arquivo importado. Deseja continuar?</string>
+    <string name="ajustes_exactas_ok">Alarmes exatos permitidos</string>
+    <string name="drive_subtitulo">Salve notas, tarefas e imagens em um arquivo privado no seu drive.</string>
+    <string name="copia_local_subtitulo">Exporte ou importe seus dados. Compatível com o Kiwu para Linux.</string>
+
+    <string name="inicio">Início</string>
+    <string name="proxima_clase">Próxima aula</string>
+    <string name="configura_horario">Configure seu horário</string>
+    <string name="sin_clases_hoy">Sem aulas agendadas</string>
+    <string name="para_hoy">Para hoje</string>
+    <string name="ver_todas_flecha">Ver todas ›</string>
+    <string name="ver_todos_flecha">Ver todos ›</string>
+    <string name="todo_al_dia_hoy">Tudo em dia por hoje</string>
+    <string name="tarjetas_para_repasar_n">Você tem %1$d cartões para revisar hoje</string>
+    <string name="tus_cuadernos">Seus cadernos</string>
+    <string name="saludo_manana">Bom dia</string>
+    <string name="saludo_tarde">Boa tarde</string>
+    <string name="saludo_noche">Boa noite</string>
 </resources>

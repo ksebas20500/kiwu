@@ -61,8 +61,12 @@ object ColoresClase {
 
     fun contraste(fondo: Color): Color = if (fondo.luminance() > 0.45f) lerp(fondo, Color.Black, 0.72f) else Color.White
 
-    fun de(c: Clase): ColorPastel {
-        val elegido = ReglasHorario.colorValido(c.color)
+    /**
+     * Color de una clase: el suyo si lo tiene, si no el de su lista ([colorMateria]) y, si tampoco, el automático por
+     * materia/título.
+     */
+    fun de(c: Clase, colorMateria: String? = null): ColorPastel {
+        val elegido = ReglasHorario.colorValido(c.color) ?: ReglasHorario.colorValido(colorMateria)
         if (elegido != null) {
             val fondo = deHex(elegido)
             return ColorPastel(fondo, contraste(fondo))
@@ -72,12 +76,12 @@ object ColoresClase {
     }
 }
 
-/** Selector de color compacto: Automático, carrusel de 8 tonos principales y personalizado. */
+/** Selector de color compacto: Automático, carrusel de 8 tonos principales y (opcionalmente) un color a medida. */
 @Composable
 internal fun SelectorColorClase(
     actual: String?,
     alElegir: (String?) -> Unit,
-    alOtro: () -> Unit,
+    alOtro: (() -> Unit)? = null,
     textoAutomatico: String = stringResource(R.string.color_automatico)
 ) {
     val activo = ReglasHorario.colorValido(actual)
@@ -112,12 +116,14 @@ internal fun SelectorColorClase(
             }
 
             item {
-                Box(
-                    Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
-                        .border(if (propio) 2.dp else 1.dp, if (propio) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, CircleShape)
-                        .clickable(onClick = alOtro),
-                    contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Filled.Palette, stringResource(R.string.color_otro), Modifier.size(18.dp)) }
+                if (alOtro != null) {
+                    Box(
+                        Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
+                            .border(if (propio) 2.dp else 1.dp, if (propio) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, CircleShape)
+                            .clickable(onClick = alOtro),
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(Icons.Filled.Palette, stringResource(R.string.color_otro), Modifier.size(18.dp)) }
+                }
             }
         }
     }

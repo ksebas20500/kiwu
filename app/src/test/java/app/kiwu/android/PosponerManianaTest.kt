@@ -40,4 +40,15 @@ class PosponerManianaTest {
         // 00:10 de mañana: media hora antes sería hoy a las 23:40, no «mañana».
         assertEquals(en(1, 8), Recordatorios.mananaPospuesto(tarea(en(1, 0, 10)), ahora, zona))
     }
+
+    @Test
+    fun laEntregaPospuestaAlDeslizarCaeMananaALaMismaHora() {
+        assertEquals(en(1, 18), Recordatorios.entregaPospuesta(tarea(en(0, 18)), ahora, zona))
+        // Con hora rara (13:37) la conserva al pasar de día.
+        assertEquals(en(1, 13, 37), Recordatorios.entregaPospuesta(tarea(en(0, 13, 37)), ahora, zona))
+        // Sin fecha: mañana a las 8:00.
+        assertEquals(en(1, 8), Recordatorios.entregaPospuesta(tarea(null), ahora, zona))
+        // Tarea en el futuro: la pospone 1 día a partir de su fecha (no mañana).
+        assertEquals(en(4, 18), Recordatorios.entregaPospuesta(tarea(en(3, 18)), ahora, zona))
+    }
 }

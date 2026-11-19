@@ -9,6 +9,7 @@ import app.kiwu.android.domain.Horario
 import app.kiwu.android.domain.Materia
 import app.kiwu.android.domain.Pagina
 import app.kiwu.android.domain.ReglasHorario
+import app.kiwu.android.domain.SesionEstudio
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -35,6 +36,7 @@ class ErrorCopia(val motivo: MotivoErrorCopia, mensaje: String, val detalle: Str
 data class ResumenImportacion(
     val materias: Int, val deberes: Int, val cuadernos: Int, val paginas: Int,
     val horarios: Int = 0, val clases: Int = 0, val grupos: Int = 0, val faltas: Int = 0,
+    val sesiones: Int = 0,
 )
 
 /**
@@ -80,6 +82,7 @@ object Copia {
         val grupos = dao.gruposAhora()
         val gruposVivos = clases.map { it.grupo }.toSet()
         val faltas = dao.faltasAhora().filter { it.grupo in gruposVivos }
+        val sesiones = dao.sesionesAhora().filter { it.materiaId == null || it.materiaId in materias.map { m -> m.id }.toSet() }
         val raiz = buildJsonObject {
             put("formato", FORMATO)
             put("app", "kiwu")
@@ -90,6 +93,7 @@ object Copia {
                     // Campos opcionales (Android 0.3): carpeta de listas y emoji.
                     put("grupo", m.grupoId?.let { JsonPrimitive(it) } ?: JsonNull)
                     put("emoji", m.emoji?.let { JsonPrimitive(it) } ?: JsonNull)
+                    put("color", m.color?.let { JsonPrimitive(it) } ?: JsonNull)
                     put("calificaciones", m.calificaciones)
                     put("creada", iso(m.creada)); put("actualizada", iso(m.actualizada))
                 })
@@ -148,6 +152,15 @@ object Copia {
                     put("creada", iso(f.creada))
                 })
             })
+            // Igual que las faltas: las sesiones de estudio del temporizador (el escritorio no las usa todavía).
+            put("sesiones", buildJsonArray {
+                for (s in sesiones) add(buildJsonObject {
+                    put("id", s.id)
+                    s.materiaId?.let { put("materia", it) }
+                    put("dia", LocalDate.ofEpochDay(s.dia).toString()); put("minutos", s.minutos)
+                    put("creada", iso(s.creada))
+                })
+            })
         }
         return json.encodeToString(JsonElement.serializer(), raiz)
     }
@@ -181,6 +194,7 @@ object Copia {
                 // Campos opcionales: las copias antiguas no los traen (lista suelta y aspecto automático).
                 grupoId = m.cadena("grupo")?.takeIf { it in idsGrupo },
                 emoji = m.cadena("emoji")?.takeIf { it.isNotBlank() },
+                color = ReglasHorario.colorValido(m.cadena("color")),
                 calificaciones = m.cadena("calificaciones").orEmpty(),
                 creada = desdeIso(m["creada"]) ?: 0L, actualizada = desdeIso(m["actualizada"]) ?: 0L,
             )
@@ -253,6 +267,21 @@ object Copia {
             Falta(
                 id = f.cadena("id") ?: return@mapNotNull null, grupo = grupo, horarioId = f.cadena("horario") ?: return@mapNotNull null,
                 dia = dia.toEpochDay(), justificada = f.logico("justificada"), creada = desdeIso(f["creada"]) ?: 0L,
+                // La marca de tiempo no está en el formato (compartido con macOS/Linux): se estrena con la hora de creación.
+                actualizada = desdeIso(f["creada"]) ?: 0L,
+            )
+        }
+
+        // Sección opcional: las sesiones de estudio del temporizador. La materia que no existe se desvincula.
+        val idsMaterias = materias.map { it.id }.toSet()
+        val sesiones = lista("sesiones").mapNotNull { s ->
+            val dia = s.cadena("dia")?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return@mapNotNull null
+            val minutos = (s["minutos"] as? JsonPrimitive)?.intOrNull ?: return@mapNotNull null
+            SesionEstudio(
+                id = s.cadena("id") ?: return@mapNotNull null,
+                materiaId = s.cadena("materia")?.takeIf { it in idsMaterias },
+                dia = dia.toEpochDay(), minutos = minutos, creada = desdeIso(s["creada"]) ?: 0L,
+                actualizada = desdeIso(s["creada"]) ?: 0L,
             )
         }
 
@@ -267,6 +296,7 @@ object Copia {
             horarios = dao.insertarHorarios(horarios).count { it != -1L },
             clases = dao.insertarClases(clases).count { it != -1L },
             faltas = dao.insertarFaltas(faltas).count { it != -1L },
+            sesiones = dao.insertarSesiones(sesiones).count { it != -1L },
         )
     }
 }

@@ -3,6 +3,7 @@ package app.kiwu.android.domain
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
@@ -24,6 +25,8 @@ data class Materia(
     @ColumnInfo(name = "grupo_id") val grupoId: String? = null,
     /** Emoji propio de la lista (opcional; null = el icono de lista de siempre). */
     val emoji: String? = null,
+    /** Color de la lista como `#RRGGBB`; null = el color automático de siempre. Sus clases del horario lo heredan. */
+    val color: String? = null,
     /** Notas de la materia como JSON (ver [Calificaciones]); vacío si no hay. */
     @ColumnInfo(defaultValue = "''") val calificaciones: String = "",
     val creada: Long,
@@ -81,7 +84,15 @@ data class Deber(
     /** Cuándo se mostró el último aviso (para no repetirlo). */
     val recordado: Long? = null,
     val eliminada: Long? = null,
-)
+    @Ignore val esExterno: Boolean = false,
+) {
+    constructor(
+        id: String = nuevoId(), materiaId: String, titulo: String, completado: Boolean = false, estado: Int = 0, fechaEntrega: Long? = null,
+        recordatorioHoras: Int = 24, repite: Int = 0, prioridad: Int = 0, etiquetas: String = "", pasos: String = "",
+        examen: Boolean = false, fechaCompletado: Long? = null, nota: String = DOCUMENTO_VACIO, creada: Long,
+        actualizada: Long, recordado: Long? = null, eliminada: Long? = null
+    ) : this(id, materiaId, titulo, completado, estado, fechaEntrega, recordatorioHoras, repite, prioridad, etiquetas, pasos, examen, fechaCompletado, nota, creada, actualizada, recordado, eliminada, false)
+}
 
 /**
  * Id fijo de la lista especial «Eventos»: guarda cosas que pasan (cumpleaños, charlas) y no se completan. Es una lista
@@ -101,6 +112,8 @@ data class Cuaderno(
     val creada: Long,
     val actualizada: Long,
     val eliminada: Long? = null,
+    @ColumnInfo(name = "cover_image_path") val coverImagePath: String? = null,
+    @ColumnInfo(name = "cover_color_hex") val coverColorHex: String? = null,
 )
 
 @Entity(

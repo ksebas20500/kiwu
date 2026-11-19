@@ -9,12 +9,17 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timer
+import app.kiwu.android.ui.home.HomeScreen
 import app.kiwu.android.ui.estudio.CalificacionesScreen
+import app.kiwu.android.ui.estudio.RepasoHoyScreen
+import app.kiwu.android.ui.estudio.RepasoHoyViewModel
 import app.kiwu.android.ui.estudio.TarjetasScreen
 import app.kiwu.android.ui.estudio.TemporizadorScreen
 import androidx.compose.material3.Icon
@@ -56,6 +61,7 @@ import app.kiwu.android.ui.archivos.ArchivosScreen
 import app.kiwu.android.ui.horario.HorarioScreen
 import app.kiwu.android.ui.horario.MenuHorario
 import app.kiwu.android.ui.horario.HorarioViewModel
+import app.kiwu.android.ui.notas.FiltroNotas
 import app.kiwu.android.ui.notas.MenuNotas
 import app.kiwu.android.ui.notas.NotasScreen
 import app.kiwu.android.ui.notas.NotasViewModel
@@ -78,21 +84,23 @@ fun Raiz(
     abrirPagina: String? = null,
     nuevaNota: String? = null,
     seccion: String? = null,
+    abrirRepaso: Boolean = false,
     inicial: AjustesUi = AjustesUi(),
+    fondoInicial: android.graphics.Bitmap? = null,
     guia: Boolean = false,
     alAtender: () -> Unit = {},
 ) {
     val ajustes by app.ajustes.flujo.collectAsStateWithLifecycle(inicial)
     val oscuro = when (ajustes.tema) {
         "claro" -> false
-        "oscuro" -> true
+        "oscuro", Acentos.NEGRO -> true
         else -> isSystemInDarkTheme()
     }
     PedirPermisoDeAvisos(app)
     IconosDeBarras(oscuro)
-    KiwuTheme(oscuro, ajustes.acento) {
+    KiwuTheme(oscuro, ajustes.acento, false) {
         FondoDeVentana()
-        FondoKiwu(ajustes) {
+        FondoKiwu(ajustes, fondoInicial) {
             val nav = rememberNavController()
             LaunchedEffect(abrirTarea) {
                 if (abrirTarea != null) { nav.navigate("tarea/$abrirTarea"); alAtender() }
@@ -108,6 +116,10 @@ fun Raiz(
                     alAtender()
                 }
             }
+            // Aviso diario de repaso: abre la cola global.
+            LaunchedEffect(abrirRepaso) {
+                if (abrirRepaso) { nav.navigate("repaso-hoy"); alAtender() }
+            }
             val adjuntos = rememberOrigenAdjuntos()
             val alcance = androidx.compose.runtime.rememberCoroutineScope()
             // Lista que se abre al entrar en Tareas (la de ejemplo, al terminar la guía).
@@ -115,11 +127,9 @@ fun Raiz(
             NavHost(nav, startDestination = if (guia) "guia" else "principal") {
                 composable("guia") {
                     var terminando by androidx.compose.runtime.remember { mutableStateOf(false) }
-                    val r = androidx.compose.ui.platform.LocalContext.current.resources
                     GuiaScreen(alTerminar = {
                         if (!terminando) alcance.launch {
                             terminando = true
-                            if (app.repo.crearListaDeEjemplo(r.getString(Guia.NOMBRE_LISTA), Guia.tareas.map { r.getString(it) })) abrirLista = Guia.ID_LISTA
                             app.ajustes.cambiar { it.copy(guiaVista = true) }
                             nav.navigate("principal") { popUpTo("guia") { inclusive = true } }
                         }
@@ -132,6 +142,7 @@ fun Raiz(
                         app, alAbrirTarea = { nav.navigate("tarea/$it") }, alAbrirPagina = { nav.navigate("pagina/$it") }, alAjustes = { nav.navigate("ajustes") },
                         alRacha = { nav.navigate("racha") }, alBuscar = { nav.navigate("buscar") },
                         alTemporizador = { nav.navigate("temporizador") }, alCalificaciones = { nav.navigate("calificaciones/$it") },
+                        alRepasoHoy = { nav.navigate("repaso-hoy") },
                         abrirLista = abrirLista, alAbrirLista = { abrirLista = null },
                         seccionInicial = seccion, alAtenderSeccion = alAtender,
                     )
@@ -162,6 +173,12 @@ fun Raiz(
                 composable("tarjetas/{id}") { entrada ->
                     val id = entrada.arguments?.getString("id") ?: return@composable
                     TarjetasScreen(app, id, alVolver = { nav.volver() })
+                }
+                composable("repaso-hoy") {
+                    val vm: RepasoHoyViewModel = viewModel(
+                        factory = viewModelFactory { initializer { RepasoHoyViewModel(app.repo) } },
+                    )
+                    RepasoHoyScreen(vm, alVolver = { nav.volver() })
                 }
                 composable("racha") { RachaScreen(app, alVolver = { nav.volver() }) }
             }
@@ -209,15 +226,16 @@ private fun androidx.navigation.NavController.volver() {
 private fun Principal(
     app: KiwuApp, alAbrirTarea: (String) -> Unit, alAbrirPagina: (String) -> Unit, alAjustes: () -> Unit,
     alRacha: () -> Unit = {}, alBuscar: () -> Unit = {}, alTemporizador: () -> Unit = {}, alCalificaciones: (String) -> Unit = {},
+    alRepasoHoy: () -> Unit = {},
     abrirLista: String? = null, alAbrirLista: () -> Unit = {},
     seccionInicial: String? = null, alAtenderSeccion: () -> Unit = {},
 ) {
-    var modulo by rememberSaveable { mutableStateOf("tareas") }
+    var modulo by rememberSaveable { mutableStateOf("inicio") }
     // Abrir desde el widget de horario (o de notas): se cambia de pestaña una sola vez.
     LaunchedEffect(seccionInicial) {
         if (seccionInicial != null) { modulo = seccionInicial; alAtenderSeccion() }
     }
-    val tareasVm: TareasViewModel = viewModel(factory = viewModelFactory { initializer { TareasViewModel(app.repo, app.ajustes) } })
+    val tareasVm: TareasViewModel = viewModel(factory = viewModelFactory { initializer { TareasViewModel(app, app.repo, app.ajustes) } })
     LaunchedEffect(abrirLista) {
         if (abrirLista != null) { tareasVm.ir(Elemento.DeMateria(abrirLista)); modulo = "tareas"; alAbrirLista() }
     }
@@ -226,26 +244,28 @@ private fun Principal(
     val drawer = androidx.compose.material3.rememberDrawerState(androidx.compose.material3.DrawerValue.Closed)
     val alcance = androidx.compose.runtime.rememberCoroutineScope()
     val cerrarMenu: () -> Unit = { alcance.launch { drawer.close() } }
-    // Primero se cierra el menú (se ve su animación) y después se cambia de pantalla, que es lo que más trabajo cuesta.
-    val cerrarYLuego: (() -> Unit) -> Unit = { accion -> alcance.launch { drawer.close(); accion() } }
+    val cerrarYLuego: (() -> Unit) -> Unit = { accion ->
+        alcance.launch {
+            drawer.close()
+            if (modulo == "inicio") modulo = "tareas"
+            accion()
+        }
+    }
     val abrirMenu: () -> Unit = { alcance.launch { drawer.open() } }
-    // Con el menú abierto, «atrás» lo cierra en vez de salir de la app.
     androidx.activity.compose.BackHandler(enabled = drawer.isOpen) { cerrarMenu() }
-    // El menú lateral cubre toda la pantalla, también la barra inferior. Cada módulo tiene el suyo.
     androidx.compose.material3.ModalNavigationDrawer(
         drawerState = drawer,
         drawerContent = {
             when (modulo) {
-                "tareas" -> MenuTareas(tareasVm, cerrarYLuego, alAjustes, alRacha)
                 "notas" -> MenuNotas(notasVm, cerrarYLuego, alAjustes)
-                else -> MenuHorario(horarioVm, cerrarYLuego, alAjustes)
+                "horario" -> MenuHorario(horarioVm, cerrarYLuego, alAjustes)
+                else -> MenuTareas(tareasVm, cerrarYLuego, alAjustes, alRacha)
             }
         },
     ) {
     Scaffold(
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        // Las pantallas de dentro ya gestionan la barra de estado; la barra inferior gestiona la de navegación.
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             androidx.compose.foundation.layout.Column {
@@ -256,6 +276,7 @@ private fun Principal(
                         selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         selectedTextColor = MaterialTheme.colorScheme.onSurface,
                     )
+                    NavigationBarItem(colors = colores, selected = modulo == "inicio", onClick = { modulo = "inicio" }, icon = { Icon(Icons.Filled.Home, null) }, label = { Text(androidx.compose.ui.res.stringResource(R.string.inicio)) })
                     NavigationBarItem(colors = colores, selected = modulo == "tareas", onClick = { modulo = "tareas" }, icon = { Icon(Icons.Filled.CheckCircle, null) }, label = { Text(androidx.compose.ui.res.stringResource(R.string.tareas)) })
                     NavigationBarItem(colors = colores, selected = modulo == "notas", onClick = { modulo = "notas" }, icon = { Icon(Icons.Filled.Description, null) }, label = { Text(androidx.compose.ui.res.stringResource(R.string.notas)) })
                     NavigationBarItem(colors = colores, selected = modulo == "horario", onClick = { modulo = "horario" }, icon = { Icon(Icons.Filled.Schedule, null) }, label = { Text(androidx.compose.ui.res.stringResource(R.string.horario)) })
@@ -264,8 +285,7 @@ private fun Principal(
         },
     ) { relleno ->
         Box(Modifier.padding(relleno).consumeWindowInsets(relleno).fillMaxSize()) {
-            // Transición corta entre pestañas: fundido con un deslizamiento pequeño hacia el lado al que se avanza.
-            val orden = listOf("tareas", "notas", "horario")
+            val orden = listOf("inicio", "tareas", "notas", "horario")
             androidx.compose.animation.AnimatedContent(
                 targetState = modulo,
                 transitionSpec = {
@@ -278,16 +298,34 @@ private fun Principal(
                 label = "modulo",
             ) { destino ->
                 when (destino) {
-                    "notas" -> NotasScreen(notasVm, alAbrirPagina, abrirMenu, insigniaRacha = { InsigniaRacha(app, alRacha) }, accionesExtra = { IconoTemporizador(alTemporizador) })
+                    "inicio" -> HomeScreen(
+                        app = app,
+                        tareasVm = tareasVm,
+                        notasVm = notasVm,
+                        horarioVm = horarioVm,
+                        alAbrirMenu = abrirMenu,
+                        alAbrirTarea = alAbrirTarea,
+                        alAbrirCuaderno = { id ->
+                            notasVm.filtrar(FiltroNotas.DeCuaderno(id))
+                            modulo = "notas"
+                        },
+                        alTareas = { modulo = "tareas" },
+                        alNotas = { modulo = "notas" },
+                        alHorario = { modulo = "horario" },
+                        alRacha = alRacha,
+                        alTemporizador = alTemporizador,
+                        alRepasoHoy = alRepasoHoy,
+                    )
+                    "notas" -> NotasScreen(
+                        notasVm, alAbrirPagina, abrirMenu, alRepasoHoy = alRepasoHoy,
+                    )
                     "horario" -> HorarioScreen(
                         horarioVm, abrirMenu, alAbrirTarea,
-                        // «Abrir la lista completa»: cambia a la pestaña Tareas, ya en esa lista.
                         alAbrirLista = { id -> tareasVm.ir(Elemento.DeMateria(id)); modulo = "tareas" },
                     )
                     else -> TareasScreen(
                         tareasVm, alAbrirTarea, abrirMenu, archivos = { m -> ArchivosScreen(m) { carpeta -> tareasVm.vincularCarpeta(m.id, carpeta) } },
-                        insigniaRacha = { InsigniaRacha(app, alRacha) },
-                        accionesExtra = { IconoTemporizador(alTemporizador); IconoBuscar(alBuscar) },
+                        accionesExtra = { IconoBuscar(alBuscar) },
                         alCalificaciones = alCalificaciones,
                     )
                 }
@@ -346,3 +384,7 @@ private fun IconoTemporizador(alTemporizador: () -> Unit) =
 @Composable
 private fun IconoBuscar(alBuscar: () -> Unit) =
     androidx.compose.material3.IconButton(onClick = alBuscar) { Icon(Icons.Filled.Search, androidx.compose.ui.res.stringResource(R.string.buscar)) }
+
+@Composable
+private fun IconoRepasoHoy(alAbrir: () -> Unit) =
+    androidx.compose.material3.IconButton(onClick = alAbrir) { Icon(Icons.Filled.Style, androidx.compose.ui.res.stringResource(R.string.repaso_hoy)) }

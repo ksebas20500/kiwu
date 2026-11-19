@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Archivos que Kiwu comparte: solo la carpeta de exportaciones de su caché (PDF de notas). -->
+<paths>
+    <cache-path name="exportaciones" path="exportaciones/" />
+</paths>

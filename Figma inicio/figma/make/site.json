@@ -1,0 +1,10 @@
+{
+  "description": "Kiwu helps students manage assignments, class schedules, attendance, and grades in one place, with predictive tools to stay organized and on track.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

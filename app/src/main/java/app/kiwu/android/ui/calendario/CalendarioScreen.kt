@@ -1,5 +1,9 @@
 package app.kiwu.android.ui.calendario
 
+import android.Manifest
+import android.annotation.SuppressLint
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,42 +25,52 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.kiwu.android.R
+import app.kiwu.android.data.CalendarioTelefono
 import app.kiwu.android.domain.Deber
+import app.kiwu.android.domain.EventoExterno
 import app.kiwu.android.domain.esEvento
 import app.kiwu.android.ui.Fechas
-import app.kiwu.android.ui.fechaCorta
 import app.kiwu.android.ui.Pasteles
+import app.kiwu.android.ui.fechaCorta
+import app.kiwu.android.ui.tareas.AzulEvento
+import app.kiwu.android.ui.tareas.AzulEventoTexto
 import app.kiwu.android.ui.tareas.CampoNuevaTarea
 import app.kiwu.android.ui.tareas.FilaTarea
 import app.kiwu.android.ui.tareas.TarjetaEventoAgenda
 import app.kiwu.android.ui.tareas.TareasEstado
 import app.kiwu.android.ui.tareas.TareasViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import app.kiwu.android.R
-import androidx.compose.ui.res.stringResource
 
 private const val MAX_PUNTOS = 3
 private val ALTO_FILA = 52.dp
@@ -68,8 +82,11 @@ internal fun inicioDeRejilla(mes: LocalDate): LocalDate {
 }
 
 /** Calendario mensual optimizado y agenda diaria detallada. */
+// Falso positivo conocido (b/368420773): el check no reconoce «value = ...» cuando produceState lleva claves.
+@SuppressLint("ProduceStateDoesNotAssignValue")
 @Composable
 fun CalendarioScreen(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String) -> Unit) {
+    val context = LocalContext.current
     val zona = ZoneId.systemDefault()
     val hoy = remember(estado.ahora) { Instant.ofEpochMilli(estado.ahora).atZone(zona).toLocalDate() }
     var mes by rememberSaveable { mutableStateOf(hoy.withDayOfMonth(1).toString()) }
@@ -77,6 +94,25 @@ fun CalendarioScreen(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String
     val primeroDelMes = LocalDate.parse(mes)
     val diaSel = LocalDate.parse(seleccionado)
     var completadasVisibles by rememberSaveable { mutableStateOf(false) }
+
+    var tienePermiso by remember { mutableStateOf(CalendarioTelefono.permitido(context)) }
+    val launcherPermiso = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { concedido ->
+        tienePermiso = concedido
+    }
+
+    val externos by produceState(emptyList<EventoExterno>(), primeroDelMes, tienePermiso, estado.deberes) {
+        value = withContext(Dispatchers.IO) {
+            if (tienePermiso) {
+                CalendarioTelefono.eventos(
+                    context,
+                    primeroDelMes.minusDays(7),
+                    primeroDelMes.plusMonths(1).plusDays(7),
+                    zona,
+                )
+            } else emptyList()
+        }
+    }
+    val externosPorDia = remember(externos) { externos.groupBy { it.dia(zona) } }
 
     val porDia = remember(estado.deberes) {
         estado.deberes.filter { it.fechaEntrega != null }
@@ -104,6 +140,26 @@ fun CalendarioScreen(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String
                 }
             }
 
+            if (!tienePermiso) {
+                Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 4.dp), horizontalArrangement = Arrangement.Center) {
+                    Surface(
+                        onClick = { launcherPermiso.launch(Manifest.permission.READ_CALENDAR) },
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                    ) {
+                        Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.Event, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                            Text(
+                                stringResource(R.string.ver_google_calendar),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(start = 6.dp),
+                            )
+                        }
+                    }
+                }
+            }
+
             // Días de la semana
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp)) {
                 for (d in (1..7).map { Fechas.letraDia(it) }) {
@@ -125,6 +181,7 @@ fun CalendarioScreen(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String
                                 esHoy = dia == hoy,
                                 seleccionada = dia == diaSel,
                                 tareas = porDia[dia].orEmpty().sortedBy { it.fechaEntrega },
+                                eventosExternos = externosPorDia[dia].orEmpty(),
                                 modifier = Modifier.weight(1f).fillMaxHeight(),
                                 alElegir = {
                                     seleccionado = dia.toString()
@@ -142,6 +199,7 @@ fun CalendarioScreen(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String
             val tareasDelDia = remember(estado.deberes, diaSel) { vm.reglas.delDia(estado.deberes, diaSel) }
             val pendientesDia = tareasDelDia.filter { !it.completado }
             val completadosDia = tareasDelDia.filter { it.completado }
+            val externosDia = externosPorDia[diaSel].orEmpty()
 
             Column(Modifier.fillMaxWidth().weight(1f)) {
                 Text(
@@ -153,7 +211,7 @@ fun CalendarioScreen(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String
                 )
 
                 LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(bottom = 88.dp)) {
-                    if (tareasDelDia.isEmpty()) {
+                    if (tareasDelDia.isEmpty() && externosDia.isEmpty()) {
                         item {
                             Text(
                                 stringResource(R.string.sin_entregas_dia),
@@ -163,7 +221,12 @@ fun CalendarioScreen(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String
                         }
                     }
 
-                    // Tareas pendientes y eventos
+                    // Eventos de Google Calendar / Teléfono
+                    items(externosDia, key = { "ext-${it.id}" }) { ext ->
+                        TarjetaEventoExternoAgenda(ext, zona)
+                    }
+
+                    // Tareas pendientes y eventos de Kiwu
                     items(pendientesDia, key = { it.id }) { d ->
                         if (d.esEvento) {
                             TarjetaEventoAgenda(d, estado.nombres[d.materiaId], alAbrir = { alAbrir(d.id) })
@@ -171,7 +234,7 @@ fun CalendarioScreen(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String
                             FilaTarea(
                                 d, estado.nombres[d.materiaId], estado.ahora, vm.reglas,
                                 alAbrir = { alAbrir(d.id) }, alMarcar = { vm.marcar(d.id, it) },
-                                alEliminar = { vm.eliminarTarea(d.id) },
+                                alEliminar = { vm.eliminarTarea(d.id) }, alPosponer = { vm.posponer(d.id) },
                             )
                         }
                     }
@@ -233,10 +296,13 @@ private fun CeldaDia(
     esHoy: Boolean,
     seleccionada: Boolean,
     tareas: List<Deber>,
+    eventosExternos: List<EventoExterno> = emptyList(),
     modifier: Modifier,
     alElegir: () -> Unit,
 ) {
     val colores = remember(tareas.map { it.id }) { Pasteles.asignar(tareas.map { it.id }) }
+    val totalPuntos = tareas.size + eventosExternos.size
+
     Column(
         modifier.padding(2.dp).clip(RoundedCornerShape(8.dp))
             .then(
@@ -262,15 +328,67 @@ private fun CeldaDia(
             )
         }
         Row(Modifier.fillMaxWidth().padding(top = 3.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            for (t in tareas.take(MAX_PUNTOS)) {
+            var dibujados = 0
+            for (t in tareas) {
+                if (dibujados >= MAX_PUNTOS) break
                 val c = colores[t.id]
                 Box(
                     Modifier.padding(horizontal = 1.dp).size(6.dp).clip(CircleShape)
                         .background(c?.texto ?: MaterialTheme.colorScheme.primary),
                 )
+                dibujados++
             }
-            if (tareas.size > MAX_PUNTOS) {
+            for (ext in eventosExternos) {
+                if (dibujados >= MAX_PUNTOS) break
+                val colorDot = remember(ext.id) { AzulEventoTexto }
+                Box(
+                    Modifier.padding(horizontal = 1.dp).size(6.dp).clip(CircleShape)
+                        .background(colorDot),
+                )
+                dibujados++
+            }
+            if (totalPuntos > MAX_PUNTOS) {
                 Text("+", fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 1.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun TarjetaEventoExternoAgenda(evento: EventoExterno, zona: ZoneId) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = AzulEvento.copy(alpha = 0.35f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, AzulEventoTexto.copy(alpha = 0.3f)),
+    ) {
+        Row(
+            Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier.size(36.dp).background(AzulEvento, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.Event, null, Modifier.size(20.dp), tint = AzulEventoTexto)
+            }
+            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                Text(evento.titulo, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Row(
+                    Modifier.padding(top = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(R.string.google_calendar), style = MaterialTheme.typography.labelSmall, color = AzulEventoTexto, fontWeight = FontWeight.Bold)
+                    val horaTexto = if (evento.todoElDia) {
+                        stringResource(R.string.todo_el_dia)
+                    } else {
+                        val horaInicio = Instant.ofEpochMilli(evento.inicio).atZone(zona).toLocalTime().toString()
+                        val horaFin = evento.fin?.let { Instant.ofEpochMilli(it).atZone(zona).toLocalTime().toString() }
+                        if (horaFin != null) "$horaInicio - $horaFin" else horaInicio
+                    }
+                    Text(horaTexto, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
     }

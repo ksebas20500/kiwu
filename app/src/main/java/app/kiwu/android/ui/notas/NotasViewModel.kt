@@ -1,7 +1,9 @@
 package app.kiwu.android.ui.notas
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.kiwu.android.data.NotebookCoverStorage
 import app.kiwu.android.data.Repositorio
 import app.kiwu.android.data.ResumenPagina
 import app.kiwu.android.domain.Cuaderno
@@ -31,10 +33,13 @@ data class NotasEstado(
     val filtro: FiltroNotas = FiltroNotas.Todas,
     val busqueda: String = "",
     val paginas: List<ResumenPagina> = emptyList(),
+    val todasLasPaginas: List<ResumenPagina> = emptyList(),
     val cargado: Boolean = false,
 ) {
     val cuadernoActual: Cuaderno? get() = (filtro as? FiltroNotas.DeCuaderno)?.let { f -> cuadernos.firstOrNull { it.id == f.id } }
     val nombresCuadernos: Map<String, String> get() = cuadernos.associate { it.id to it.nombre }
+    val favoritasCount: Int get() = todasLasPaginas.count { it.favorita }
+    fun cantidadNotas(cuadernoId: String): Int = todasLasPaginas.count { it.cuadernoId == cuadernoId }
 }
 
 class NotasViewModel(private val repo: Repositorio) : ViewModel() {
@@ -52,29 +57,46 @@ class NotasViewModel(private val repo: Repositorio) : ViewModel() {
             }
             dentro && (consulta.isEmpty() || consulta in sinTildes(p.titulo) || consulta in sinTildes(p.textoPlano))
         }
-        NotasEstado(cuadernos, actual, q, visibles, cargado = true)
+        NotasEstado(cuadernos, actual, q, visibles, paginas, cargado = true)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NotasEstado())
 
     fun filtrar(f: FiltroNotas) { filtro.value = f }
     fun buscar(texto: String) { busqueda.value = texto }
 
-    fun crearCuaderno(nombre: String, icono: String) = viewModelScope.launch {
-        val c = repo.crearCuaderno(nombre, icono.ifBlank { "📓" })
+    fun crearCuaderno(
+        nombre: String,
+        icono: String,
+        coverImagePath: String? = null,
+        coverColorHex: String? = null,
+    ) = viewModelScope.launch {
+        val c = repo.crearCuaderno(nombre, icono.ifBlank { "📓" }, coverImagePath, coverColorHex)
         filtro.value = FiltroNotas.DeCuaderno(c.id)
     }
 
-    fun editarCuaderno(id: String, nombre: String, icono: String) = viewModelScope.launch { repo.editarCuaderno(id, nombre, icono.ifBlank { "📓" }) }
+    fun editarCuaderno(
+        id: String,
+        nombre: String,
+        icono: String,
+        coverImagePath: String? = null,
+        coverColorHex: String? = null,
+    ) = viewModelScope.launch {
+        repo.editarCuaderno(id, nombre, icono.ifBlank { "📓" }, coverImagePath, coverColorHex)
+    }
 
-    fun eliminarCuaderno(id: String) = viewModelScope.launch {
+    fun eliminarCuaderno(id: String, context: Context? = null) = viewModelScope.launch {
         if ((filtro.value as? FiltroNotas.DeCuaderno)?.id == id) filtro.value = FiltroNotas.Todas
+        if (context != null) NotebookCoverStorage.borrarPortada(context, id)
         repo.eliminarCuaderno(id)
     }
 
     /** Crea una página en el cuaderno elegido (o en «Notas rápidas», que se crea si no hay ninguno) y devuelve su id. */
-    suspend fun nuevaPagina(): String {
+    suspend fun nuevaPagina(cuadernoIdExplicito: String? = null): String {
         val e = estado.value
-        val cuaderno = e.cuadernoActual ?: e.cuadernos.firstOrNull() ?: repo.crearCuaderno(app.kiwu.android.Textos.notasRapidas, "📝")
-        return repo.crearPagina(cuaderno.id).id
+        val destino = cuadernoIdExplicito
+            ?: e.cuadernoActual?.id
+            ?: e.cuadernos.firstOrNull()?.id
+            ?: repo.crearCuaderno(app.kiwu.android.Textos.notasRapidas, "📝").id
+        return repo.crearPagina(destino).id
     }
 
     fun ponerFavorita(id: String, favorita: Boolean) = viewModelScope.launch { repo.ponerFavorita(id, favorita) }

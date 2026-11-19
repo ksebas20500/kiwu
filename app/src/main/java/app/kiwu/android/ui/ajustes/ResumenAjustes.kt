@@ -27,6 +27,7 @@ class ResumenAjustes(private val r: Resources) {
         when (id) {
             "claro" -> R.string.tema_claro
             "oscuro" -> R.string.tema_oscuro
+            Acentos.NEGRO -> R.string.tema_negro
             else -> R.string.resumen_tema_sistema
         },
     )
@@ -73,6 +74,8 @@ class ResumenAjustes(private val r: Resources) {
             r.getString(R.string.resumen_activados),
             if (a.segundoAvisoMin > 0) r.getString(R.string.resumen_segundo_aviso, minutos(a.segundoAvisoMin)) else null,
             if (!a.rachaAviso) r.getString(R.string.resumen_sin_aviso_racha) else null,
+            if (!a.resumenSemanal) r.getString(R.string.resumen_sin_resumen) else null,
+            if (!a.repasoAviso) r.getString(R.string.resumen_sin_repaso) else null,
         ).joinToString(" · ")
     }
 

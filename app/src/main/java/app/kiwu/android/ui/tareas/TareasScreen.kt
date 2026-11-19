@@ -172,8 +172,8 @@ fun TareasScreen(
         val carpeta = (estado.elemento as? Elemento.DeGrupo)?.id
         DialogoNuevoElemento(
             titulo = if (carpeta != null) stringResource(R.string.lista_nueva_en, estado.grupoActual?.nombre ?: stringResource(R.string.la_carpeta)) else stringResource(R.string.lista_nueva),
-            etiqueta = stringResource(R.string.lista_nombre_materia), accion = stringResource(R.string.crear), alCerrar = { dialogoNuevaLista = false },
-        ) { nombre, emoji -> vm.crearLista(nombre, emoji, carpeta) }
+            etiqueta = stringResource(R.string.lista_nombre_materia), accion = stringResource(R.string.crear), conColor = true, alCerrar = { dialogoNuevaLista = false },
+        ) { nombre, emoji, color -> vm.crearLista(nombre, emoji, carpeta, color) }
     }
 }
 

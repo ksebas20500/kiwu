@@ -15,6 +15,7 @@ import app.kiwu.android.domain.MotorSync
 import app.kiwu.android.domain.Nube
 import app.kiwu.android.domain.RelojHibrido
 import app.kiwu.android.domain.TiposBloque
+import java.time.LocalDate
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -115,6 +116,45 @@ class SyncRoomTest {
         val deberes = movil.repo.deberes.first()
         assertEquals(listOf("A"), deberes.map { it.titulo })
         assertTrue(deberes[0].completado)
+    }
+
+    @Test
+    fun unaFaltaYsuCicloCompletoViajanEntreDispositivos() = runBlocking {
+        val dia = LocalDate.of(2026, 11, 9)
+        val f = movil.repo.marcarFalta("G", "H", dia)
+        movil.sincronizar(nube)
+        tablet.sincronizar(nube)
+        assertEquals(listOf(dia.toEpochDay()), tablet.repo.faltasAhora().map { it.dia })
+
+        tablet.repo.justificarFalta(f.id, true)
+        tablet.sincronizar(nube)
+        movil.sincronizar(nube)
+        assertTrue(movil.repo.faltasAhora().single().justificada)
+
+        movil.repo.quitarFalta(f.id)
+        movil.sincronizar(nube)
+        tablet.sincronizar(nube)
+        assertTrue(tablet.repo.faltasAhora().isEmpty())
+        // El borrado es lógico: la fila se queda (con `eliminada`) y ya no se re-encola.
+        assertNotNull(tablet.valor("SELECT eliminada FROM falta WHERE id = '${f.id}'"))
+        assertEquals(0, tablet.almacen.pendientesTotal())
+    }
+
+    @Test
+    fun lasSesionesDeEstudioViajanYLaPodaLimpiaEnAmbos() = runBlocking {
+        val lista = movil.repo.crearMateria("Mate")
+        movil.repo.registrarSesion(lista.id, 25)
+        movil.sincronizar(nube)
+        tablet.sincronizar(nube)
+        val sesiones = tablet.repo.sesiones.first()
+        assertEquals(1, sesiones.size)
+        assertEquals(25, sesiones[0].minutos)
+        // La poda en el móvil es un borrado lógico: viaja y la vieja desaparece en la tablet también.
+        movil.repo.registrarSesion(lista.id, 10, dia = LocalDate.now().plusDays(60))
+        movil.sincronizar(nube)
+        tablet.sincronizar(nube)
+        assertEquals(1, tablet.repo.sesiones.first().size)
+        assertEquals(10, tablet.repo.sesiones.first()[0].minutos)
     }
 
     @Test

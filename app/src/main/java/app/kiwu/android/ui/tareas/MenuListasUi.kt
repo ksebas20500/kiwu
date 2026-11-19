@@ -87,6 +87,7 @@ import app.kiwu.android.domain.Materia
 import app.kiwu.android.domain.NodoMenu
 import app.kiwu.android.ui.DialogoConfirmar
 import app.kiwu.android.ui.Pasteles
+import app.kiwu.android.ui.horario.SelectorColorClase
 import app.kiwu.android.ui.notas.SelectorEmoji
 import app.kiwu.android.R
 import androidx.compose.ui.res.stringResource
@@ -110,13 +111,17 @@ fun DialogoNuevoElemento(
     accion: String = stringResource(R.string.crear),
     inicial: String = "",
     emojiInicial: String? = null,
+    /** Color de la lista (`#RRGGBB`); solo se muestra el selector si [conColor]. */
+    colorInicial: String? = null,
+    conColor: Boolean = false,
     alCerrar: () -> Unit,
-    alConfirmar: (nombre: String, emoji: String?) -> Unit,
+    alConfirmar: (nombre: String, emoji: String?, color: String?) -> Unit,
 ) {
     var texto by remember { mutableStateOf(inicial) }
     var emoji by remember { mutableStateOf(emojiInicial) }
+    var color by remember { mutableStateOf(colorInicial) }
     var elegirEmoji by remember { mutableStateOf(false) }
-    val enviar = { if (texto.isNotBlank()) { alConfirmar(texto.trim(), emoji); alCerrar() } }
+    val enviar = { if (texto.isNotBlank()) { alConfirmar(texto.trim(), emoji, color); alCerrar() } }
     AlertDialog(
         onDismissRequest = alCerrar,
         title = { Text(titulo, maxLines = 2) },
@@ -137,6 +142,10 @@ fun DialogoNuevoElemento(
                     if (emoji != null) TextButton(onClick = { emoji = null }) { Text(stringResource(R.string.ajustes_quitar)) }
                 }
                 if (elegirEmoji) SelectorEmoji(emoji ?: "", EmojisListas) { emoji = it; elegirEmoji = false }
+                if (conColor) {
+                    Text(stringResource(R.string.lista_color), style = MaterialTheme.typography.labelLarge)
+                    SelectorColorClase(color, alElegir = { color = it })
+                }
             }
         },
         confirmButton = { TextButton(onClick = enviar, enabled = texto.isNotBlank()) { Text(accion) } },
@@ -180,18 +189,19 @@ fun MenuTareas(vm: TareasViewModel, cerrarYLuego: (() -> Unit) -> Unit, alAjuste
     when (val d = dialogo) {
         is Dialogo.NuevaLista -> DialogoNuevoElemento(
             titulo = if (d.nombreCarpeta != null) stringResource(R.string.lista_nueva_en, d.nombreCarpeta) else stringResource(R.string.lista_nueva),
-            etiqueta = stringResource(R.string.lista_nombre_materia), alCerrar = { dialogo = null },
-        ) { nombre, emoji -> cerrarYLuego { vm.crearLista(nombre, emoji, d.grupoId) } }
-        Dialogo.NuevaCarpeta -> DialogoNuevoElemento(stringResource(R.string.carpeta_nueva), stringResource(R.string.carpeta_nombre), alCerrar = { dialogo = null }) { nombre, emoji ->
+            etiqueta = stringResource(R.string.lista_nombre_materia), conColor = true, alCerrar = { dialogo = null },
+        ) { nombre, emoji, color -> cerrarYLuego { vm.crearLista(nombre, emoji, d.grupoId, color) } }
+        Dialogo.NuevaCarpeta -> DialogoNuevoElemento(stringResource(R.string.carpeta_nueva), stringResource(R.string.carpeta_nombre), alCerrar = { dialogo = null }) { nombre, emoji, _ ->
             cerrarYLuego { vm.crearGrupo(nombre, emoji) }
         }
         is Dialogo.EditarLista -> DialogoNuevoElemento(
-            stringResource(R.string.lista_editar), stringResource(R.string.nombre), accion = stringResource(R.string.guardar), inicial = d.materia.nombre, emojiInicial = d.materia.emoji, alCerrar = { dialogo = null },
-        ) { nombre, emoji -> vm.editarLista(d.materia.id, nombre, emoji) }
+            stringResource(R.string.lista_editar), stringResource(R.string.nombre), accion = stringResource(R.string.guardar), inicial = d.materia.nombre,
+            emojiInicial = d.materia.emoji, colorInicial = d.materia.color, conColor = true, alCerrar = { dialogo = null },
+        ) { nombre, emoji, color -> vm.editarLista(d.materia.id, nombre, emoji, color) }
         is Dialogo.EditarCarpeta -> DialogoNuevoElemento(
             stringResource(R.string.carpeta_editar), stringResource(R.string.nombre), accion = stringResource(R.string.guardar), inicial = d.grupo.nombre,
             emojiInicial = d.grupo.icono.takeIf { it != "📁" }, alCerrar = { dialogo = null },
-        ) { nombre, emoji -> vm.editarGrupo(d.grupo.id, nombre, emoji) }
+        ) { nombre, emoji, _ -> vm.editarGrupo(d.grupo.id, nombre, emoji) }
         null -> Unit
     }
     eliminarLista?.let { m ->
@@ -410,7 +420,7 @@ private fun FilaDeLista(
         cuenta = pendientes, mostrarCuenta = mostrarCuenta, alClic = { alElegir(e) }, inicio = null,
         icono = { IconoLista(m, estado.aspecto) }, arrastre = arrastre,
         menu = { cerrar ->
-            DropdownMenuItem(text = { Text(stringResource(R.string.editar_nombre_emoji)) }, onClick = { cerrar(); alEditar(m) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.editar_nombre_emoji_color)) }, onClick = { cerrar(); alEditar(m) })
             DropdownMenuItem(text = { Text(stringResource(R.string.mover_a_carpeta)) }, onClick = { cerrar(); alMover(m) })
             if (m.grupoId != null) DropdownMenuItem(text = { Text(stringResource(R.string.sacar_de_carpeta)) }, onClick = { cerrar(); alSacar(m) })
             DropdownMenuItem(text = { Text(stringResource(R.string.subir)) }, onClick = { cerrar(); alMoverOrden(m, -1) })
@@ -426,8 +436,10 @@ private fun FilaDeLista(
  */
 @Composable
 private fun IconoLista(m: Materia, aspecto: String) {
+    val propio = app.kiwu.android.domain.ReglasHorario.colorValido(m.color)
     when {
         m.emoji != null -> Text(m.emoji, fontSize = 20.sp)
+        propio != null -> Box(Modifier.size(14.dp).clip(CircleShape).background(Color(android.graphics.Color.parseColor(propio))))
         aspecto == "color" -> Box(Modifier.size(14.dp).clip(CircleShape).background(Pasteles.colores[Pasteles.indicePreferido(m.id)].fondo))
         else -> Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -530,7 +542,7 @@ private fun DialogoMoverLista(
         },
         confirmButton = { TextButton(onClick = alCerrar) { Text(stringResource(R.string.cerrar)) } },
     )
-    if (nueva) DialogoNuevoElemento(stringResource(R.string.carpeta_nueva), stringResource(R.string.carpeta_nombre), accion = stringResource(R.string.crear_y_mover), alCerrar = { nueva = false }) { nombre, emoji ->
+    if (nueva) DialogoNuevoElemento(stringResource(R.string.carpeta_nueva), stringResource(R.string.carpeta_nombre), accion = stringResource(R.string.crear_y_mover), alCerrar = { nueva = false }) { nombre, emoji, _ ->
         alNuevaCarpeta(nombre, emoji); alCerrar()
     }
 }

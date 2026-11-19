@@ -76,6 +76,9 @@ data class Falta(
     val dia: Long,
     val justificada: Boolean = false,
     val creada: Long,
+    /** Marca de la última edición (la usan los triggers del sync; ver [SyncSql]). */
+    val actualizada: Long = 0,
+    val eliminada: Long? = null,
 )
 
 /** Reglas del horario: funciones puras, sin base de datos (equivalente a `Reglas` para las tareas). */

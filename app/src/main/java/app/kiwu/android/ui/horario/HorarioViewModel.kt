@@ -78,6 +78,8 @@ class HorarioViewModel(private val repo: Repositorio) : ViewModel() {
 
     fun marcarTarea(id: String, hecha: Boolean) = viewModelScope.launch { repo.marcar(id, hecha) }
 
+    fun posponerTarea(id: String) = viewModelScope.launch { repo.posponer(id) }
+
     fun crearTarea(titulo: String, materiaId: String, fecha: Long?) = viewModelScope.launch { repo.crearDeber(titulo, materiaId, fecha) }
 
     fun vincular(grupo: String, materiaId: String?) = viewModelScope.launch { repo.vincularGrupo(grupo, materiaId) }

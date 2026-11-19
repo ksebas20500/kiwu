@@ -151,6 +151,7 @@
     <string name="tema_sistema">System</string>
     <string name="tema_claro">Light</string>
     <string name="tema_oscuro">Dark</string>
+    <string name="tema_negro">Black</string>
     <string name="resumen_tema_sistema">System</string>
     <string name="resumen_color_sistema">system</string>
     <string name="resumen_color_propio">custom</string>
@@ -209,6 +210,10 @@
     <string name="ajustes_hora_sin_hora">Time for tasks without a time</string>
     <string name="ajustes_hora_sin_hora_texto">Tasks with a date but no time are reminded that same day at this time.</string>
     <string name="antes_de">%1$s before</string>
+    <string name="ajustes_resumen">Weekly summary</string>
+    <string name="ajustes_resumen_texto">A Sunday notification with what you achieved this week: tasks, study and streak.</string>
+    <string name="ajustes_aviso_repaso">Review reminder</string>
+    <string name="ajustes_aviso_repaso_texto">Every day at 6:00 pm, if you have cards to review.</string>
     <string name="ajustes_aviso_racha">Streak reminder</string>
     <string name="ajustes_aviso_racha_texto">At 8:00 PM, if you still have tasks due or overdue today</string>
     <string name="ajustes_notif_on">Notifications are on.</string>
@@ -286,6 +291,7 @@
     <string name="carpeta_nueva">New folder</string>
     <string name="carpeta_nombre">Folder name</string>
     <string name="lista_editar">Edit list</string>
+    <string name="lista_color">Color</string>
     <string name="carpeta_editar">Edit folder</string>
     <string name="nombre">Name</string>
     <string name="lista_eliminar_titulo">Delete %1$s?</string>
@@ -308,6 +314,7 @@
     <string name="plegar_n">Collapse %1$s</string>
     <string name="lista_nueva_aqui">New list here</string>
     <string name="editar_nombre_emoji">Edit (name and emoji)</string>
+    <string name="editar_nombre_emoji_color">Edit (name, emoji and color)</string>
     <string name="subir">Move up</string>
     <string name="bajar">Move down</string>
     <string name="carpeta_vacia">Empty folder</string>
@@ -399,6 +406,8 @@
     <string name="nota_opciones">Note options</string>
     <string name="mover_otro_cuaderno">Move to another notebookâ€¦</string>
     <string name="nota_eliminar">Delete note</string>
+    <string name="compartir_pdf">Share PDF</string>
+    <string name="pdf_error">Couldn\'t create the PDF</string>
     <string name="mover_a">Move toâ€¦</string>
     <string name="nota_eliminar_titulo">Delete this note?</string>
     <string name="no_se_recupera">It can\'t be recovered.</string>
@@ -514,13 +523,38 @@
     <string name="racha_aviso_texto">Hand in what\'s pending before midnight to keep it.</string>
     <string name="canal_racha">Streak</string>
     <string name="canal_racha_desc">Reminds you in the evening if your streak is about to be lost</string>
+    <string name="canal_resumen">Weekly summary</string>
+    <string name="canal_resumen_desc">What you achieved this week: completed tasks, study and streak</string>
+    <string name="canal_repaso">Daily review</string>
+    <string name="canal_repaso_desc">One notification a day when there are cards to review</string>
     <string name="canal_tareas">Task reminders</string>
     <string name="canal_tareas_desc">Reminders before your tasks are due</string>
     <string name="canal_horario">Schedule reminders</string>
     <string name="canal_horario_desc">Reminders before your classes and activities start</string>
     <string name="completar">Complete</string>
     <string name="posponer_1h">Snooze 1 h</string>
+    <string name="resumen_titulo">Your week in Kiwu</string>
+    <string name="repaso_titulo">Cards for today</string>
+    <plurals name="repaso_texto">
+        <item quantity="one">You have %1$d card to review.</item>
+        <item quantity="other">You have %1$d cards to review.</item>
+    </plurals>
+    <string name="resumen_min_estudio">%1$d min of study</string>
     <string name="posponer_manana">Tomorrow</string>
+    <string name="resumen_horas_estudio">%1$d h %2$d min of study</string>
+    <string name="resumen_sin_resumen">no weekly summary</string>
+    <string name="resumen_sin_repaso">no review reminder</string>
+    <string name="deslizar_reabrir">Reopen</string>
+    <plurals name="resumen_tareas">
+        <item quantity="one">%d task completed</item>
+        <item quantity="many">%d tasks completed</item>
+        <item quantity="other">%d tasks completed</item>
+    </plurals>
+    <plurals name="resumen_racha">
+        <item quantity="one">Streak of %d day</item>
+        <item quantity="many">Streak of %d days</item>
+        <item quantity="other">Streak of %d days</item>
+    </plurals>
     <string name="aviso_evento_ya">Just started</string>
     <string name="aviso_evento_hace">Started %1$d min ago</string>
     <string name="aviso_tarea_ya">Just became due</string>
@@ -752,8 +786,11 @@
     <string name="respuesta">Answer</string>
     <string name="tarjeta_anadir">Add card</string>
     <string name="tarjeta_quitar">Remove card</string>
-    <string name="tarjetas_empezar">Start review (%1$d)</string>
-    <string name="tarjetas_intro">Each card has a question and its answer. Add as many as you like and tap "Start review".</string>
+    <string name="editar_tarjeta">Edit card</string>
+    <string name="tarjetas_empezar">Start session (%1$d cards)</string>
+    <string name="tarjetas_hoy">Start session (%1$d cards today)</string>
+    <string name="tarjetas_al_dia">All caught up! Cards come back when their day arrives.</string>
+    <string name="tarjetas_intro">Each card has a question and its answer. Add as many as you like and tap "Start session".</string>
     <string name="tarjetas_volver">Back to my cards</string>
     <string name="bloque_tarjeta">Flashcard</string>
     <string name="slash_repasar">Review flashcards</string>
@@ -783,6 +820,15 @@
         <item quantity="other">%1$d suggested cards. Untick the ones you don\'t want.</item>
     </plurals>
     <string name="tarjetas_anadir_n">Add (%1$d)</string>
+    <string name="tarjetas_fecha_examen">Exam date</string>
+    <string name="tarjetas_poner_fecha">Set date</string>
+    <string name="repaso_hoy">Review today</string>
+    <string name="repaso_hoy_intro">All the cards in your notes that are due. Notes for subjects with an exam in 7, 3 or 1 days come first.</string>
+    <string name="repaso_examen_chip">Exam in %2$d days</string>
+    <plurals name="repaso_hoy_notas">
+        <item quantity="one">%1$d note</item>
+        <item quantity="other">%1$d notes</item>
+    </plurals>
     <string name="nota_ayuda">What you got, for example 4.5</string>
     <string name="peso_ayuda">How much it counts in %% (for example 20). Empty = all count the same</string>
     <string name="nota_minima_aprobar">Minimum passing grade</string>
@@ -820,4 +866,37 @@
     <string name="quitar_anuncios">Remove ads</string>
     <string name="anuncios_quitados">Ads removed!</string>
     <string name="quitar_anuncios_descripcion">Remove ads permanently</string>
+    <string name="ver_google_calendar">Show Google Calendar events</string>
+    <string name="conceder_permiso">Allow</string>
+
+    <string name="hechas">Done</string>
+    <string name="ajustes_seccion_personalizacion">Customization &amp; usage</string>
+    <string name="ajustes_seccion_cuenta_datos">Account &amp; data</string>
+    <string name="ajustes_seccion_aplicacion">App</string>
+    <string name="ajustes_comprobar_actualizacion">Check for updates</string>
+    <string name="ajustes_o_con_correo">or with email</string>
+    <string name="ajustes_min_caracteres">Minimum 6 characters</string>
+    <string name="ajustes_recomendado">Recommended</string>
+    <string name="ajustes_integraciones">Integrations</string>
+    <string name="ajustes_confirmar_restaurar_titulo">Restore backup?</string>
+    <string name="ajustes_confirmar_restaurar_texto">Current app data will be overwritten with the Google Drive backup. Do you want to continue?</string>
+    <string name="ajustes_confirmar_importar_titulo">Import data?</string>
+    <string name="ajustes_confirmar_importar_texto">Current app data may be overwritten with the imported file. Do you want to continue?</string>
+    <string name="ajustes_exactas_ok">Exact alarms allowed</string>
+    <string name="drive_subtitulo">Save notes, tasks and images in a private file in your drive.</string>
+    <string name="copia_local_subtitulo">Export or import your data. Compatible with Kiwu for Linux.</string>
+
+    <string name="inicio">Home</string>
+    <string name="proxima_clase">Next class</string>
+    <string name="configura_horario">Set up your schedule</string>
+    <string name="sin_clases_hoy">No classes scheduled</string>
+    <string name="para_hoy">For today</string>
+    <string name="ver_todas_flecha">See all ›</string>
+    <string name="ver_todos_flecha">See all ›</string>
+    <string name="todo_al_dia_hoy">All done for today</string>
+    <string name="tarjetas_para_repasar_n">You have %1$d flashcards to review today</string>
+    <string name="tus_cuadernos">Your notebooks</string>
+    <string name="saludo_manana">Good morning</string>
+    <string name="saludo_tarde">Good afternoon</string>
+    <string name="saludo_noche">Good evening</string>
 </resources>

@@ -56,7 +56,7 @@ suspend fun coloresDelWidget(contexto: Context): ColoresWidget {
     val sistemaOscuro = (contexto.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
     val oscuro = when (ajustes.tema) {
         "claro" -> false
-        "oscuro" -> true
+        "oscuro", Acentos.NEGRO -> true
         else -> sistemaOscuro
     }
     val esquema = if (ajustes.acento == Acentos.SISTEMA && Build.VERSION.SDK_INT >= 31) {

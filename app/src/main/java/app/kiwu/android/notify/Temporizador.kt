@@ -11,10 +11,12 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import app.kiwu.android.Idioma
+import app.kiwu.android.KiwuApp
 import app.kiwu.android.MainActivity
 import app.kiwu.android.R
 import app.kiwu.android.domain.SesionEstudio
 import app.kiwu.android.domain.TiempoEstudio
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 /**
@@ -36,7 +38,7 @@ object Temporizador {
     private fun prefs(c: Context) = c.applicationContext.getSharedPreferences("temporizador", Context.MODE_PRIVATE)
 
     /** Cuándo termina la cuenta atrás en marcha (ms), o null si no hay ninguna (ni en pausa). */
-    fun fin(c: Context): Long? = prefs(c).getLong("fin", 0L).takeIf { it > System.currentTimeMillis() }
+    fun fin(c: Context): Long? = prefs(c).getLong("fin", 0L).takeIf { it > 0 }
 
     fun minutos(c: Context): Int = prefs(c).getInt("minutos", 25)
 
@@ -50,8 +52,10 @@ object Temporizador {
 
     private fun registrar(c: Context, minutos: Int) {
         if (minutos < 1) return
-        val nueva = SesionEstudio(materia(c), LocalDate.now().toEpochDay(), minutos)
-        prefs(c).edit().putString("sesiones", TiempoEstudio.escribir(TiempoEstudio.anadir(sesiones(c), nueva))).apply()
+        val app = c.applicationContext as? KiwuApp ?: return
+        app.alcance.launch {
+            app.repo.registrarSesion(materia(c), minutos)
+        }
     }
 
     /** Qué queda de la cuenta atrás cuando está pausada (ms); 0 = no hay pausa. */
@@ -124,12 +128,10 @@ object Temporizador {
 
     /** La alarma de fin: apunta la sesión completa (o avisa de que se acabó el descanso). */
     fun terminar(c: Context) {
-        if (prefs(c).getBoolean("descanso", false)) avisoDescanso(c)
-        else {
-            registrar(c, minutos(c))
-            avisar(c)
-        }
+        val descanso = prefs(c).getBoolean("descanso", false)
+        if (!descanso) registrar(c, minutos(c))
         soltar(c)
+        if (descanso) avisoDescanso(c) else avisar(c)
     }
 
     private fun alarma(c: Context) = PendingIntent.getBroadcast(
@@ -166,6 +168,12 @@ object Temporizador {
     /** La notificación permanente con el tiempo que queda: la bloqueo de pantalla y el AOD la muestran apagando la pantalla. */
     private fun notificarCurso(c: Context) {
         if (!Avisos.tienePermiso(c)) return
+        val tiempoFin = fin(c)
+        val tiempoPausa = pausaRestante(c)
+        if (tiempoFin == null && tiempoPausa <= 0L) {
+            NotificationManagerCompat.from(c).cancel(ID_CURSO)
+            return
+        }
         val t = Idioma.contexto(c)
         if (Build.VERSION.SDK_INT >= 26) {
             c.getSystemService(NotificationManager::class.java)
@@ -178,7 +186,7 @@ object Temporizador {
                 if (descanso) t.getString(R.string.temporizador_descanso_curso, minutos(c))
                 else t.getString(R.string.temporizador_curso, minutos(c)),
             )
-            .setWhen(fin(c) ?: (System.currentTimeMillis() + pausaRestante(c)))
+            .setWhen(tiempoFin ?: (System.currentTimeMillis() + tiempoPausa))
             .setUsesChronometer(true)
             .setChronometerCountDown(true) // API 24+, minSdk 26
             .setOngoing(true).setOnlyAlertOnce(true)

@@ -159,6 +159,7 @@
     <string name="tema_sistema">Sistema</string>
     <string name="tema_claro">Claro</string>
     <string name="tema_oscuro">Oscuro</string>
+    <string name="tema_negro">Negro</string>
     <string name="resumen_tema_sistema">Del sistema</string>
     <string name="resumen_color_sistema">del sistema</string>
     <string name="resumen_color_propio">propio</string>
@@ -217,6 +218,10 @@
     <string name="ajustes_hora_sin_hora">Hora de las tareas sin hora</string>
     <string name="ajustes_hora_sin_hora_texto">Las tareas con fecha pero sin hora se avisan ese mismo día a esta hora.</string>
     <string name="antes_de">%1$s antes</string>
+    <string name="ajustes_resumen">Resumen semanal</string>
+    <string name="ajustes_resumen_texto">Un aviso el domingo con lo que lograste en la semana: tareas, estudio y racha.</string>
+    <string name="ajustes_aviso_repaso">Aviso de repaso</string>
+    <string name="ajustes_aviso_repaso_texto">Cada día a las 18:00, si tienes tarjetas para repasar.</string>
     <string name="ajustes_aviso_racha">Aviso de la racha</string>
     <string name="ajustes_aviso_racha_texto">A las 20:00, si hoy te quedan tareas por entregar o vencidas</string>
     <string name="ajustes_notif_on">Las notificaciones están activadas.</string>
@@ -301,6 +306,7 @@
     <string name="carpeta_nueva">Nueva carpeta</string>
     <string name="carpeta_nombre">Nombre de la carpeta</string>
     <string name="lista_editar">Editar lista</string>
+    <string name="lista_color">Color</string>
     <string name="carpeta_editar">Editar carpeta</string>
     <string name="nombre">Nombre</string>
     <string name="lista_eliminar_titulo">¿Eliminar %1$s?</string>
@@ -323,6 +329,7 @@
     <string name="plegar_n">Plegar %1$s</string>
     <string name="lista_nueva_aqui">Nueva lista aquí</string>
     <string name="editar_nombre_emoji">Editar (nombre y emoji)</string>
+    <string name="editar_nombre_emoji_color">Editar (nombre, emoji y color)</string>
     <string name="subir">Subir</string>
     <string name="bajar">Bajar</string>
     <string name="carpeta_vacia">Carpeta vacía</string>
@@ -417,6 +424,8 @@
     <string name="nota_opciones">Opciones de la nota</string>
     <string name="mover_otro_cuaderno">Mover a otro cuaderno…</string>
     <string name="nota_eliminar">Eliminar nota</string>
+    <string name="compartir_pdf">Compartir PDF</string>
+    <string name="pdf_error">No se pudo crear el PDF</string>
     <string name="mover_a">Mover a…</string>
     <string name="nota_eliminar_titulo">¿Eliminar esta nota?</string>
     <string name="no_se_recupera">No se podrá recuperar.</string>
@@ -532,13 +541,38 @@
     <string name="racha_aviso_texto">Entrega lo pendiente antes de medianoche para mantenerla.</string>
     <string name="canal_racha">Racha</string>
     <string name="canal_racha_desc">Te avisa por la tarde si tu racha está a punto de perderse</string>
+    <string name="canal_resumen">Resumen semanal</string>
+    <string name="canal_resumen_desc">Lo que lograste esta semana: tareas completadas, estudio y racha</string>
+    <string name="canal_repaso">Repaso diario</string>
+    <string name="canal_repaso_desc">Un aviso al día cuando hay tarjetas para repasar</string>
     <string name="canal_tareas">Recordatorios de tareas</string>
     <string name="canal_tareas_desc">Avisos antes de la fecha de entrega de tus tareas</string>
     <string name="canal_horario">Avisos del horario</string>
     <string name="canal_horario_desc">Avisos antes de que empiecen tus clases y actividades</string>
     <string name="completar">Completar</string>
     <string name="posponer_1h">Posponer 1 h</string>
+    <string name="resumen_titulo">Tu semana en Kiwu</string>
+    <string name="repaso_titulo">Tarjetas para hoy</string>
+    <plurals name="repaso_texto">
+        <item quantity="one">Tienes %1$d tarjeta para repasar.</item>
+        <item quantity="other">Tienes %1$d tarjetas para repasar.</item>
+    </plurals>
+    <string name="resumen_min_estudio">%1$d min de estudio</string>
     <string name="posponer_manana">Mañana</string>
+    <string name="resumen_horas_estudio">%1$d h %2$d min de estudio</string>
+    <string name="resumen_sin_resumen">sin resumen semanal</string>
+    <string name="resumen_sin_repaso">sin aviso de repaso</string>
+    <string name="deslizar_reabrir">Reabrir</string>
+    <plurals name="resumen_tareas">
+        <item quantity="one">%d tarea completada</item>
+        <item quantity="many">%d tareas completadas</item>
+        <item quantity="other">%d tareas completadas</item>
+    </plurals>
+    <plurals name="resumen_racha">
+        <item quantity="one">Racha de %d día</item>
+        <item quantity="many">Racha de %d días</item>
+        <item quantity="other">Racha de %d días</item>
+    </plurals>
     <string name="aviso_evento_ya">Acaba de empezar</string>
     <string name="aviso_evento_hace">Empezó hace %1$d min</string>
     <string name="aviso_tarea_ya">Acaba de vencer</string>
@@ -774,8 +808,11 @@
     <string name="respuesta">Respuesta</string>
     <string name="tarjeta_anadir">Añadir tarjeta</string>
     <string name="tarjeta_quitar">Quitar tarjeta</string>
-    <string name="tarjetas_empezar">Empezar repaso (%1$d)</string>
-    <string name="tarjetas_intro">Cada tarjeta tiene una pregunta y su respuesta. Añade las que quieras y pulsa «Empezar repaso».</string>
+    <string name="editar_tarjeta">Editar tarjeta</string>
+    <string name="tarjetas_empezar">Empezar sesión (%1$d tarjetas)</string>
+    <string name="tarjetas_hoy">Empezar sesión (%1$d tarjetas de hoy)</string>
+    <string name="tarjetas_al_dia">¡Todo al día! Las tarjetas vuelven cuando les toque.</string>
+    <string name="tarjetas_intro">Cada tarjeta tiene una pregunta y su respuesta. Añade las que quieras y pulsa «Empezar sesión».</string>
     <string name="tarjetas_volver">Volver a mis tarjetas</string>
     <string name="bloque_tarjeta">Tarjeta de repaso</string>
     <string name="slash_repasar">Repasar tarjetas</string>
@@ -805,6 +842,15 @@
         <item quantity="other">%1$d tarjetas propuestas. Desmarca las que no quieras.</item>
     </plurals>
     <string name="tarjetas_anadir_n">Añadir (%1$d)</string>
+    <string name="tarjetas_fecha_examen">Fecha del examen</string>
+    <string name="tarjetas_poner_fecha">Poner fecha</string>
+    <string name="repaso_hoy">Repasar hoy</string>
+    <string name="repaso_hoy_intro">Todas las tarjetas de tus notas que ya toca repasar. Las de materias con examen a 7, 3 o 1 días van primero.</string>
+    <string name="repaso_examen_chip">Examen en %2$d días</string>
+    <plurals name="repaso_hoy_notas">
+        <item quantity="one">%1$d nota</item>
+        <item quantity="other">%1$d notas</item>
+    </plurals>
     <string name="nota_ayuda">Lo que sacaste, por ejemplo 4.5</string>
     <string name="peso_ayuda">Cuánto vale en %% (por ejemplo 20). Vacío = todas valen igual</string>
     <string name="nota_minima_aprobar">Nota mínima para aprobar</string>
@@ -842,4 +888,37 @@
     <string name="quitar_anuncios">Quitar anuncios</string>
     <string name="anuncios_quitados">¡Anuncios eliminados!</string>
     <string name="quitar_anuncios_descripcion">Elimina los anuncios para siempre</string>
+    <string name="ver_google_calendar">Mostrar eventos de Google Calendar</string>
+    <string name="conceder_permiso">Permitir</string>
+
+    <string name="hechas">Hechas</string>
+    <string name="ajustes_seccion_personalizacion">Personalización y uso</string>
+    <string name="ajustes_seccion_cuenta_datos">Cuenta y datos</string>
+    <string name="ajustes_seccion_aplicacion">Aplicación</string>
+    <string name="ajustes_comprobar_actualizacion">Comprobar si hay una versión nueva</string>
+    <string name="ajustes_o_con_correo">o con correo</string>
+    <string name="ajustes_min_caracteres">Mínimo 6 caracteres</string>
+    <string name="ajustes_recomendado">Recomendado</string>
+    <string name="ajustes_integraciones">Integraciones</string>
+    <string name="ajustes_confirmar_restaurar_titulo">¿Restaurar copia de seguridad?</string>
+    <string name="ajustes_confirmar_restaurar_texto">Los datos actuales de la app se sobrescribirán con la copia de seguridad de Google Drive. ¿Deseas continuar?</string>
+    <string name="ajustes_confirmar_importar_titulo">¿Importar datos?</string>
+    <string name="ajustes_confirmar_importar_texto">Los datos actuales de la app pueden sobrescribirse con el archivo importado. ¿Deseas continuar?</string>
+    <string name="ajustes_exactas_ok">Alarmas exactas permitidas</string>
+    <string name="drive_subtitulo">Guarda notas, tareas e imágenes en un archivo privado en tu unidad.</string>
+    <string name="copia_local_subtitulo">Exporta o importa tus datos. Compatible con Kiwu para Linux.</string>
+
+    <string name="inicio">Inicio</string>
+    <string name="proxima_clase">Próxima clase</string>
+    <string name="configura_horario">Configura tu horario</string>
+    <string name="sin_clases_hoy">No hay clases programadas</string>
+    <string name="para_hoy">Para hoy</string>
+    <string name="ver_todas_flecha">Ver todas ›</string>
+    <string name="ver_todos_flecha">Ver todos ›</string>
+    <string name="todo_al_dia_hoy">Todo al día por hoy</string>
+    <string name="tarjetas_para_repasar_n">Tienes %1$d tarjetas para repasar hoy</string>
+    <string name="tus_cuadernos">Tus cuadernos</string>
+    <string name="saludo_manana">Buenos días</string>
+    <string name="saludo_tarde">Buenas tardes</string>
+    <string name="saludo_noche">Buenas noches</string>
 </resources>

@@ -11,6 +11,9 @@
 
     <application
         android:name=".KiwuApp"
+        android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:localeConfig="@xml/locales_config"
@@ -37,6 +40,8 @@
         <receiver android:name=".notify.AccionReceiver" android:exported="false" />
         <receiver android:name=".notify.ClaseReceiver" android:exported="false" />
         <receiver android:name=".notify.RachaReceiver" android:exported="false" />
+        <receiver android:name=".notify.ResumenReceiver" android:exported="false" />
+        <receiver android:name=".notify.RepasoReceiver" android:exported="false" />
         <receiver android:name=".notify.TemporizadorReceiver" android:exported="false" />
         <receiver android:name=".widgets.DeberesWidgetReceiver" android:exported="false" android:label="@string/widget_deberes">
             <intent-filter>
@@ -92,6 +97,16 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+        <!-- Sirve los PDF exportados de la caché a otras apps (compartir con `ACTION_SEND`), sin exponer nada más. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.archivos"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/archivos" />
+        </provider>
         <!-- Play Services descarga el modelo de texto al instalar, para que «Texto desde foto» funcione a la primera. -->
         <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="ocr" />
     </application>

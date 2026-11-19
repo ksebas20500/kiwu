@@ -4,6 +4,7 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.test.platform.app.InstrumentationRegistry
 import app.kiwu.android.data.KiwuDb
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -157,10 +158,34 @@ class MigracionTest {
         db.query("SELECT titulo, tarjetas FROM pagina").use { it.moveToFirst(); assertEquals("Apuntes", it.getString(0)); assertEquals("", it.getString(1)) }
     }
 
+    /** La versión 9 pasa a la 10: las faltas ya creadas cuentan su `creada` como marca y quedan sin `eliminada`. */
+    @Test
+    fun deLaVersion9ALa10LasFaltasLlevanMarca() {
+        ayudante.createDatabase("migracion9", 9).apply {
+            execSQL("INSERT INTO falta (id, grupo, horario_id, dia, justificada, creada) VALUES ('F1', 'G', 'H', 20000, 0, 1234)")
+            close()
+        }
+        val db = ayudante.runMigrationsAndValidate("migracion9", 10, true, KiwuDb.MIGRACION_9_10)
+        db.query("SELECT actualizada, eliminada FROM falta").use {
+            it.moveToFirst(); assertEquals(1234L, it.getLong(0)); assertTrue(it.isNull(1))
+        }
+    }
+
+    /** La versión 11 pasa a la 12: las listas existentes se quedan sin color propio (automático). */
+    @Test
+    fun deLaVersion11ALa12LasListasNoTienenColorPropio() {
+        ayudante.createDatabase("migracion11", 11).apply {
+            execSQL("INSERT INTO materia (id, nombre, icono, orden, creada, actualizada) VALUES ('M1', 'Mate', 'book', 0, 1, 1)")
+            close()
+        }
+        val db = ayudante.runMigrationsAndValidate("migracion11", 12, true, KiwuDb.MIGRACION_11_12)
+        db.query("SELECT color FROM materia").use { it.moveToFirst(); assertTrue(it.isNull(0)) }
+    }
+
     /** De la primera versión a la última pasando por todas las migraciones. */
     @Test
-    fun deLaVersion1ALa9EnUnSoloPaso() {
+    fun deLaVersion1ALa12EnUnSoloPaso() {
         ayudante.createDatabase("migracion19", 1).apply { close() }
-        ayudante.runMigrationsAndValidate("migracion19", 9, true, KiwuDb.MIGRACION_1_2, KiwuDb.MIGRACION_2_3, KiwuDb.MIGRACION_3_4, KiwuDb.MIGRACION_4_5, KiwuDb.MIGRACION_5_6, KiwuDb.MIGRACION_6_7, KiwuDb.MIGRACION_7_8, KiwuDb.MIGRACION_8_9)
+        ayudante.runMigrationsAndValidate("migracion19", 12, true, KiwuDb.MIGRACION_1_2, KiwuDb.MIGRACION_2_3, KiwuDb.MIGRACION_3_4, KiwuDb.MIGRACION_4_5, KiwuDb.MIGRACION_5_6, KiwuDb.MIGRACION_6_7, KiwuDb.MIGRACION_7_8, KiwuDb.MIGRACION_8_9, KiwuDb.MIGRACION_9_10, KiwuDb.MIGRACION_10_11, KiwuDb.MIGRACION_11_12)
     }
 }

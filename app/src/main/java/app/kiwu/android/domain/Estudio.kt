@@ -1,10 +1,16 @@
 package app.kiwu.android.domain
 
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.Index
+import androidx.room.PrimaryKey
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.double
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -94,19 +100,88 @@ object Calificaciones {
     }
 }
 
-/** Una tarjeta de repaso: pregunta y respuesta. */
-data class Tarjeta(val pregunta: String, val respuesta: String)
+/**
+ * Una tarjeta de repaso: pregunta y respuesta. `caja` y `vence` guardan el repaso espaciado (ver [Repaso]);
+ * una tarjeta sin repasar todavía tiene `vence = 0` y las versiones anteriores la leen igual.
+ */
+data class Tarjeta(val pregunta: String, val respuesta: String, val caja: Int = 0, val vence: Long = 0)
 
 object Tarjetas {
-    fun leer(json: String): List<Tarjeta> = try {
-        if (json.isBlank()) emptyList()
-        else Json.parseToJsonElement(json).jsonArray.map { Tarjeta(it.jsonObject.getValue("p").jsonPrimitive.content, it.jsonObject.getValue("r").jsonPrimitive.content) }
-    } catch (e: Exception) {
-        emptyList() // un texto dañado (p. ej. de otro dispositivo) no debe romper la pantalla
+    fun leer(json: String): List<Tarjeta> {
+        if (json.isBlank()) return emptyList()
+        return try {
+            val elemento = Json.parseToJsonElement(json)
+            // Formato nuevo: {"fecha":"...","items":[...]}  |  Formato antiguo: [...]
+            val array = if (elemento is JsonArray) elemento else elemento.jsonObject["items"]?.jsonArray
+                ?: return emptyList()
+            array.map {
+                val o = it.jsonObject
+                Tarjeta(
+                    o.getValue("p").jsonPrimitive.content,
+                    o.getValue("r").jsonPrimitive.content,
+                    o["c"]?.jsonPrimitive?.intOrNull ?: 0,
+                    o["v"]?.jsonPrimitive?.longOrNull ?: 0L,
+                )
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
-    fun escribir(tarjetas: List<Tarjeta>): String =
-        if (tarjetas.isEmpty()) "" else JsonArray(tarjetas.map { JsonObject(mapOf("p" to JsonPrimitive(it.pregunta), "r" to JsonPrimitive(it.respuesta))) }).toString()
+    /** Lee la fecha de examen local guardada en la nota (ISO «yyyy-MM-dd»), si existe. */
+    fun leerFechaExamen(json: String): String? = try {
+        if (json.isBlank()) null
+        else {
+            val e = Json.parseToJsonElement(json)
+            if (e is JsonArray) null else e.jsonObject["fecha"]?.jsonPrimitive?.content
+        }
+    } catch (_: Exception) { null }
+
+    fun escribir(tarjetas: List<Tarjeta>, fechaExamen: String? = null): String {
+        if (tarjetas.isEmpty() && fechaExamen == null) return ""
+        val items = JsonArray(
+            tarjetas.map { t ->
+                JsonObject(buildMap {
+                    put("p", JsonPrimitive(t.pregunta))
+                    put("r", JsonPrimitive(t.respuesta))
+                    if (t.caja != 0) put("c", JsonPrimitive(t.caja))
+                    if (t.vence != 0L) put("v", JsonPrimitive(t.vence))
+                })
+            },
+        )
+        // Si hay fecha de examen usamos el wrapper objeto; si no, el array directo (compatible con versiones anteriores).
+        return if (fechaExamen != null) {
+            JsonObject(mapOf("fecha" to JsonPrimitive(fechaExamen), "items" to items)).toString()
+        } else {
+            items.toString()
+        }
+    }
+}
+
+/**
+ * Repaso espaciado con cajas de Leitner: cada tarjeta acertada sube de caja y tarda el doble en volver;
+ * las falladas vuelven a empezar y siguen pendientes. Las cajas solo aplican a las tarjetas guardadas
+ * (las escritas como bloque en el apunte no tienen dónde recordar su caja).
+ */
+object Repaso {
+    /** Cuántas cajas hay (0 = nueva o fallada; las otras 5 esperan 1, 2, 4, 8 y 16 días). */
+    const val CAJAS = 6
+
+    /** Días que espera una tarjeta acertada según su caja (el índice es la caja; la 0 no se usa). */
+    val DIAS = longArrayOf(0, 1, 2, 4, 8, 16)
+
+    /** Las tarjetas cuya hora de repaso ya llegó: las nuevas (vence = 0) primero, luego las más atrasadas. */
+    fun vencen(tarjetas: List<Tarjeta>, ahora: Long): List<Tarjeta> =
+        tarjetas.filter { it.vence <= ahora }.sortedBy { it.vence }
+
+    /** La tarjeta se supo: sube de caja y vuelve dentro de los días que le tocan. */
+    fun acertada(t: Tarjeta, ahora: Long): Tarjeta {
+        val caja = (t.caja + 1).coerceAtMost(CAJAS - 1)
+        return t.copy(caja = caja, vence = ahora + DIAS[caja] * 24 * 60 * 60 * 1000L)
+    }
+
+    /** La tarjeta no se supo: vuelve a empezar y queda pendiente (reaparece en la misma sesión). */
+    fun fallada(t: Tarjeta, ahora: Long): Tarjeta = t.copy(caja = 0, vence = ahora)
 }
 
 /** Propone tarjetas a partir de cómo está escrito el apunte, sin IA. Quien repasa elige cuáles guardar. */
@@ -206,25 +281,37 @@ object Examenes {
     }
 }
 
-/** Una sesión del temporizador: la lista (materia) en la que se estudió, el día (`LocalDate.toEpochDay`) y los minutos. */
-data class SesionEstudio(val materiaId: String?, val dia: Long, val minutos: Int)
+/**
+ * Una sesión del temporizador: la lista (materia) en la que se estudió, el día (`LocalDate.toEpochDay`) y los minutos.
+ * Vive en Room (tabla `sesion`): así viaja en el sync y entra al respaldo; hasta 0.8.2 vivía en preferencias
+ * (el arranque la importa una vez, ver `KiwuApp`).
+ */
+@Entity(tableName = "sesion", indices = [Index("dia")])
+data class SesionEstudio(
+    @PrimaryKey val id: String = nuevoId(),
+    @ColumnInfo(name = "materia_id") val materiaId: String?,
+    /** El día de la sesión como `LocalDate.toEpochDay()`. */
+    val dia: Long,
+    val minutos: Int,
+    val creada: Long = 0,
+    val actualizada: Long = 0,
+    val eliminada: Long? = null,
+)
 
 object TiempoEstudio {
+    /** Las sesiones que guardaban en preferencias las versiones anteriores (JSON `{m, d, n}`). Solo para la importación. */
     fun leer(json: String): List<SesionEstudio> = try {
-        if (json.isBlank()) emptyList()
-        else Json.parseToJsonElement(json).jsonArray.map {
-            val o = it.jsonObject
-            SesionEstudio(o["m"]?.jsonPrimitive?.content, o.getValue("d").jsonPrimitive.content.toLong(), o.getValue("n").jsonPrimitive.content.toInt())
+        if (json.isBlank()) {
+            emptyList()
+        } else {
+            Json.parseToJsonElement(json).jsonArray.map {
+                val o = it.jsonObject
+                SesionEstudio(materiaId = o["m"]?.jsonPrimitive?.content, dia = o.getValue("d").jsonPrimitive.content.toLong(), minutos = o.getValue("n").jsonPrimitive.content.toInt())
+            }
         }
     } catch (e: Exception) {
         emptyList()
     }
-
-    fun escribir(s: List<SesionEstudio>): String =
-        JsonArray(s.map { JsonObject(listOfNotNull(it.materiaId?.let { m -> "m" to JsonPrimitive(m) }, "d" to JsonPrimitive(it.dia), "n" to JsonPrimitive(it.minutos)).toMap()) }).toString()
-
-    /** Añade una sesión y olvida las de hace más de 8 semanas (solo se muestra la semana actual). */
-    fun anadir(s: List<SesionEstudio>, nueva: SesionEstudio): List<SesionEstudio> = s.filter { it.dia > nueva.dia - 56 } + nueva
 
     /**
      * Minutos efectivamente estudiados de una sesión que quedó con [restanteMs] sin terminar (0 si llegó al final).
@@ -236,7 +323,7 @@ object TiempoEstudio {
     /** Minutos por lista en la semana (de lunes a domingo) que contiene [hoy], de más a menos. */
     fun semana(s: List<SesionEstudio>, hoy: java.time.LocalDate): List<Pair<String?, Int>> {
         val lunes = hoy.with(java.time.DayOfWeek.MONDAY).toEpochDay()
-        return s.filter { it.dia in lunes until lunes + 7 }.groupBy { it.materiaId }
+        return s.filter { it.eliminada == null && it.dia in lunes until lunes + 7 }.groupBy { it.materiaId }
             .map { (m, l) -> m to l.sumOf { it.minutos } }.sortedByDescending { it.second }
     }
 }

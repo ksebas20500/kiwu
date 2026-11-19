@@ -145,7 +145,7 @@ class CarpetasTest {
         val g = repo.crearGrupo("Semestre 3", "🎓")
         val m = repo.crearMateria("Cálculo")
         repo.moverMateriaAGrupo(m.id, g.id)
-        repo.editarMateria(m.id, "Cálculo", "📐")
+        repo.editarMateria(m.id, "Cálculo", "📐", "#43A047")
         repo.plegarGrupo(g.id, true)
         val texto = Copia.exportar(db.dao())
 
@@ -157,7 +157,7 @@ class CarpetasTest {
             val grupo = otra.dao().gruposAhora().single()
             assertEquals("Semestre 3", grupo.nombre); assertEquals("🎓", grupo.icono); assertTrue(grupo.plegado)
             val lista = otra.dao().materia(m.id)!!
-            assertEquals(g.id, lista.grupoId); assertEquals("📐", lista.emoji)
+            assertEquals(g.id, lista.grupoId); assertEquals("📐", lista.emoji); assertEquals("#43A047", lista.color)
             // importar otra vez no duplica nada
             assertEquals(0, Copia.importar(otra.dao(), texto).grupos)
         } finally {
@@ -170,7 +170,22 @@ class CarpetasTest {
         val r = Copia.importar(db.dao(), """{"formato":1,"app":"kiwu","materias":[{"id":"M1","nombre":"Uni"}]}""")
         assertEquals(1, r.materias); assertEquals(0, r.grupos)
         val m = db.dao().materia("M1")!!
-        assertNull(m.grupoId); assertNull(m.emoji)
+        assertNull(m.grupoId); assertNull(m.emoji); assertNull(m.color)
+    }
+
+    /** El color de una lista se valida (`#RRGGBB`) y se puede quitar volviendo al automático. */
+    @Test
+    fun elColorDeLaListaSeValidaYSePuedeQuitar() = runBlocking {
+        val m = repo.crearMateria("Física", color = "#00897b")
+        assertEquals("#00897B", repo.materia(m.id)!!.color)
+        // Un valor que no es un hex válido no se guarda: la lista vuelve al color automático.
+        repo.editarMateria(m.id, "Física", null, "turquesa")
+        assertNull(repo.materia(m.id)!!.color)
+        // Y elegir un color válido de nuevo funciona.
+        repo.editarMateria(m.id, "Física", null, "#43a047")
+        assertEquals("#43A047", repo.materia(m.id)!!.color)
+        repo.editarMateria(m.id, "Física", null, null)
+        assertNull(repo.materia(m.id)!!.color)
     }
 
     @Test

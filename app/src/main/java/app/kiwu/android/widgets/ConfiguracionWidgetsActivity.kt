@@ -43,6 +43,7 @@ import androidx.lifecycle.lifecycleScope
 import app.kiwu.android.KiwuApp
 import app.kiwu.android.data.AjustesUi
 import app.kiwu.android.domain.ID_EVENTOS
+import app.kiwu.android.ui.Acentos
 import app.kiwu.android.ui.KiwuTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -85,11 +86,11 @@ class ConfiguracionWidgetsActivity : ComponentActivity() {
         val ajustes = runBlocking { withTimeoutOrNull(1500) { app.ajustes.flujo.first() } } ?: AjustesUi()
         val oscuro = when (ajustes.tema) {
             "claro" -> false
-            "oscuro" -> true
+            "oscuro", Acentos.NEGRO -> true
             else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         }
         setContent {
-            KiwuTheme(oscuro, ajustes.acento) {
+            KiwuTheme(oscuro, ajustes.acento, amoled = false) {
                 Scaffold { relleno ->
                     PantallaConfiguracion(
                         app = app,

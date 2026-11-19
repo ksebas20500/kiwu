@@ -22,12 +22,12 @@ import java.util.UUID
 
 /**
  * Qué tablas viajan y cómo. La cola de cambios la llenan unos *triggers* de SQLite: así no hay que tocar cada consulta de
- * `KiwuDao`, y cualquier edición futura se sincroniza sola. Las faltas de clase no viajan todavía (no tienen marca de
- * tiempo ni borrado lógico).
+ * `KiwuDao`, y cualquier edición futura se sincroniza sola. Las faltas viajan como las demás tablas: marcar, quitar y
+ * justificar tocan su `actualizada`, y quitar es un borrado lógico (`eliminada`).
  */
 object SyncSql {
     /** Padres antes que hijos. */
-    val tablas = listOf("materia", "grupo_lista", "horario", "cuaderno", "deber", "clase", "pagina")
+    val tablas = listOf("materia", "grupo_lista", "horario", "falta", "sesion", "cuaderno", "deber", "clase", "pagina")
 
     /** Columnas que son de este dispositivo y no viajan (carpeta vinculada, aviso ya mostrado). */
     val locales = mapOf("materia" to setOf("carpeta"), "deber" to setOf("recordado"))
@@ -52,6 +52,13 @@ object SyncSql {
                 "CREATE TRIGGER IF NOT EXISTS sync_${t}_upd AFTER UPDATE ON $t WHEN NEW.actualizada IS NOT OLD.actualizada AND $NO_APLICANDO " +
                     "BEGIN INSERT OR REPLACE INTO sync_cola (tabla, fila) VALUES ('$t', NEW.id); END",
             )
+        }
+        // v10: las faltas que ya había en la base (sin `eliminada` y con `creada` como marca, puesto por la migración
+        // 9→10) se suben al sync una sola vez; las nuevas encolan solas por los triggers.
+        val yaseEncolaron = db.query("SELECT valor FROM sync_estado WHERE clave = 'faltas_encoladas'").use { it.moveToFirst() }
+        if (!yaseEncolaron) {
+            db.execSQL("INSERT OR REPLACE INTO sync_cola (tabla, fila) SELECT 'falta', id FROM falta")
+            db.execSQL("INSERT OR REPLACE INTO sync_estado (clave, valor) VALUES ('faltas_encoladas', '1')")
         }
     }
 }

@@ -59,4 +59,16 @@ class ColoresClaseTest {
         assertTrue(elegido.texto == ColoresClase.contraste(rojo))
         assertNotEquals(elegido.fondo, fondo(automatico))
     }
+
+    @Test
+    fun laClaseHeredaElColorDeSuListaYElSuyoManda() {
+        val verde = Color(0xFF43A047)
+        val sinPropio = clase("Algebra", grupo = "AAA1", materiaId = "M1")
+        assertTrue(ColoresClase.de(sinPropio, "#43a047").fondo == verde)
+        // El color de la propia clase gana sobre el de la lista.
+        val rojo = clase("Algebra", grupo = "AAA1", materiaId = "M1", color = "#E53935")
+        assertTrue(ColoresClase.de(rojo, "#43A047").fondo == Color(0xFFE53935))
+        // Un color de lista inválido se ignora y vuelve el automático.
+        assertEquals(fondo(sinPropio), ColoresClase.de(sinPropio, "rojo").fondo)
+    }
 }

@@ -512,6 +512,7 @@ fun CelebracionRacha(r: Racha, alCerrar: () -> Unit, modifier: Modifier = Modifi
             Text(
                 if (r.actual == 1) stringResource(R.string.racha_empezaste) else pluralStringResource(R.plurals.racha_n_dias, r.actual, r.actual),
                 style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onBackground,
             )
             Spacer(Modifier.height(6.dp))
             Text(
@@ -520,7 +521,7 @@ fun CelebracionRacha(r: Racha, alCerrar: () -> Unit, modifier: Modifier = Modifi
                     r.actual == 1 -> stringResource(R.string.racha_manana_2)
                     else -> pluralStringResource(R.plurals.racha_manana_llegas, r.actual + 1, r.actual + 1)
                 },
-                style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f), textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(28.dp))
             SemanaRacha(r, hoy, animarHoy = true)

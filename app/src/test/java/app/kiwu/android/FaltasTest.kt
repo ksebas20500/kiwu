@@ -173,4 +173,23 @@ class FaltasTest {
         assertEquals(0, Copia.importar(db.dao(), copia).faltas)
         assertTrue(db.dao().faltasAhora().isEmpty())
     }
+
+    /** Quitar y vaciar son borrados lógicos: la fila se queda en la base (con `eliminada`) para que el sync la propague. */
+    @Test
+    fun quitarYVaciarSonBorradoLogico() = runBlocking {
+        val dia = LocalDate.of(2026, 10, 26)
+        val f = repo.marcarFalta("G", "H", dia)
+        repo.marcarFalta("G", "H", dia.plusDays(1))
+        repo.quitarFalta(f.id)
+        assertTrue(repo.faltasAhora().single().dia == dia.plusDays(1).toEpochDay()) // la otra sigue viva
+        db.openHelper.readableDatabase.query("SELECT eliminada FROM falta WHERE id = '${f.id}'").use { c ->
+            assertTrue(c.moveToFirst()); assertFalse(c.isNull(0)) // la fila no se borra: queda con `eliminada`
+        }
+        // Re-marcar el mismo día tras quitarla crea una falta nueva (la eliminada ya no cuenta).
+        val nueva = repo.marcarFalta("G", "H", dia)
+        assertTrue(nueva.id != f.id)
+        // Y reactivar la eliminada con upsert la vuelve a la vista.
+        db.dao().guardarFalta(f.copy(eliminada = null, actualizada = 9))
+        assertTrue(repo.faltasAhora().any { it.id == f.id })
+    }
 }

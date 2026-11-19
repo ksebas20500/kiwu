@@ -156,10 +156,10 @@ fun DetalleTareaScreen(vm: DetalleTareaViewModel, adjuntos: OrigenAdjuntos, alVo
     val zona = ZoneId.systemDefault()
 
     val actual = d
-    // Si la tarea desapareció (se eliminó), se vuelve atrás.
+    // Si la tarea no existe (evento externo o eliminada), se vuelve atrás.
     var existio by remember { mutableStateOf(false) }
     LaunchedEffect(actual) {
-        if (actual != null) existio = true else if (existio) alVolver()
+        if (actual != null) existio = true else alVolver()
     }
     if (actual == null) return
 

@@ -20,7 +20,29 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
+import androidx.compose.material.icons.automirrored.filled.ShortText
+import androidx.compose.material.icons.filled.FormatListNumbered
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.FormatQuote
+import androidx.compose.material.icons.filled.FormatSize
+import androidx.compose.material.icons.filled.HorizontalRule
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Notes
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.ShortText
+import androidx.compose.material.icons.filled.Style
+import androidx.compose.material.icons.filled.Title
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
@@ -116,7 +138,7 @@ fun esOscuro(): Boolean = MaterialTheme.colorScheme.background.luminance() < 0.5
 fun EditorBloques(estado: EstadoEditor, adjuntos: OrigenAdjuntos, modifier: Modifier = Modifier) {
     val numeros = estado.numeros()
     ManejarAcciones(estado, adjuntos)
-    Column(modifier) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         for (b in estado.bloques) {
             key(b.id) { BloqueUi(estado, b, numeros[b.id], adjuntos) }
         }
@@ -198,7 +220,7 @@ private fun BloqueTextoUi(ed: EstadoEditor, b: BloqueEd, numero: Int?) {
     val sangria = (b.indent * 24).dp
 
     val contenido: @Composable () -> Unit = {
-        Row(Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 2.dp), verticalAlignment = Alignment.Top) {
+        Row(Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
             when (b.kind) {
                 TiposBloque.VINETAS -> Text(
                     listOf("•", "◦", "▪", "•", "◦")[b.indent.coerceIn(0, 4)],
@@ -240,6 +262,9 @@ private fun BloqueTextoUi(ed: EstadoEditor, b: BloqueEd, numero: Int?) {
                         }
                         .onPreviewKeyEvent { evento -> atajos(ed, b, evento) },
                 )
+            }
+            if (enfocado) {
+                MenuBloque(ed, b)
             }
         }
     }
@@ -312,24 +337,94 @@ private fun atajos(ed: EstadoEditor, b: BloqueEd, evento: androidx.compose.ui.in
     return false
 }
 
+private fun descripcionBloque(tipo: String): String = when (tipo) {
+    TiposBloque.TITULO -> "Título principal de tamaño grande"
+    TiposBloque.SUBTITULO -> "Sección o subtítulo secundario"
+    TiposBloque.PARRAFO -> "Texto normal en párrafo"
+    TiposBloque.VINETAS -> "Lista simple con viñetas"
+    TiposBloque.NUMERADA -> "Lista ordenada con números"
+    TiposBloque.TAREAS -> "Lista de tareas con casilla"
+    TiposBloque.CITA -> "Cita o texto con barra lateral"
+    TiposBloque.DESTACADO -> "Recuadro de aviso o idea clave"
+    TiposBloque.CODIGO -> "Bloque de código con sintaxis"
+    TiposBloque.TARJETA -> "Tarjeta de repaso flashcard"
+    TiposBloque.IMAGEN -> "Insertar una imagen adjunta"
+    TiposBloque.ARCHIVO -> "Adjuntar un documento o archivo"
+    TiposBloque.DIVISOR -> "Línea horizontal separadora"
+    ACCION_REPASAR -> "Repasar las tarjetas de esta nota"
+    ACCION_TEXTO_FOTO -> "Escanear texto desde una foto"
+    else -> "Insertar bloque"
+}
+
+@Composable
+private fun iconoBloque(tipo: String): androidx.compose.ui.graphics.vector.ImageVector = when (tipo) {
+    TiposBloque.TITULO -> Icons.Filled.Title
+    TiposBloque.SUBTITULO -> Icons.Filled.FormatSize
+    TiposBloque.PARRAFO -> Icons.AutoMirrored.Filled.ShortText
+    TiposBloque.VINETAS -> Icons.AutoMirrored.Filled.FormatListBulleted
+    TiposBloque.NUMERADA -> Icons.Filled.FormatListNumbered
+    TiposBloque.TAREAS -> Icons.Filled.Checklist
+    TiposBloque.CITA -> Icons.Filled.FormatQuote
+    TiposBloque.DESTACADO -> Icons.Filled.Lightbulb
+    TiposBloque.CODIGO -> Icons.Filled.Code
+    TiposBloque.TARJETA -> Icons.Filled.Style
+    TiposBloque.IMAGEN -> Icons.Filled.Image
+    TiposBloque.ARCHIVO -> Icons.Filled.AttachFile
+    TiposBloque.DIVISOR -> Icons.Filled.HorizontalRule
+    ACCION_REPASAR -> Icons.Filled.School
+    ACCION_TEXTO_FOTO -> Icons.Filled.CameraAlt
+    else -> Icons.Filled.Description
+}
+
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun MenuSlash(ed: EstadoEditor, b: BloqueEd, opciones: List<String>) {
-    // Al aparecer (o al filtrar) se desplaza hasta verse entero: así no queda tapado por el teclado.
     val visible = androidx.compose.foundation.relocation.BringIntoViewRequester()
     LaunchedEffect(opciones.size) { androidx.compose.runtime.withFrameNanos { }; runCatching { visible.bringIntoView() } }
     Surface(
-        Modifier.fillMaxWidth().padding(vertical = 4.dp).bringIntoViewRequester(visible), shape = RoundedCornerShape(12.dp),
-        tonalElevation = 3.dp, shadowElevation = 4.dp,
+        Modifier.fillMaxWidth().heightIn(max = 280.dp).padding(vertical = 4.dp).bringIntoViewRequester(visible),
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 3.dp,
+        shadowElevation = 4.dp,
     ) {
-        Column(Modifier.padding(vertical = 4.dp)) {
-            for (tipo in opciones.take(8)) {
-                Text(
-                    titulosBloques()[tipo] ?: tipo,
-                    Modifier.fillMaxWidth().clickable { ed.elegirSlash(b, tipo) }.padding(horizontal = 14.dp, vertical = 10.dp),
-                )
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(vertical = 4.dp)) {
+            for (tipo in opciones) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { ed.elegirSlash(b, tipo) }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Icon(
+                                iconoBloque(tipo),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            titulosBloques()[tipo] ?: tipo,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            descripcionBloque(tipo),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
-            if (opciones.size > 8) Text(stringResource(R.string.sigue_escribiendo), Modifier.padding(horizontal = 14.dp, vertical = 4.dp), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

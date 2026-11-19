@@ -20,6 +20,9 @@ import app.kiwu.android.R
 
 private val Coral = Color(0xFFE8705A)
 
+// Fondo personalizado por defecto de Kiwu (a juego con el Onboarding)
+val FondoKiwuBase = Color(0xFFFBFAF8)
+
 private val Claro = lightColorScheme(
     primary = Color(0xFFC44B35),
     onPrimary = Color.White,
@@ -29,8 +32,8 @@ private val Claro = lightColorScheme(
     secondaryContainer = Color(0xFFFFDAD2),
     onSecondaryContainer = Color(0xFF2C1511),
     tertiary = Color(0xFF6C5D2F),
-    background = Color(0xFFFFF8F6),
-    surface = Color(0xFFFFF8F6),
+    background = FondoKiwuBase,
+    surface = FondoKiwuBase,
     surfaceVariant = Color(0xFFF5DDD8),
     onSurfaceVariant = Color(0xFF534340),
     error = Color(0xFFBA1A1A),
@@ -58,6 +61,9 @@ class Acento(val id: String, @androidx.annotation.StringRes val titulo: Int, val
 object Acentos {
     const val CORAL = "coral"
     const val SISTEMA = "sistema"
+
+    /** El tema oscuro «negro» (AMOLED): mismo esquema pero con fondo negro puro. */
+    const val NEGRO = "negro"
 
     val predefinidos = listOf(
         Acento(CORAL, R.string.color_coral, Coral),
@@ -150,7 +156,6 @@ fun esquemaDe(acento: String, oscuro: Boolean): ColorScheme {
             error = Color(0xFFFFB4AB),
         )
     } else {
-        val fondo = Color.hsl(tono, if (gris) 0.10f else 0.70f, 0.975f)
         lightColorScheme(
             primary = conContraste(tono, sa, 0.42f, Color.White, 4.8f),
             onPrimary = Color.White,
@@ -160,8 +165,8 @@ fun esquemaDe(acento: String, oscuro: Boolean): ColorScheme {
             secondaryContainer = Color.hsl(tono, if (gris) 0.06f else 0.55f, 0.90f),
             onSecondaryContainer = Color.hsl(tono, sa * 0.5f, 0.12f),
             tertiary = conContraste((tono + 60f) % 360f, 0.35f, 0.38f, Color.White, 4.8f),
-            background = fondo, onBackground = Color.hsl(tono, 0.10f, 0.10f),
-            surface = fondo, onSurface = Color.hsl(tono, 0.10f, 0.10f),
+            background = FondoKiwuBase,
+            surface = FondoKiwuBase,
             surfaceVariant = Color.hsl(tono, if (gris) 0.06f else 0.35f, 0.90f),
             onSurfaceVariant = Color.hsl(tono, 0.14f, 0.28f),
             surfaceContainerLowest = Color.White,
@@ -177,13 +182,19 @@ fun esquemaDe(acento: String, oscuro: Boolean): ColorScheme {
 }
 
 @Composable
-fun KiwuTheme(oscuro: Boolean = isSystemInDarkTheme(), acento: String = "morado", contenido: @Composable () -> Unit) {
+fun KiwuTheme(
+    oscuro: Boolean = isSystemInDarkTheme(),
+    acento: String = "morado",
+    amoled: Boolean = false,
+    contenido: @Composable () -> Unit,
+) {
     val contexto = LocalContext.current
     val esquema = if (acento == Acentos.SISTEMA && Build.VERSION.SDK_INT >= 31) {
         if (oscuro) dynamicDarkColorScheme(contexto) else dynamicLightColorScheme(contexto)
     } else {
         esquemaDe(acento, oscuro)
     }
+    // Se removió el modo AMOLED ("negro").
     MaterialTheme(colorScheme = esquema, content = contenido)
 }
 
@@ -202,7 +213,6 @@ object Pasteles {
         ColorPastel(Color(0.98f, 0.88f, 0.62f), Color(0.50f, 0.36f, 0.00f)),  // miel
     )
 
-    /** Índice estable según el id (mismo cálculo que Kiwu para Linux: MD5 del id módulo 8). */
     private val indices = java.util.concurrent.ConcurrentHashMap<String, Int>()
 
     fun indicePreferido(id: String): Int = indices.getOrPut(id) {
@@ -210,45 +220,30 @@ object Pasteles {
         BigInteger(1, resumen).mod(BigInteger.valueOf(colores.size.toLong())).toInt()
     }
 
-    /** Cada tarea recibe un color estable; si dos tareas del mismo día coinciden, la segunda pasa al siguiente libre. */
-    fun asignar(ids: List<String>): Map<String, ColorPastel> {
-        val usados = mutableSetOf<Int>()
-        val salida = LinkedHashMap<String, ColorPastel>()
-        for (id in ids) {
-            var indice = indicePreferido(id)
-            if (usados.size < colores.size) {
-                while (indice in usados) indice = (indice + 1) % colores.size
-            }
-            usados += indice
-            salida[id] = colores[indice]
-        }
-        return salida
-    }
+    fun de(id: String): ColorPastel = colores[indicePreferido(id)]
+
+    fun asignar(ids: List<String>): Map<String, ColorPastel> = ids.associateWith { de(it) }
 }
 
-/** Colores de texto y resaltado de las notas: mismos nombres y valores que en macOS y Linux. */
-object ColoresNota {
-    class Par(val claro: Color, val oscuro: Color)
+class ParColor(val claro: Color, val oscuro: Color)
 
-    val colores = linkedMapOf(
-        "gris" to Par(Color(0.45f, 0.45f, 0.45f), Color(0.62f, 0.62f, 0.62f)),
-        "marron" to Par(Color(0.60f, 0.40f, 0.27f), Color(0.76f, 0.56f, 0.42f)),
-        "naranja" to Par(Color(0.85f, 0.45f, 0.05f), Color(0.96f, 0.62f, 0.27f)),
-        "amarillo" to Par(Color(0.74f, 0.58f, 0.00f), Color(0.96f, 0.80f, 0.27f)),
-        "verde" to Par(Color(0.18f, 0.55f, 0.34f), Color(0.42f, 0.76f, 0.52f)),
-        "azul" to Par(Color(0.20f, 0.45f, 0.80f), Color(0.42f, 0.66f, 0.96f)),
-        "morado" to Par(Color(0.55f, 0.35f, 0.75f), Color(0.72f, 0.57f, 0.92f)),
-        "rosa" to Par(Color(0.80f, 0.30f, 0.55f), Color(0.96f, 0.52f, 0.72f)),
-        "rojo" to Par(Color(0.80f, 0.25f, 0.20f), Color(0.96f, 0.46f, 0.42f)),
+object ColoresNota {
+    val colores = mapOf(
+        "amarillo" to ParColor(Color(0xFFFFF1A8), Color(0xFF62581A)),
+        "verde" to ParColor(Color(0xFFC7F3D6), Color(0xFF1E5233)),
+        "azul" to ParColor(Color(0xFFCBE5FF), Color(0xFF1D4570)),
+        "morado" to ParColor(Color(0xFFEADBFF), Color(0xFF4C2F70)),
+        "rosa" to ParColor(Color(0xFFFFD8E4), Color(0xFF69243C)),
     )
 
     val titulos = mapOf(
-        "gris" to R.string.color_gris, "marron" to R.string.color_marron, "naranja" to R.string.color_naranja, "amarillo" to R.string.color_amarillo,
-        "verde" to R.string.color_verde, "azul" to R.string.color_azul, "morado" to R.string.color_morado, "rosa" to R.string.color_rosa, "rojo" to R.string.color_rojo,
+        "amarillo" to R.string.color_amarillo,
+        "verde" to R.string.color_verde,
+        "azul" to R.string.color_azul,
+        "morado" to R.string.color_morado,
+        "rosa" to R.string.color_rosa,
     )
 
-    fun texto(nombre: String?, oscuro: Boolean): Color? = colores[nombre]?.let { if (oscuro) it.oscuro else it.claro }
-
-    /** Fondo del resaltado: el color con transparencia. */
-    fun resaltado(nombre: String?, oscuro: Boolean): Color? = texto(nombre, oscuro)?.copy(alpha = if (oscuro) 0.35f else 0.28f)
+    fun texto(f: String?, oscuro: Boolean): Color? = colores[f]?.let { if (oscuro) it.oscuro else it.claro }
+    fun resaltado(f: String?, oscuro: Boolean): Color? = colores[f]?.let { if (oscuro) it.oscuro else it.claro }
 }

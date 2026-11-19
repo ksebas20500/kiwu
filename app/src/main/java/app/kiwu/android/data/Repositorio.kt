@@ -20,6 +20,8 @@ import app.kiwu.android.domain.Etiquetas
 import app.kiwu.android.domain.Paso
 import app.kiwu.android.domain.Pasos
 import app.kiwu.android.domain.ReglasHorario
+import app.kiwu.android.domain.Recordatorios
+import app.kiwu.android.domain.SesionEstudio
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
@@ -45,6 +47,8 @@ class Repositorio(
     val deberes: Flow<List<Deber>> = dao.deberes()
     val cuadernos: Flow<List<Cuaderno>> = dao.cuadernos()
     val paginas: Flow<List<ResumenPagina>> = dao.paginas()
+    /** Páginas con tarjetas guardadas: la cola global de repaso. */
+    val paginasConTarjetas: Flow<List<app.kiwu.android.domain.PaginaTarjetas>> = dao.paginasConTarjetas()
     val horarios: Flow<List<Horario>> = dao.horarios()
     val clases: Flow<List<Clase>> = dao.clases()
     val grupos: Flow<List<GrupoLista>> = dao.grupos()
@@ -70,13 +74,14 @@ class Repositorio(
 
     // --- listas (materias) ----------------------------------------------------------------------
 
-    /** Crea una lista; con [grupoId] nace ya dentro de esa carpeta y con [emoji] (opcional) como icono. */
-    suspend fun crearMateria(nombre: String, emoji: String? = null, grupoId: String? = null): Materia {
+    /** Crea una lista; con [grupoId] nace ya dentro de esa carpeta, con [emoji] (opcional) como icono y [color] (opcional). */
+    suspend fun crearMateria(nombre: String, emoji: String? = null, grupoId: String? = null, color: String? = null): Materia {
         val t = reloj()
         val grupo = grupoId?.takeIf { dao.grupo(it) != null }
         val m = Materia(
             nombre = nombre.trim(), orden = dao.siguienteOrdenMateria(), grupoId = grupo,
-            emoji = emoji?.trim()?.takeIf { it.isNotEmpty() }, creada = t, actualizada = t,
+            emoji = emoji?.trim()?.takeIf { it.isNotEmpty() }, color = ReglasHorario.colorValido(color),
+            creada = t, actualizada = t,
         )
         dao.guardarMateria(m)
         // Si la carpeta estaba plegada se despliega, para que se vea la lista recién creada.
@@ -96,10 +101,17 @@ class Repositorio(
 
     suspend fun materia(id: String): Materia? = dao.materia(id)
 
-    /** Cambia el nombre y el emoji de una lista (con emoji null o vacío vuelve el icono de siempre). */
-    suspend fun editarMateria(id: String, nombre: String, emoji: String?) {
+    /** Cambia el nombre, el emoji y el color de una lista (emoji null o vacío = icono de siempre; color null = automático). */
+    suspend fun editarMateria(id: String, nombre: String, emoji: String?, color: String? = null) {
         val m = dao.materia(id) ?: return
-        dao.guardarMateria(m.copy(nombre = nombre.trim().ifEmpty { m.nombre }, emoji = emoji?.trim()?.takeIf { it.isNotEmpty() }, actualizada = reloj()))
+        dao.guardarMateria(
+            m.copy(
+                nombre = nombre.trim().ifEmpty { m.nombre },
+                emoji = emoji?.trim()?.takeIf { it.isNotEmpty() },
+                color = ReglasHorario.colorValido(color),
+                actualizada = reloj(),
+            ),
+        )
     }
 
     /** Mete una lista en una carpeta o la deja suelta (con null). Si la carpeta no existe, queda suelta. */
@@ -214,7 +226,15 @@ class Repositorio(
 
     suspend fun cambiarTarjetas(paginaId: String, tarjetas: List<app.kiwu.android.domain.Tarjeta>) {
         val p = dao.pagina(paginaId) ?: return
-        dao.guardarPagina(p.copy(tarjetas = app.kiwu.android.domain.Tarjetas.escribir(tarjetas), actualizada = reloj()))
+        // Preserva la fecha de examen local que ya hubiera guardada.
+        val fecha = app.kiwu.android.domain.Tarjetas.leerFechaExamen(p.tarjetas)
+        dao.guardarPagina(p.copy(tarjetas = app.kiwu.android.domain.Tarjetas.escribir(tarjetas, fecha), actualizada = reloj()))
+    }
+
+    suspend fun cambiarFechaExamenNota(paginaId: String, fecha: String?) {
+        val p = dao.pagina(paginaId) ?: return
+        val lista = app.kiwu.android.domain.Tarjetas.leer(p.tarjetas)
+        dao.guardarPagina(p.copy(tarjetas = app.kiwu.android.domain.Tarjetas.escribir(lista, fecha), actualizada = reloj()))
     }
 
     suspend fun cambiarExamen(id: String, examen: Boolean): Deber? = editar(id) { it.copy(examen = examen) }
@@ -287,6 +307,12 @@ class Repositorio(
         return reglas.ponerFecha(d, fecha, reloj()).also { dao.guardarDeber(it) }
     }
 
+    /** Pospone la tarea a mañana (el gesto de deslizar la fila): misma hora de entrega, o a las 8:00 si no tenía fecha. */
+    suspend fun posponer(id: String, ahora: Long = reloj()): Deber? {
+        val d = dao.deber(id) ?: return null
+        return reglas.ponerFecha(d, Recordatorios.entregaPospuesta(d, ahora), reloj()).also { dao.guardarDeber(it) }
+    }
+
     suspend fun moverAMateria(id: String, materiaId: String): Deber? {
         val d = dao.deber(id) ?: return null
         return d.copy(materiaId = materiaId, actualizada = reloj()).also { dao.guardarDeber(it) }
@@ -309,16 +335,43 @@ class Repositorio(
 
     // --- cuadernos y páginas --------------------------------------------------------------------
 
-    suspend fun crearCuaderno(nombre: String, icono: String = "📓"): Cuaderno {
+    suspend fun crearCuaderno(
+        nombre: String,
+        icono: String = "📓",
+        coverImagePath: String? = null,
+        coverColorHex: String? = null,
+    ): Cuaderno {
         val t = reloj()
-        val c = Cuaderno(nombre = nombre.trim(), icono = icono, orden = dao.siguienteOrdenCuaderno(), creada = t, actualizada = t)
+        val c = Cuaderno(
+            nombre = nombre.trim(),
+            icono = icono,
+            orden = dao.siguienteOrdenCuaderno(),
+            creada = t,
+            actualizada = t,
+            coverImagePath = coverImagePath,
+            coverColorHex = coverColorHex,
+        )
         dao.guardarCuaderno(c)
         return c
     }
 
-    suspend fun editarCuaderno(id: String, nombre: String, icono: String) {
+    suspend fun editarCuaderno(
+        id: String,
+        nombre: String,
+        icono: String,
+        coverImagePath: String? = null,
+        coverColorHex: String? = null,
+    ) {
         val c = dao.cuaderno(id) ?: return
-        dao.guardarCuaderno(c.copy(nombre = nombre.trim(), icono = icono, actualizada = reloj()))
+        dao.guardarCuaderno(
+            c.copy(
+                nombre = nombre.trim(),
+                icono = icono,
+                actualizada = reloj(),
+                coverImagePath = coverImagePath,
+                coverColorHex = coverColorHex,
+            )
+        )
     }
 
     suspend fun eliminarCuaderno(id: String) = dao.eliminarCuaderno(id, reloj())
@@ -433,25 +486,46 @@ class Repositorio(
 
     suspend fun eliminarGrupo(grupo: String) = dao.eliminarGrupo(grupo, reloj())
 
+    // --- sesiones de estudio (temporizador Pomodoro) ----------------------------------------------
+
+    val sesiones: Flow<List<SesionEstudio>> = dao.sesiones()
+
+    suspend fun sesionesAhora(): List<SesionEstudio> = dao.sesionesAhora()
+
+    /** Las sesiones importadas de las preferencias viejas conservan su día original; no se podan (ya están podadas). */
+    suspend fun guardarSesionesImportadas(viejas: List<SesionEstudio>) {
+        val t = reloj()
+        dao.guardarSesiones(viejas.map { it.copy(creada = it.creada.takeIf { c -> c > 0 } ?: t, actualizada = t) })
+        dao.podarSesiones(LocalDate.now().toEpochDay() - 56, t)
+    }
+
+    /** Registra una sesión de estudio y poda las de más de 8 semanas. */
+    suspend fun registrarSesion(materiaId: String?, minutos: Int, dia: LocalDate = LocalDate.now(), ahora: Long = reloj()) {
+        if (minutos < 1) return
+        dao.guardarSesiones(listOf(SesionEstudio(materiaId = materiaId, dia = dia.toEpochDay(), minutos = minutos, creada = ahora, actualizada = ahora)))
+        dao.podarSesiones(dia.toEpochDay() - 56, ahora)
+    }
+
     // --- faltas de clase ------------------------------------------------------------------------
 
     suspend fun faltasAhora(): List<Falta> = dao.faltasAhora()
 
     /** Marca una falta de la materia ([grupo]) el día [dia] (por defecto, hoy). Un mismo día solo cuenta una vez. */
     suspend fun marcarFalta(grupo: String, horarioId: String, dia: LocalDate = LocalDate.now(), justificada: Boolean = false): Falta {
+        val t = reloj()
         dao.faltasAhora().firstOrNull { it.grupo == grupo && it.dia == dia.toEpochDay() }?.let { return it }
-        val f = Falta(grupo = grupo, horarioId = horarioId, dia = dia.toEpochDay(), justificada = justificada, creada = reloj())
+        val f = Falta(grupo = grupo, horarioId = horarioId, dia = dia.toEpochDay(), justificada = justificada, creada = t, actualizada = t)
         dao.guardarFalta(f)
         return f
     }
 
-    suspend fun quitarFalta(id: String) = dao.quitarFalta(id)
+    suspend fun quitarFalta(id: String) = dao.quitarFalta(id, reloj())
 
-    suspend fun justificarFalta(id: String, justificada: Boolean) = dao.justificarFalta(id, justificada)
+    suspend fun justificarFalta(id: String, justificada: Boolean) = dao.justificarFalta(id, justificada, reloj())
 
     /** Máximo de faltas de la materia, en todas sus filas; null o 0 = sin límite. */
     suspend fun ponerMaximoFaltas(grupo: String, maximo: Int?) = dao.ponerMaximoFaltas(grupo, maximo?.takeIf { it > 0 }, reloj())
 
     /** Borra todas las faltas de un horario (al empezar un semestre nuevo). */
-    suspend fun vaciarFaltas(horarioId: String) = dao.vaciarFaltas(horarioId)
+    suspend fun vaciarFaltas(horarioId: String) = dao.vaciarFaltas(horarioId, reloj())
 }

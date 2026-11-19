@@ -1,6 +1,7 @@
 package app.kiwu.android
 
 import android.content.Intent
+import android.graphics.Bitmap
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -18,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import app.kiwu.android.ui.Raiz
+import app.kiwu.android.ui.cargarFondoPrevio
 
 class MainActivity : ComponentActivity() {
     // En Android 8–12, el idioma elegido en Ajustes (en 13+ lo aplica el sistema).
@@ -31,8 +33,10 @@ class MainActivity : ComponentActivity() {
     private var nuevaNota by mutableStateOf<String?>(null)
     /** Sección que pidió abrir un widget («tareas», «notas» u «horario»). */
     private var seccion by mutableStateOf<String?>(null)
+    /** Abrir «Repasar hoy» desde el aviso diario. */
+    private var abrirRepaso by mutableStateOf(false)
 
-    private var estadoInicial by mutableStateOf<Pair<AjustesUi, Boolean>?>(null)
+    private var estadoInicial by mutableStateOf<Triple<AjustesUi, Boolean, Bitmap?>?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
@@ -47,16 +51,20 @@ class MainActivity : ComponentActivity() {
         val app = application as KiwuApp
 
         lifecycleScope.launch {
-            val (inicial, guia) = withContext(Dispatchers.IO) {
-                val ini = withTimeoutOrNull(1500) { app.ajustes.flujo.first() } ?: AjustesUi()
+            val ini: AjustesUi
+            val guia: Boolean
+            val fondoPrevio: Bitmap?
+            withContext(Dispatchers.IO) {
+                ini = withTimeoutOrNull(1500) { app.ajustes.flujo.first() } ?: AjustesUi()
                 val hayDat = if (ini.guiaVista) true else (withTimeoutOrNull(1500) { app.repo.hayDatos() } ?: true)
                 if (!ini.guiaVista && hayDat) {
                     runCatching { app.ajustes.cambiar { it.copy(guiaVista = true) } }
                 }
-                val g = Guia.debeMostrarse(ini.guiaVista, hayDat)
-                ini to g
+                guia = Guia.debeMostrarse(ini.guiaVista, hayDat)
+                // Precarga el fondo junto con los ajustes: así el primer frame ya tiene la imagen.
+                fondoPrevio = ini.fondoUri?.let { uri -> cargarFondoPrevio(this@MainActivity, uri) }
             }
-            estadoInicial = inicial to guia
+            estadoInicial = Triple(ini, guia, fondoPrevio)
         }
 
         setContent {
@@ -68,7 +76,9 @@ class MainActivity : ComponentActivity() {
                     abrirPagina = abrirPagina,
                     nuevaNota = nuevaNota,
                     seccion = seccion,
+                    abrirRepaso = abrirRepaso,
                     inicial = estado.first,
+                    fondoInicial = estado.third,
                     guia = estado.second,
                     alAtender = ::olvidarPedido,
                 )
@@ -98,6 +108,7 @@ class MainActivity : ComponentActivity() {
         abrirPagina = intent?.getStringExtra(EXTRA_NOTA)
         nuevaNota = if (intent?.hasExtra(EXTRA_NUEVA_NOTA) == true) intent.getStringExtra(EXTRA_NUEVA_NOTA).orEmpty() else null
         seccion = intent?.getStringExtra(EXTRA_SECCION)
+        abrirRepaso = intent?.hasExtra(EXTRA_REPASO) == true
     }
 
     /** Ya se navegó a lo que pedía el widget: no se repite al girar la pantalla ni al recomponer. */
@@ -106,12 +117,14 @@ class MainActivity : ComponentActivity() {
         abrirPagina = null
         nuevaNota = null
         seccion = null
+        abrirRepaso = false
     }
 
     companion object {
         const val EXTRA_TAREA = "tarea"
         const val EXTRA_NOTA = "nota"
         const val EXTRA_NUEVA_NOTA = "nueva_nota"
+        const val EXTRA_REPASO = "repaso"
         const val EXTRA_SECCION = "seccion"
     }
 }

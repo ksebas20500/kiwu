@@ -1,19 +1,37 @@
 package app.kiwu.android.ui.notas
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -21,21 +39,27 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Style
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -51,29 +75,58 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.kiwu.android.KiwuApp
+import app.kiwu.android.R
+import app.kiwu.android.data.AjustesUi
+import app.kiwu.android.data.NotebookCoverStorage
 import app.kiwu.android.data.ResumenPagina
 import app.kiwu.android.domain.Cuaderno
 import app.kiwu.android.ui.DialogoConfirmar
 import app.kiwu.android.ui.EstadoVacio
-import app.kiwu.android.ui.Fechas
 import app.kiwu.android.ui.fechaCorta
+import coil.compose.AsyncImage
+import java.io.File
 import kotlinx.coroutines.launch
-import app.kiwu.android.R
-import androidx.compose.ui.res.stringResource
 
 val EmojisCuaderno = listOf("📓", "📝", "📚", "📖", "🎓", "💡", "🧪", "🧮", "💻", "🎨", "🎵", "🌱", "🗂️", "⭐", "🔥", "✅", "📌", "🧠", "🏃", "🍎")
+val ColoresPortada = listOf("#E57373", "#81C784", "#64B5F6", "#FFD54F", "#BA68C8", "#FF8A65", "#4DB6AC", "#A1887F")
 
-/** Módulo de notas: cuadernos (filtros), búsqueda y lista de páginas. */
+private fun hexAColor(hex: String?): Color? {
+    if (hex.isNull_or_blank()) return null
+    return try {
+        Color(android.graphics.Color.parseColor(hex))
+    } catch (e: Exception) {
+        null
+    }
+}
+
+private fun String?.isNull_or_blank(): Boolean = this == null || this.trim().isEmpty()
+
+/** Módulo de notas: estantería de cuadernos con portadas visuales, búsqueda y lista de páginas. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun NotasScreen(vm: NotasViewModel, alAbrirPagina: (String) -> Unit, alAbrirMenu: () -> Unit, insigniaRacha: @Composable () -> Unit = {}, accionesExtra: @Composable () -> Unit = {}) {
+fun NotasScreen(
+    vm: NotasViewModel,
+    alAbrirPagina: (String) -> Unit,
+    alAbrirMenu: () -> Unit,
+    alRepasoHoy: () -> Unit = {},
+    insigniaRacha: @Composable () -> Unit = {},
+    accionesExtra: @Composable () -> Unit = {},
+) {
+    val contexto = LocalContext.current
     val estado by vm.estado.collectAsStateWithLifecycle()
     val alcance = rememberCoroutineScope()
     var buscando by remember { mutableStateOf(false) }
@@ -82,80 +135,215 @@ fun NotasScreen(vm: NotasViewModel, alAbrirPagina: (String) -> Unit, alAbrirMenu
     var eliminarCuaderno by remember { mutableStateOf<Cuaderno?>(null) }
     var menuCuaderno by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    if (buscando) {
-                        OutlinedTextField(
-                            value = estado.busqueda, onValueChange = vm::buscar, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text(stringResource(R.string.notas_buscar_en)) },
-                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, imeAction = ImeAction.Search),
-                        )
-                    } else {
-                        Text(
-                            when (val f = estado.filtro) {
-                                FiltroNotas.Todas -> stringResource(R.string.notas)
-                                FiltroNotas.Favoritas -> stringResource(R.string.favoritas)
-                                is FiltroNotas.DeCuaderno -> estado.cuadernoActual?.let { "${it.icono} ${it.nombre}" } ?: stringResource(R.string.notas)
-                            },
-                        )
-                    }
-                },
-                navigationIcon = {
-                    if (buscando) {
-                        IconButton(onClick = { buscando = false; vm.buscar("") }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.cerrar_busqueda)) }
-                    } else {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = alAbrirMenu) { Icon(Icons.Filled.Menu, stringResource(R.string.abrir_menu)) }
-                            insigniaRacha()
+    val esNivelPrincipal = estado.filtro == FiltroNotas.Todas && !buscando
+    val cuadernoActual = estado.cuadernoActual
+
+    val app = contexto.applicationContext as? KiwuApp
+    val ajustes by (app?.ajustes?.flujo?.collectAsStateWithLifecycle(AjustesUi()) ?: remember { mutableStateOf(AjustesUi()) })
+
+    Box(Modifier.fillMaxSize()) {
+        if (ajustes.fondoUri != null) {
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background.copy(alpha = 0.72f)))
+        }
+
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        if (buscando) {
+                            OutlinedTextField(
+                                value = estado.busqueda,
+                                onValueChange = vm::buscar,
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                placeholder = { Text(stringResource(R.string.notas_buscar_en)) },
+                                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, imeAction = ImeAction.Search),
+                            )
+                        } else {
+                            Column {
+                                Text(
+                                    when (val f = estado.filtro) {
+                                        FiltroNotas.Todas -> stringResource(R.string.notas)
+                                        FiltroNotas.Favoritas -> stringResource(R.string.favoritas)
+                                        is FiltroNotas.DeCuaderno -> cuadernoActual?.nombre ?: stringResource(R.string.notas)
+                                    },
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                if (!esNivelPrincipal) {
+                                    val cant = estado.paginas.size
+                                    Text(
+                                        if (cant == 1) "1 nota" else "$cant notas",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
                         }
+                    },
+                    navigationIcon = {
+                        if (buscando || !esNivelPrincipal) {
+                            IconButton(onClick = {
+                                if (buscando) {
+                                    buscando = false
+                                    vm.buscar("")
+                                } else {
+                                    vm.filtrar(FiltroNotas.Todas)
+                                }
+                            }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.volver))
+                            }
+                        } else {
+                            IconButton(onClick = alAbrirMenu) {
+                                Icon(Icons.Filled.Menu, stringResource(R.string.abrir_menu))
+                            }
+                        }
+                    },
+                    actions = {
+                        if (!buscando) {
+                            IconButton(onClick = { buscando = true }) {
+                                Icon(Icons.Filled.Search, stringResource(R.string.buscar))
+                            }
+                            IconButton(onClick = alRepasoHoy) {
+                                Icon(Icons.Filled.Style, stringResource(R.string.repaso_hoy))
+                            }
+
+                            if (!esNivelPrincipal && estado.filtro is FiltroNotas.DeCuaderno) {
+                                Box {
+                                    IconButton(onClick = { menuCuaderno = true }) {
+                                        Icon(Icons.Filled.MoreVert, stringResource(R.string.cuaderno_opciones))
+                                    }
+                                    DropdownMenu(expanded = menuCuaderno, onDismissRequest = { menuCuaderno = false }) {
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.cuaderno_editar)) },
+                                            onClick = { menuCuaderno = false; dialogoCuaderno = cuadernoActual },
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.cuaderno_eliminar), color = MaterialTheme.colorScheme.error) },
+                                            onClick = { menuCuaderno = false; eliminarCuaderno = cuadernoActual },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                )
+            },
+            floatingActionButton = {
+                FloatingActionButton(onClick = {
+                    alcance.launch {
+                        val destino = (estado.filtro as? FiltroNotas.DeCuaderno)?.id
+                        alAbrirPagina(vm.nuevaPagina(destino))
                     }
-                },
-                actions = {
-                    // Al buscar, el campo de búsqueda necesita el sitio: la racha se esconde.
-                    if (!buscando) accionesExtra()
-                    if (!buscando) IconButton(onClick = { buscando = true }) { Icon(Icons.Filled.Search, stringResource(R.string.buscar)) }
-                    if (estado.cuadernoActual != null && !buscando) {
-                        Box {
-                            IconButton(onClick = { menuCuaderno = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.cuaderno_opciones)) }
-                            DropdownMenu(expanded = menuCuaderno, onDismissRequest = { menuCuaderno = false }) {
-                                DropdownMenuItem(text = { Text(stringResource(R.string.cuaderno_editar)) }, onClick = { menuCuaderno = false; dialogoCuaderno = estado.cuadernoActual })
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.cuaderno_eliminar), color = MaterialTheme.colorScheme.error) },
-                                    onClick = { menuCuaderno = false; eliminarCuaderno = estado.cuadernoActual },
+                }) {
+                    Icon(Icons.Filled.Add, stringResource(R.string.nota_nueva))
+                }
+            },
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+        ) { relleno ->
+            Column(Modifier.padding(relleno).consumeWindowInsets(relleno).fillMaxSize()) {
+                if (buscando) {
+                    BuscadorUnificado(estado, vm, alAbrirPagina) { buscando = false }
+                } else if (esNivelPrincipal) {
+                    // --- NIVEL 1: ESTANTERÍA DE CUADERNOS ---
+                    // Fila de accesos rápidos
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.90f),
+                            modifier = Modifier.weight(1f).clickable { vm.filtrar(FiltroNotas.Favoritas) },
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Icon(Icons.Filled.Star, contentDescription = null, tint = Color(0xFFE0A100), modifier = Modifier.size(20.dp))
+                                Text(
+                                    "${stringResource(R.string.favoritas)} (${estado.favoritasCount})",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+
+                        val tienePendientesSRS = estado.todasLasPaginas.isNotEmpty()
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (tienePendientesSRS) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.90f),
+                            modifier = Modifier.weight(1f).clickable { alRepasoHoy() },
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Icon(
+                                    Icons.Filled.Style,
+                                    contentDescription = null,
+                                    tint = if (tienePendientesSRS) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Text(
+                                    stringResource(R.string.repaso_hoy),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (tienePendientesSRS) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
                         }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { alcance.launch { alAbrirPagina(vm.nuevaPagina()) } }) { Icon(Icons.Filled.Add, stringResource(R.string.nota_nueva)) }
-        },
-        containerColor = Color.Transparent,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-    ) { relleno ->
-        Column(Modifier.padding(relleno).consumeWindowInsets(relleno).fillMaxSize()) {
-            LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                item { FilterChip(estado.filtro == FiltroNotas.Todas, { vm.filtrar(FiltroNotas.Todas) }, { Text(stringResource(R.string.todas)) }) }
-                item { FilterChip(estado.filtro == FiltroNotas.Favoritas, { vm.filtrar(FiltroNotas.Favoritas) }, { Text(stringResource(R.string.favoritas_estrella)) }) }
-                items(estado.cuadernos, key = { it.id }) { c ->
-                    FilterChip(estado.filtro == FiltroNotas.DeCuaderno(c.id), { vm.filtrar(FiltroNotas.DeCuaderno(c.id)) }, { Text("${c.icono} ${c.nombre}") })
-                }
-                item { TextButton(onClick = { nuevoCuaderno = true }) { Text(stringResource(R.string.cuaderno_mas)) } }
-            }
-            if (estado.cargado && estado.paginas.isEmpty()) {
-                EstadoVacio(
-                    Icons.Filled.Description,
-                    stringResource(if (estado.busqueda.isNotBlank()) R.string.sin_resultados else R.string.sin_notas),
-                )
-            } else {
-                LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
-                    items(estado.paginas, key = { it.id }) { p ->
-                        FilaPagina(p, estado.nombresCuadernos[p.cuadernoId], estado.cuadernos, vm, alAbrirPagina)
+
+                    // Cuadrícula de Cuadernos
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(minSize = 156.dp),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(20.dp),
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        // Primer ítem: + Nuevo cuaderno
+                        item {
+                            TarjetaNuevoCuaderno { nuevoCuaderno = true }
+                        }
+
+                        // Lista de cuadernos
+                        items(estado.cuadernos, key = { it.id }) { cuaderno ->
+                            NotebookCard(
+                                cuaderno = cuaderno,
+                                cantNotas = estado.cantidadNotas(cuaderno.id),
+                                alPulsar = { vm.filtrar(FiltroNotas.DeCuaderno(cuaderno.id)) },
+                                alEditar = { dialogoCuaderno = cuaderno },
+                                alEliminar = { eliminarCuaderno = cuaderno },
+                            )
+                        }
+                    }
+                } else {
+                    // --- NIVEL 2: DENTRO DE UN CUADERNO / FAVORITAS ---
+                    if (estado.cargado && estado.paginas.isEmpty()) {
+                        EstadoVacio(
+                            Icons.Filled.Description,
+                            stringResource(R.string.sin_notas),
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            items(estado.paginas, key = { it.id }) { p ->
+                                TarjetaNotaIndividual(p, estado.nombresCuadernos[p.cuadernoId], vm, alAbrirPagina)
+                            }
+                        }
                     }
                 }
             }
@@ -163,90 +351,470 @@ fun NotasScreen(vm: NotasViewModel, alAbrirPagina: (String) -> Unit, alAbrirMenu
     }
 
     if (nuevoCuaderno) {
-        DialogoCuaderno(null, alCerrar = { nuevoCuaderno = false }) { nombre, icono -> vm.crearCuaderno(nombre, icono) }
+        DialogoCuaderno(null, alCerrar = { nuevoCuaderno = false }) { nombre, icono, foto, colorHex ->
+            vm.crearCuaderno(nombre, icono, foto, colorHex)
+        }
     }
     dialogoCuaderno?.let { c ->
-        DialogoCuaderno(c, alCerrar = { dialogoCuaderno = null }) { nombre, icono -> vm.editarCuaderno(c.id, nombre, icono) }
+        DialogoCuaderno(c, alCerrar = { dialogoCuaderno = null }) { nombre, icono, foto, colorHex ->
+            vm.editarCuaderno(c.id, nombre, icono, foto, colorHex)
+        }
     }
     eliminarCuaderno?.let { c ->
         DialogoConfirmar(
-            stringResource(R.string.cuaderno_eliminar_titulo, c.nombre), stringResource(R.string.cuaderno_eliminar_texto), stringResource(R.string.cuaderno_eliminar_boton),
+            stringResource(R.string.cuaderno_eliminar_titulo, c.nombre),
+            stringResource(R.string.cuaderno_eliminar_texto),
+            stringResource(R.string.cuaderno_eliminar_boton),
             alCerrar = { eliminarCuaderno = null },
-        ) { vm.eliminarCuaderno(c.id) }
+        ) { vm.eliminarCuaderno(c.id, contexto) }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+/** Tarjeta con forma de libro para la estantería de cuadernos. */
 @Composable
-private fun FilaPagina(p: ResumenPagina, cuaderno: String?, cuadernos: List<Cuaderno>, vm: NotasViewModel, alAbrir: (String) -> Unit) {
+private fun NotebookCard(
+    cuaderno: Cuaderno,
+    cantNotas: Int,
+    alPulsar: () -> Unit,
+    alEditar: () -> Unit,
+    alEliminar: () -> Unit,
+) {
     var menu by remember { mutableStateOf(false) }
-    var mover by remember { mutableStateOf(false) }
-    var eliminar by remember { mutableStateOf(false) }
-    Row(
-        Modifier.fillMaxWidth().combinedClickable(onClick = { alAbrir(p.id) }, onLongClick = { menu = true })
-            .padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    val shapeLibro = RoundedCornerShape(topStart = 4.dp, bottomStart = 4.dp, topEnd = 14.dp, bottomEnd = 14.dp)
+    val colorRespaldo = hexAColor(cuaderno.coverColorHex) ?: MaterialTheme.colorScheme.primaryContainer
+    val tieneImagen = cuaderno.coverImagePath != null && File(cuaderno.coverImagePath).exists()
+
+    Column(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = alPulsar),
     ) {
-        Text(p.icono.ifBlank { "📄" }, fontSize = 24.sp, modifier = Modifier.padding(end = 14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(p.titulo.ifBlank { stringResource(R.string.sin_titulo) }, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            val resumen = p.textoPlano.replace('\n', ' ').take(90)
-            if (resumen.isNotBlank()) Text(resumen, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
-            Text(
-                listOfNotNull(cuaderno, fechaCorta(p.actualizada, System.currentTimeMillis())).joinToString(" · "),
-                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-            )
+        // Portada del libro
+        Surface(
+            shape = shapeLibro,
+            color = colorRespaldo,
+            shadowElevation = 4.dp,
+            modifier = Modifier.fillMaxWidth().aspectRatio(0.75f),
+        ) {
+            Box(Modifier.fillMaxSize()) {
+                if (tieneImagen && cuaderno.coverImagePath != null) {
+                    AsyncImage(
+                        model = File(cuaderno.coverImagePath),
+                        contentDescription = cuaderno.nombre,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(colorRespaldo, colorRespaldo.copy(alpha = 0.75f))
+                                )
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(cuaderno.icono.ifBlank { "📓" }, fontSize = 42.sp)
+                    }
+                }
+
+                // Lomo del libro (franja vertical a la izquierda)
+                Box(
+                    modifier = Modifier
+                        .width(6.dp)
+                        .fillMaxHeight()
+                        .background(Color.Black.copy(alpha = 0.14f))
+                        .align(Alignment.CenterStart)
+                )
+            }
         }
-        IconButton(onClick = { vm.ponerFavorita(p.id, !p.favorita) }) {
-            Icon(if (p.favorita) Icons.Filled.Star else Icons.Filled.StarBorder, stringResource(if (p.favorita) R.string.quitar_favoritas else R.string.anadir_favoritas),
-                tint = if (p.favorita) Color(0xFFE0A100) else MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Box {
-            IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.nota_opciones)) }
-            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                DropdownMenuItem(text = { Text(stringResource(if (p.favorita) R.string.quitar_favoritas else R.string.anadir_favoritas)) }, onClick = { menu = false; vm.ponerFavorita(p.id, !p.favorita) })
-                if (cuadernos.size > 1) DropdownMenuItem(text = { Text(stringResource(R.string.mover_otro_cuaderno)) }, onClick = { menu = false; mover = true })
-                DropdownMenuItem(text = { Text(stringResource(R.string.nota_eliminar), color = MaterialTheme.colorScheme.error) }, onClick = { menu = false; eliminar = true })
+
+        // Pie del cuaderno sobre superficie legible
+        Surface(
+            shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.90f),
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+        ) {
+            Row(
+                modifier = Modifier.padding(start = 10.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        cuaderno.nombre,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        if (cantNotas == 1) "1 nota" else "$cantNotas notas",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Box {
+                    IconButton(onClick = { menu = true }, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Filled.MoreVert, contentDescription = null, modifier = Modifier.size(18.dp))
+                    }
+                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.cuaderno_editar)) },
+                            onClick = { menu = false; alEditar() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.cuaderno_eliminar), color = MaterialTheme.colorScheme.error) },
+                            onClick = { menu = false; alEliminar() },
+                        )
+                    }
+                }
             }
         }
     }
-    if (mover) {
-        AlertDialog(
-            onDismissRequest = { mover = false }, title = { Text(stringResource(R.string.mover_a)) },
-            text = {
-                Column {
-                    for (c in cuadernos.filter { it.id != p.cuadernoId }) {
-                        TextButton(onClick = { mover = false; vm.moverPagina(p.id, c.id) }) { Text("${c.icono} ${c.nombre}") }
-                    }
+}
+
+/** Tarjeta "+ Nuevo cuaderno" con borde punteado/tonal. */
+@Composable
+private fun TarjetaNuevoCuaderno(alPulsar: () -> Unit) {
+    val shapeLibro = RoundedCornerShape(topStart = 4.dp, bottomStart = 4.dp, topEnd = 14.dp, bottomEnd = 14.dp)
+    Column(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = alPulsar),
+    ) {
+        Surface(
+            shape = shapeLibro,
+            color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.6f),
+            border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+            modifier = Modifier.fillMaxWidth().aspectRatio(0.75f),
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 }
-            },
-            confirmButton = {}, dismissButton = { TextButton(onClick = { mover = false }) { Text(stringResource(R.string.cancelar)) } },
-        )
-    }
-    if (eliminar) {
-        DialogoConfirmar(stringResource(R.string.nota_eliminar_titulo), stringResource(R.string.no_se_recupera), stringResource(R.string.eliminar), alCerrar = { eliminar = false }) { vm.eliminarPagina(p.id) }
+                Text(
+                    stringResource(R.string.cuaderno_nuevo),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+        }
+        Spacer(Modifier.height(32.dp))
     }
 }
 
-/** Crear o editar un cuaderno: nombre e icono (emoji). */
+/** Tarjeta de nota individual dentro de un cuaderno. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun DialogoCuaderno(cuaderno: Cuaderno?, alCerrar: () -> Unit, alConfirmar: (String, String) -> Unit) {
+private fun TarjetaNotaIndividual(
+    p: ResumenPagina,
+    nombreCuaderno: String?,
+    vm: NotasViewModel,
+    alAbrir: (String) -> Unit,
+) {
+    var menu by remember { mutableStateOf(false) }
+    var eliminar by remember { mutableStateOf(false) }
+
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.90f),
+        modifier = Modifier.fillMaxWidth().combinedClickable(onClick = { alAbrir(p.id) }, onLongClick = { menu = true }),
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(p.icono.ifBlank { "📄" }, fontSize = 24.sp, modifier = Modifier.padding(end = 12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    p.titulo.ifBlank { stringResource(R.string.sin_titulo) },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                val extracto = p.textoPlano.replace('\n', ' ').trim()
+                if (extracto.isNotBlank()) {
+                    Text(
+                        extracto,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(vertical = 2.dp),
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    if (nombreCuaderno != null) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                        ) {
+                            Text(
+                                nombreCuaderno,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            )
+                        }
+                    }
+                    Text(
+                        fechaCorta(p.actualizada, System.currentTimeMillis()),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    )
+                }
+            }
+
+            IconButton(onClick = { vm.ponerFavorita(p.id, !p.favorita) }) {
+                Icon(
+                    if (p.favorita) Icons.Filled.Star else Icons.Filled.StarBorder,
+                    contentDescription = null,
+                    tint = if (p.favorita) Color(0xFFE0A100) else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Box {
+                IconButton(onClick = { menu = true }) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = null)
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(if (p.favorita) R.string.quitar_favoritas else R.string.anadir_favoritas)) },
+                        onClick = { menu = false; vm.ponerFavorita(p.id, !p.favorita) },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.nota_eliminar), color = MaterialTheme.colorScheme.error) },
+                        onClick = { menu = false; eliminar = true },
+                    )
+                }
+            }
+        }
+    }
+
+    if (eliminar) {
+        DialogoConfirmar(
+            stringResource(R.string.nota_eliminar_titulo),
+            stringResource(R.string.no_se_recupera),
+            stringResource(R.string.eliminar),
+            alCerrar = { eliminar = false },
+        ) { vm.eliminarPagina(p.id) }
+    }
+}
+
+/** Buscador unificado: cuadernos en miniatura + notas que coinciden. */
+@Composable
+private fun BuscadorUnificado(
+    estado: NotasEstado,
+    vm: NotasViewModel,
+    alAbrirPagina: (String) -> Unit,
+    alCerrarBusqueda: () -> Unit,
+) {
+    val cuadernosCoincidentes = remember(estado.cuadernos, estado.busqueda) {
+        if (estado.busqueda.isBlank()) emptyList()
+        else estado.cuadernos.filter { estado.busqueda in it.nombre.lowercase() }
+    }
+
+    Column(Modifier.fillMaxSize()) {
+        if (cuadernosCoincidentes.isNotEmpty()) {
+            Text(
+                stringResource(R.string.cuadernos),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 6.dp),
+            )
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                items(cuadernosCoincidentes, key = { "b-c-" + it.id }) { c ->
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.90f),
+                        modifier = Modifier.clickable {
+                            alCerrarBusqueda()
+                            vm.filtrar(FiltroNotas.DeCuaderno(c.id))
+                        },
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            val colorRespaldo = hexAColor(c.coverColorHex) ?: MaterialTheme.colorScheme.primaryContainer
+                            val tieneImagen = c.coverImagePath != null && File(c.coverImagePath).exists()
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = colorRespaldo,
+                                modifier = Modifier.size(36.dp, 48.dp),
+                            ) {
+                                if (tieneImagen && c.coverImagePath != null) {
+                                    AsyncImage(
+                                        model = File(c.coverImagePath),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                } else {
+                                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Text(c.icono.ifBlank { "📓" }, fontSize = 18.sp)
+                                    }
+                                }
+                            }
+                            Text(c.nombre, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
+        if (estado.paginas.isEmpty() && cuadernosCoincidentes.isEmpty()) {
+            EstadoVacio(Icons.Filled.Description, stringResource(R.string.sin_resultados))
+        } else {
+            Text(
+                stringResource(R.string.notas),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 6.dp),
+            )
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 96.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                items(estado.paginas, key = { "b-p-" + it.id }) { p ->
+                    TarjetaNotaIndividual(p, estado.nombresCuadernos[p.cuadernoId], vm, alAbrirPagina)
+                }
+            }
+        }
+    }
+}
+
+/** Diálogo / BottomSheet para crear o editar un cuaderno con selector de foto y color. */
+@Composable
+fun DialogoCuaderno(
+    cuaderno: Cuaderno?,
+    alCerrar: () -> Unit,
+    alConfirmar: (nombre: String, icono: String, coverImagePath: String?, coverColorHex: String?) -> Unit,
+) {
+    val contexto = LocalContext.current
     var nombre by remember { mutableStateOf(cuaderno?.nombre ?: "") }
     var icono by remember { mutableStateOf(cuaderno?.icono ?: "📓") }
+    var coverImagePath by remember { mutableStateOf(cuaderno?.coverImagePath) }
+    var coverColorHex by remember { mutableStateOf(cuaderno?.coverColorHex) }
+
+    val lanzadorFoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) {
+            val notebookId = cuaderno?.id ?: app.kiwu.android.domain.nuevoId()
+            val ruta = NotebookCoverStorage.guardarPortada(contexto, notebookId, uri)
+            if (ruta != null) {
+                coverImagePath = ruta
+            }
+        }
+    }
+
     AlertDialog(
         onDismissRequest = alCerrar,
         title = { Text(stringResource(if (cuaderno == null) R.string.cuaderno_nuevo else R.string.cuaderno_editar)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
-                    nombre, { nombre = it }, label = { Text(stringResource(R.string.nombre)) }, singleLine = true,
+                    value = nombre,
+                    onValueChange = { nombre = it },
+                    label = { Text(stringResource(R.string.nombre)) },
+                    singleLine = true,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    modifier = Modifier.fillMaxWidth(),
                 )
-                Text(stringResource(R.string.horario_icono), style = MaterialTheme.typography.labelMedium)
+
+                Text("Foto de portada", style = MaterialTheme.typography.labelMedium)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    val tieneFoto = coverImagePath != null && File(coverImagePath!!).exists()
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.size(48.dp, 64.dp),
+                    ) {
+                        if (tieneFoto && coverImagePath != null) {
+                            AsyncImage(
+                                model = File(coverImagePath!!),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        } else {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Filled.Image, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Button(
+                            onClick = {
+                                lanzadorFoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            },
+                        ) {
+                            Text(if (tieneFoto) "Cambiar foto" else "Elegir foto")
+                        }
+                        if (tieneFoto) {
+                            TextButton(onClick = { coverImagePath = null }) {
+                                Text("Quitar foto", color = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                }
+
+                HorizontalDivider()
+
+                Text("Color de fondo e ícono", style = MaterialTheme.typography.labelMedium)
+                // Colores predefinidos
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(ColoresPortada) { hex ->
+                        val color = hexAColor(hex) ?: Color.Gray
+                        val seleccionado = coverColorHex == hex
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(color)
+                                .border(
+                                    if (seleccionado) 3.dp else 1.dp,
+                                    if (seleccionado) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                                    CircleShape,
+                                )
+                                .clickable { coverColorHex = hex },
+                        )
+                    }
+                }
+
                 SelectorEmoji(icono) { icono = it }
             }
         },
-        confirmButton = { TextButton(onClick = { alConfirmar(nombre.trim(), icono); alCerrar() }, enabled = nombre.isNotBlank()) { Text(stringResource(R.string.guardar)) } },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    alConfirmar(nombre.trim(), icono, coverImagePath, coverColorHex)
+                    alCerrar()
+                },
+                enabled = nombre.isNotBlank(),
+            ) { Text(stringResource(R.string.guardar)) }
+        },
         dismissButton = { TextButton(onClick = alCerrar) { Text(stringResource(R.string.cancelar)) } },
     )
 }
@@ -257,14 +825,40 @@ fun SelectorEmoji(actual: String, emojis: List<String> = EmojisCuaderno, alElegi
     androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         for (e in emojis) {
             Surface(
-                onClick = { alElegir(e) }, shape = RoundedCornerShape(8.dp),
+                onClick = { alElegir(e) },
+                shape = RoundedCornerShape(8.dp),
                 color = if (e == actual) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
             ) { Text(e, fontSize = 22.sp, modifier = Modifier.padding(6.dp)) }
         }
     }
 }
 
-/** Menú lateral de Notas: filtros, cuadernos (con su menú) y ajustes. */
+/** Menú lateral de Notas. Se dibuja sobre toda la pantalla. */
+@Composable
+fun MenuNotas(vm: NotasViewModel, cerrarYLuego: (() -> Unit) -> Unit, alAjustes: () -> Unit) {
+    val contexto = LocalContext.current
+    val estado by vm.estado.collectAsStateWithLifecycle()
+    var nuevo by remember { mutableStateOf(false) }
+    var editar by remember { mutableStateOf<Cuaderno?>(null) }
+    var eliminar by remember { mutableStateOf<Cuaderno?>(null) }
+    PanelNotas(
+        estado = estado,
+        alElegir = { f -> cerrarYLuego { vm.filtrar(f) } },
+        alNuevoCuaderno = { nuevo = true },
+        alEditar = { editar = it },
+        alEliminar = { eliminar = it },
+        alAjustes = { cerrarYLuego(alAjustes) },
+    )
+    if (nuevo) DialogoCuaderno(null, alCerrar = { nuevo = false }) { nombre, icono, foto, color -> vm.crearCuaderno(nombre, icono, foto, color) }
+    editar?.let { c -> DialogoCuaderno(c, alCerrar = { editar = null }) { nombre, icono, foto, color -> vm.editarCuaderno(c.id, nombre, icono, foto, color) } }
+    eliminar?.let { c ->
+        DialogoConfirmar(
+            stringResource(R.string.cuaderno_eliminar_titulo, c.nombre), stringResource(R.string.cuaderno_eliminar_texto), stringResource(R.string.cuaderno_eliminar_boton),
+            alCerrar = { eliminar = null },
+        ) { vm.eliminarCuaderno(c.id, contexto) }
+    }
+}
+
 @Composable
 private fun PanelNotas(
     estado: NotasEstado,
@@ -323,29 +917,4 @@ private fun ItemPanel(titulo: String, icono: androidx.compose.ui.graphics.vector
         label = { Text(titulo, maxLines = 1) }, icon = { Icon(icono, null) }, selected = seleccionado, onClick = alClic,
         modifier = Modifier.padding(androidx.compose.material3.NavigationDrawerItemDefaults.ItemPadding),
     )
-}
-
-/** Menú lateral de Notas. Se dibuja sobre toda la pantalla (también sobre la barra inferior). */
-@Composable
-fun MenuNotas(vm: NotasViewModel, cerrarYLuego: (() -> Unit) -> Unit, alAjustes: () -> Unit) {
-    val estado by vm.estado.collectAsStateWithLifecycle()
-    var nuevo by remember { mutableStateOf(false) }
-    var editar by remember { mutableStateOf<Cuaderno?>(null) }
-    var eliminar by remember { mutableStateOf<Cuaderno?>(null) }
-    PanelNotas(
-        estado = estado,
-        alElegir = { f -> cerrarYLuego { vm.filtrar(f) } },
-        alNuevoCuaderno = { nuevo = true },
-        alEditar = { editar = it },
-        alEliminar = { eliminar = it },
-        alAjustes = { cerrarYLuego(alAjustes) },
-    )
-    if (nuevo) DialogoCuaderno(null, alCerrar = { nuevo = false }) { nombre, icono -> vm.crearCuaderno(nombre, icono) }
-    editar?.let { c -> DialogoCuaderno(c, alCerrar = { editar = null }) { nombre, icono -> vm.editarCuaderno(c.id, nombre, icono) } }
-    eliminar?.let { c ->
-        DialogoConfirmar(
-            stringResource(R.string.cuaderno_eliminar_titulo, c.nombre), stringResource(R.string.cuaderno_eliminar_texto), stringResource(R.string.cuaderno_eliminar_boton),
-            alCerrar = { eliminar = null },
-        ) { vm.eliminarCuaderno(c.id) }
-    }
 }

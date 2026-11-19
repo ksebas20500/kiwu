@@ -1,6 +1,7 @@
 package app.kiwu.android
 
 import android.app.Application
+import android.content.Context
 import android.content.res.Configuration
 import android.database.ContentObserver
 import android.os.Handler
@@ -11,14 +12,19 @@ import app.kiwu.android.data.BillingManager
 import app.kiwu.android.data.KiwuDb
 import app.kiwu.android.data.Repositorio
 import app.kiwu.android.data.ServicioSync
+import app.kiwu.android.domain.TiempoEstudio
 import app.kiwu.android.notify.Avisos
 import app.kiwu.android.notify.AvisosAndroid
 import app.kiwu.android.domain.Rachas
 import app.kiwu.android.notify.AvisosClases
 import app.kiwu.android.notify.AvisosRacha
+import app.kiwu.android.notify.AvisosRepaso
+import app.kiwu.android.notify.AvisosResumen
 import app.kiwu.android.notify.ProgramadorAvisos
 import app.kiwu.android.notify.ProgramadorClases
 import app.kiwu.android.notify.ProgramadorRacha
+import app.kiwu.android.notify.ProgramadorRepaso
+import app.kiwu.android.notify.ProgramadorResumen
 import app.kiwu.android.widgets.Widgets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +39,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 
-/** Contenedor de dependencias de la app (sin framework de inyección: son solo dos objetos). */
+/** Contenedor de dependencias de la app (sin framework de inyección: todo sale de aquí — db, repo, ajustes, sync, billing…). */
 class KiwuApp : Application() {
     val db by lazy { KiwuDb.obtener(this) }
     private val prefsRacha by lazy { getSharedPreferences("racha", MODE_PRIVATE) }
@@ -57,30 +63,52 @@ class KiwuApp : Application() {
     private var observadorCalendario: ContentObserver? = null
     private var refrescoCalendarioPendiente: Job? = null
 
+    /** Refresca los widgets sin romper la app si no hay lanzador o es una prueba JVM. */
+    private fun refrescarWidgets(programar: Boolean = false) {
+        alcance.launch {
+            try {
+                Widgets.refrescar(this@KiwuApp)
+                if (programar) Widgets.programar(this@KiwuApp)
+            } catch (_: Exception) {
+                // Sin widgets o en pruebas: no debe romper la app.
+            }
+        }
+    }
+
     // En Android 8–12, el idioma elegido en Ajustes también para lo que no es una pantalla (fechas por defecto, servicios).
     override fun attachBaseContext(base: android.content.Context) = super.attachBaseContext(Idioma.contexto(base))
 
     override fun onCreate() {
         super.onCreate()
         Textos.actualizar(this)
-        com.google.android.gms.ads.MobileAds.initialize(this) {}
         iniciarAvisos()
         iniciarWidgets()
         iniciarObservadorCalendario()
         sync.iniciar()
+        importarSesionesViejas()
+    }
+
+    /**
+     * Las sesiones de estudio vivían en preferencias hasta 0.8.2: pasan a la base una sola vez (con marca propia en
+     * las preferencias, así un respaldo restaurado no las duplica) y el temporizador ya solo escribe en Room.
+     */
+    private fun importarSesionesViejas() {
+        alcance.launch {
+            val p = getSharedPreferences("temporizador", Context.MODE_PRIVATE)
+            if (p.getBoolean("sesiones_importadas", false)) return@launch
+            val viejas = TiempoEstudio.leer(p.getString("sesiones", "").orEmpty())
+            if (viejas.isNotEmpty()) {
+                repo.guardarSesionesImportadas(viejas)
+            }
+            p.edit().putBoolean("sesiones_importadas", true).remove("sesiones").apply()
+        }
     }
 
     /** Con el tema «sistema», el widget tiene que seguir al modo claro/oscuro del teléfono sin esperar 30 minutos. */
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         if (!widgetsIniciados) return
-        alcance.launch {
-            try {
-                Widgets.refrescar(this@KiwuApp)
-            } catch (_: Exception) {
-                // Sin widgets o en pruebas: no debe romper la app.
-            }
-        }
+        refrescarWidgets()
     }
 
     /** Mantiene las alarmas de los recordatorios al día con las tareas (se llama al arrancar y tras reiniciar el teléfono). */
@@ -104,6 +132,14 @@ class KiwuApp : Application() {
         AvisosRacha.crearCanal(this)
         val programadorRacha = ProgramadorRacha(this)
         alcance.launch { ajustes.flujo.map { it.rachaAviso }.distinctUntilChanged().collect { programadorRacha.reconciliar(it) } }
+        // Resumen semanal: una alarma cada domingo a la tarde.
+        AvisosResumen.crearCanal(this)
+        val programadorResumen = ProgramadorResumen(this)
+        alcance.launch { ajustes.flujo.map { it.resumenSemanal }.distinctUntilChanged().collect { programadorResumen.reconciliar(it) } }
+        // Repaso diario: una alarma a las 18:00 si hay tarjetas vencidas.
+        AvisosRepaso.crearCanal(this)
+        val programadorRepaso = ProgramadorRepaso(this)
+        alcance.launch { ajustes.flujo.map { it.repasoAviso }.distinctUntilChanged().collect { programadorRepaso.reconciliar(it) } }
         // Si se completa una tarea después del aviso de la racha, el aviso sobra.
         alcance.launch {
             repo.entradaRacha.collect {
@@ -128,6 +164,7 @@ class KiwuApp : Application() {
             try {
                 val a = ajustes.flujo.first()
                 programadorAvisos.reconciliar(repo.deberesAhora(), a.segundoAvisoMin, horaSinHora = a.horaAvisoSinHora)
+                ProgramadorRepaso(this@KiwuApp).reconciliar(a.repasoAviso)
             } catch (_: Exception) {
                 // Sin base o sin permiso de notificaciones: no debe romper la app.
             }
@@ -136,13 +173,7 @@ class KiwuApp : Application() {
         // no corrió; al volver, se re-registra (por si el permiso llegó después de arrancar) y se
         // redibuja todo con lo que haya en el teléfono, borrando los eventos borrados mientras tanto.
         iniciarObservadorCalendario()
-        alcance.launch {
-            try {
-                Widgets.refrescar(this@KiwuApp)
-            } catch (_: Exception) {
-                // Sin widgets o en pruebas: no debe romper la app.
-            }
-        }
+        refrescarWidgets()
     }
 
     /**
@@ -159,12 +190,7 @@ class KiwuApp : Application() {
                 repo.cuadernos.map { }, repo.horarios.map { }, repo.clases.map { }, repo.faltas.map { }, ajustes.flujo.map { },
             ).collectLatest {
                 delay(350)
-                try {
-                    Widgets.refrescar(this@KiwuApp)
-                    Widgets.programar(this@KiwuApp)
-                } catch (_: Exception) {
-                    // Sin lanzador o en las pruebas JVM no hay widgets que refrescar; no debe romper la app.
-                }
+                refrescarWidgets(programar = true)
             }
         }
     }
@@ -184,11 +210,7 @@ class KiwuApp : Application() {
                 refrescoCalendarioPendiente?.cancel()
                 refrescoCalendarioPendiente = alcance.launch {
                     delay(1000)
-                    try {
-                        Widgets.refrescar(this@KiwuApp)
-                    } catch (_: Exception) {
-                        // Sin widgets o en pruebas: no debe romper la app.
-                    }
+                    refrescarWidgets()
                 }
             }
         }

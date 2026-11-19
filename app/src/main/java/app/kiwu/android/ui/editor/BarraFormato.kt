@@ -24,7 +24,10 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -44,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -135,6 +139,18 @@ fun BarraFormato(ed: EstadoEditor, adjuntos: OrigenAdjuntos, modifier: Modifier 
 
     Surface(modifier.fillMaxWidth().imePadding().navigationBarsPadding(), tonalElevation = 3.dp, shadowElevation = 6.dp) {
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(
+                onClick = {
+                    if (b.texto.isEmpty()) b.poner("/", emptyList()) else b.poner("${b.texto}/", emptyList())
+                },
+                contentPadding = PaddingValues(horizontal = 8.dp),
+            ) {
+                Text("+ Bloque", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            }
+            VerticalDivider(
+                modifier = Modifier.height(24.dp).padding(horizontal = 2.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+            )
             if (esTexto) {
                 Boton(Icons.Filled.FormatBold, stringResource(R.string.negrita), ed.activo(b, "b")) { ed.alternarFormato("b") }
                 Boton(Icons.Filled.FormatItalic, stringResource(R.string.cursiva), ed.activo(b, "i")) { ed.alternarFormato("i") }
@@ -144,6 +160,10 @@ fun BarraFormato(ed: EstadoEditor, adjuntos: OrigenAdjuntos, modifier: Modifier 
                 MenuColores(Icons.Filled.Highlight, stringResource(R.string.resaltado), true, ed)
                 Boton(Icons.Filled.Link, stringResource(R.string.enlace), ed.enlaceBajoCursor(b) != null) { dialogoEnlace = true }
                 ed.enlaceBajoCursor(b)?.let { url -> TextButton(onClick = { adjuntos.abrirUrl(url) }) { Text(stringResource(R.string.abrir)) } }
+                VerticalDivider(
+                    modifier = Modifier.height(24.dp).padding(horizontal = 2.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                )
             }
             Box {
                 Boton(Icons.Filled.Add, stringResource(R.string.insertar)) { menuInsertar = true }

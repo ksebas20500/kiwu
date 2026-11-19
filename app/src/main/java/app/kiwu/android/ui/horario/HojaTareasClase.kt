@@ -81,6 +81,8 @@ internal fun HojaTareasClase(
     alAbrirTarea: (String) -> Unit,
     alAbrirLista: (String) -> Unit,
     marcar: (String, Boolean) -> Unit,
+    /** Deslizar una fila a la izquierda pospone su entrega a mañana. */
+    posponer: (String) -> Unit,
     crearTarea: (titulo: String, materiaId: String, fecha: Long?) -> Unit,
     vincular: (materiaId: String?) -> Unit,
     crearYVincular: (nombre: String) -> Unit,
@@ -89,7 +91,7 @@ internal fun HojaTareasClase(
     justificarFalta: (String, Boolean) -> Unit,
     ponerMaximoFaltas: (Int?) -> Unit,
 ) {
-    val color = ColoresClase.de(clase)
+    val color = ColoresClase.de(clase, estado.materias.firstOrNull { it.id == clase.materiaId }?.color)
     val materia = estado.materias.firstOrNull { it.id == clase.materiaId }
     var menu by remember { mutableStateOf(false) }
     var elegirLista by remember { mutableStateOf(false) }
@@ -202,11 +204,11 @@ internal fun HojaTareasClase(
                                 stringResource(seccion.titulo), Modifier.padding(start = 8.dp, top = 10.dp, bottom = 2.dp), style = MaterialTheme.typography.labelMedium,
                                 color = if (seccion == SeccionTarea.Vencidas) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                             )
-                            for (d in filas) FilaTarea(d, estado.ahora, false, marcar, alAbrirTarea)
+                            for (d in filas) FilaTarea(d, estado.ahora, false, marcar, alAbrirTarea, posponer)
                         }
                     } else {
                         if (hechas.isEmpty()) Text(stringResource(R.string.hoja_nada_hecho), Modifier.padding(8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        for (d in hechas.sortedByDescending { it.fechaCompletado ?: 0L }) FilaTarea(d, estado.ahora, true, marcar, alAbrirTarea)
+                        for (d in hechas.sortedByDescending { it.fechaCompletado ?: 0L }) FilaTarea(d, estado.ahora, true, marcar, alAbrirTarea, posponer)
                     }
                 }
                 CampoNuevaTarea(
@@ -257,18 +259,24 @@ private fun OpcionLista(texto: String, marcada: Boolean, alPulsar: () -> Unit) {
 }
 
 @Composable
-private fun FilaTarea(d: Deber, ahora: Long, hecha: Boolean, marcar: (String, Boolean) -> Unit, alAbrir: (String) -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(hecha, onCheckedChange = { marcar(d.id, it) }, modifier = Modifier.casillaDe(d.titulo))
-        Column(Modifier.weight(1f).clickable { alAbrir(d.id) }.padding(vertical = 6.dp)) {
-            Text(
-                d.titulo, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                textDecoration = if (hecha) TextDecoration.LineThrough else null,
-                color = if (hecha) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-            )
-            d.fechaEntrega?.let { f ->
-                val vencida = !hecha && f < ahora
-                Text(fechaCorta(f, ahora, completo = true), fontSize = 12.sp, color = if (vencida) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+private fun FilaTarea(d: Deber, ahora: Long, hecha: Boolean, marcar: (String, Boolean) -> Unit, alAbrir: (String) -> Unit, posponer: (String) -> Unit) {
+    app.kiwu.android.ui.tareas.ConGestosTarea(
+        d,
+        alMarcar = { marcar(d.id, !hecha) },
+        alPosponer = { posponer(d.id) },
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(hecha, onCheckedChange = { marcar(d.id, it) }, modifier = Modifier.casillaDe(d.titulo))
+            Column(Modifier.weight(1f).clickable { alAbrir(d.id) }.padding(vertical = 6.dp)) {
+                Text(
+                    d.titulo, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    textDecoration = if (hecha) TextDecoration.LineThrough else null,
+                    color = if (hecha) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                )
+                d.fechaEntrega?.let { f ->
+                    val vencida = !hecha && f < ahora
+                    Text(fechaCorta(f, ahora, completo = true), fontSize = 12.sp, color = if (vencida) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
     }

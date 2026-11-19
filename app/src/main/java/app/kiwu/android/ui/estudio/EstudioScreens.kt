@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -45,6 +46,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import app.kiwu.android.ui.fechaCorta
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -75,6 +78,7 @@ import app.kiwu.android.domain.Calificaciones
 import app.kiwu.android.domain.ConfigCalificaciones
 import app.kiwu.android.domain.Documento
 import app.kiwu.android.domain.GeneradorTarjetas
+import app.kiwu.android.domain.Repaso
 import app.kiwu.android.domain.Tarjeta
 import app.kiwu.android.domain.Tarjetas
 import app.kiwu.android.domain.TiempoEstudio
@@ -85,7 +89,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun Pantalla(
+internal fun Pantalla(
     titulo: String,
     alVolver: () -> Unit,
     acciones: @Composable (RowScope.() -> Unit) = {},
@@ -117,7 +121,8 @@ fun TemporizadorScreen(app: KiwuApp, alVolver: () -> Unit) {
     var pausa by remember { mutableLongStateOf(Temporizador.pausaRestante(c)) }
     var noMolestar by remember { mutableStateOf(Temporizador.quiereNoMolestar(c)) }
     var colorNum by remember { mutableStateOf(Temporizador.color(c)) }
-    val semana = remember(fin, pausa) { TiempoEstudio.semana(Temporizador.sesiones(c), java.time.LocalDate.now()) }
+    val sesiones by app.repo.sesiones.collectAsStateWithLifecycle(emptyList())
+    val semana = remember(sesiones, fin, pausa) { TiempoEstudio.semana(sesiones, java.time.LocalDate.now()) }
     var ahora by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(fin) {
         while (fin != null) {
@@ -646,20 +651,41 @@ fun TarjetasScreen(app: KiwuApp, paginaId: String, alVolver: () -> Unit) {
     var tarjetas by remember { mutableStateOf<List<Tarjeta>?>(null) }
     var apunte by remember { mutableStateOf<Documento?>(null) }
     var cola by remember { mutableStateOf<List<Tarjeta>?>(null) }
+    var fechaExamen by remember { mutableStateOf<String?>(null) }
+    var mostrarSelectorFecha by remember { mutableStateOf(false) }
+    /** true cuando la cola sale del repaso espaciado (solo tarjetas guardadas): al contestar se guarda su caja. */
+    var modoSRS by remember { mutableStateOf(false) }
     var propuestas by remember { mutableStateOf<List<Tarjeta>?>(null) }
     var elegidas by remember { mutableStateOf(emptySet<Int>()) }
     var vista by remember { mutableStateOf(false) }
     var pregunta by remember { mutableStateOf("") }
     var respuesta by remember { mutableStateOf("") }
+    
+    var tarjetaEnEdicion by remember { mutableStateOf<Int?>(null) }
+    var editPregunta by remember { mutableStateOf("") }
+    var editRespuesta by remember { mutableStateOf("") }
+    
+    val ahora = remember { System.currentTimeMillis() }
     LaunchedEffect(paginaId) {
         val p = app.repo.pagina(paginaId)
         tarjetas = Tarjetas.leer(p?.tarjetas.orEmpty())
+        fechaExamen = Tarjetas.leerFechaExamen(p?.tarjetas.orEmpty())
         apunte = Documento.deJson(p?.contenido)
     }
     fun guardar(l: List<Tarjeta>) { tarjetas = l; alcance.launch { app.repo.cambiarTarjetas(paginaId, l) } }
+    fun guardarFecha(f: String?) {
+        fechaExamen = f
+        alcance.launch { app.repo.cambiarFechaExamenNota(paginaId, f) }
+    }
     val lista = tarjetas.orEmpty()
     val delApunte = remember(apunte) { apunte?.let(GeneradorTarjetas::delApunte).orEmpty() }
     val todas = delApunte + lista
+    val vencidas = remember(lista, ahora) { Repaso.vencen(lista, ahora) }
+    /** Contesta la tarjeta actual del repaso espaciado: guarda su nueva caja en la lista guardada. */
+    fun contestarSRS(nueva: Tarjeta) {
+        val i = lista.indexOfFirst { it.pregunta == nueva.pregunta && it.respuesta == nueva.respuesta }
+        if (i >= 0) guardar(lista.toMutableList().also { it[i] = nueva })
+    }
     Pantalla(stringResource(R.string.tarjetas), { if (cola != null) cola = null else if (propuestas != null) propuestas = null else alVolver() }) { relleno ->
         val actual = cola?.firstOrNull()
         Column(
@@ -694,6 +720,7 @@ fun TarjetasScreen(app: KiwuApp, paginaId: String, alVolver: () -> Unit) {
                 }
                 cola != null && actual == null -> {
                     Text(stringResource(R.string.tarjetas_terminado, todas.size), style = MaterialTheme.typography.titleLarge)
+                    if (modoSRS) Text(stringResource(R.string.tarjetas_al_dia), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Button(onClick = { cola = null }) { Text(stringResource(R.string.tarjetas_volver)) }
                 }
                 cola != null && actual != null -> {
@@ -702,8 +729,14 @@ fun TarjetasScreen(app: KiwuApp, paginaId: String, alVolver: () -> Unit) {
                     if (vista) {
                         Text(actual.respuesta, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            OutlinedButton(onClick = { cola = cola!!.drop(1) + actual; vista = false }) { Text(stringResource(R.string.tarjeta_repasar)) }
-                            Button(onClick = { cola = cola!!.drop(1); vista = false }) { Text(stringResource(R.string.tarjeta_sabida)) }
+                            OutlinedButton(onClick = {
+                                if (modoSRS) contestarSRS(Repaso.fallada(actual, System.currentTimeMillis()))
+                                cola = cola!!.drop(1) + actual; vista = false
+                            }) { Text(stringResource(R.string.tarjeta_repasar)) }
+                            Button(onClick = {
+                                if (modoSRS) contestarSRS(Repaso.acertada(actual, System.currentTimeMillis()))
+                                cola = cola!!.drop(1); vista = false
+                            }) { Text(stringResource(R.string.tarjeta_sabida)) }
                         }
                     } else {
                         Button(onClick = { vista = true }) { Text(stringResource(R.string.tarjeta_ver)) }
@@ -711,8 +744,88 @@ fun TarjetasScreen(app: KiwuApp, paginaId: String, alVolver: () -> Unit) {
                 }
                 else -> {
                     Text(stringResource(R.string.tarjetas_intro), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Button(onClick = { cola = todas; vista = false }, enabled = todas.isNotEmpty()) { Text(stringResource(R.string.tarjetas_empezar, todas.size)) }
+
+                    // --- Fecha de examen de esta nota ---
+                    androidx.compose.material3.Surface(
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+                        color = if (fechaExamen != null) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                                else MaterialTheme.colorScheme.surfaceContainer,
+                        onClick = { mostrarSelectorFecha = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Icon(
+                                Icons.Filled.School,
+                                contentDescription = null,
+                                tint = if (fechaExamen != null) MaterialTheme.colorScheme.primary
+                                       else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp),
+                            )
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    stringResource(R.string.tarjetas_fecha_examen),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = if (fechaExamen != null) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.onSurface,
+                                )
+                                if (fechaExamen != null) {
+                                    val strHoy = stringResource(R.string.examen_hoy)
+                                    val strManana = stringResource(R.string.examen_manana)
+                                    val diasText = runCatching {
+                                        val dias = java.time.temporal.ChronoUnit.DAYS.between(
+                                            java.time.LocalDate.now(),
+                                            java.time.LocalDate.parse(fechaExamen),
+                                        )
+                                        when {
+                                            dias <= 0L -> strHoy
+                                            dias == 1L -> strManana
+                                            else -> stringResource(R.string.examen_dias, dias.toInt())
+                                        }
+                                    }.getOrElse { fechaExamen ?: "" }
+                                    Text(
+                                        "$diasText  •  ${fechaCorta(java.time.Instant.parse(fechaExamen + "T00:00:00Z").toEpochMilli(), System.currentTimeMillis(), completo = true)}",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                } else {
+                                    Text(
+                                        stringResource(R.string.tarjetas_poner_fecha),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    )
+                                }
+                            }
+                            if (fechaExamen != null) {
+                                androidx.compose.material3.IconButton(onClick = { guardarFecha(null) }) {
+                                    Icon(Icons.Filled.Close, stringResource(R.string.ajustes_quitar),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (vencidas.isNotEmpty()) {
+                            Button(
+                                onClick = { cola = vencidas; modoSRS = true; vista = false },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text(stringResource(R.string.tarjetas_hoy, vencidas.size)) }
+                        } else if (lista.isNotEmpty()) {
+                            Text(stringResource(R.string.tarjetas_al_dia), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                        }
+                            if (todas.size > vencidas.size) {
+                                androidx.compose.material3.TextButton(
+                                    onClick = { cola = todas; modoSRS = false; vista = false },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) { Text(stringResource(R.string.tarjetas_empezar, todas.size)) }
+                            }
+                    }
+                    
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
                             onClick = {
                                 val ps = GeneradorTarjetas.proponer(apunte ?: Documento.vacio(), lista)
@@ -720,22 +833,73 @@ fun TarjetasScreen(app: KiwuApp, paginaId: String, alVolver: () -> Unit) {
                                 elegidas = ps.indices.toSet()
                             },
                             enabled = apunte != null,
-                        ) { Text(stringResource(R.string.tarjetas_generar)) }
+                            modifier = Modifier.weight(1f),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)
+                        ) { Text("✨ " + stringResource(R.string.tarjetas_generar), maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        
+                        OutlinedButton(
+                            onClick = { 
+                                // Scroll al final, foco en el campo, etc... no hay estado para eso fácilmente,
+                                // dejamos que el usuario baje, o se puede arreglar
+                            },
+                            modifier = Modifier.weight(1f),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)
+                        ) { Text("+ " + stringResource(R.string.anadir), maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     }
                     for (t in delApunte) {
-                        Column {
-                            Text(stringResource(R.string.tarjeta_en_apunte), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                            Text(t.pregunta, style = MaterialTheme.typography.bodyLarge)
-                            Text(t.respuesta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        androidx.compose.material3.Surface(
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.85f),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        ) {
+                            Column(Modifier.padding(12.dp)) {
+                                Text(stringResource(R.string.tarjeta_en_apunte), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                Text(t.pregunta, style = MaterialTheme.typography.bodyLarge)
+                                Text(t.respuesta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            }
                         }
                     }
                     for ((i, t) in lista.withIndex()) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text(t.pregunta, style = MaterialTheme.typography.bodyLarge)
-                                Text(t.respuesta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        val estadoSwipe = androidx.compose.material3.rememberSwipeToDismissBoxState(
+                            confirmValueChange = { valor ->
+                                if (valor == androidx.compose.material3.SwipeToDismissBoxValue.EndToStart) {
+                                    guardar(lista.toMutableList().also { it.removeAt(i) })
+                                }
+                                false
                             }
-                            IconButton(onClick = { guardar(lista.toMutableList().also { it.removeAt(i) }) }) { Icon(Icons.Filled.Close, stringResource(R.string.tarjeta_quitar)) }
+                        )
+                        androidx.compose.material3.SwipeToDismissBox(
+                            state = estadoSwipe,
+                            enableDismissFromStartToEnd = false,
+                            enableDismissFromEndToStart = true,
+                            backgroundContent = {
+                                if (estadoSwipe.dismissDirection == androidx.compose.material3.SwipeToDismissBoxValue.EndToStart) {
+                                    Box(
+                                        Modifier.fillMaxSize().padding(vertical = 4.dp)
+                                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                                            .background(MaterialTheme.colorScheme.errorContainer),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        Icon(Icons.Filled.Delete, null, tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.padding(end = 16.dp))
+                                    }
+                                }
+                            }
+                        ) {
+                            androidx.compose.material3.Surface(
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.85f),
+                                onClick = { 
+                                    editPregunta = t.pregunta
+                                    editRespuesta = t.respuesta
+                                    tarjetaEnEdicion = i 
+                                },
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            ) {
+                                Column(Modifier.padding(12.dp)) {
+                                    Text(t.pregunta, style = MaterialTheme.typography.bodyLarge)
+                                    Text(t.respuesta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
                         }
                     }
                     OutlinedTextField(pregunta, { pregunta = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.pregunta)) })
@@ -747,5 +911,55 @@ fun TarjetasScreen(app: KiwuApp, paginaId: String, alVolver: () -> Unit) {
                 }
             }
         }
+    }
+    // Selector de fecha para el examen de esta nota.
+    if (mostrarSelectorFecha) {
+        val contexto = androidx.compose.ui.platform.LocalContext.current
+        val hoyLocal = java.util.Calendar.getInstance()
+        android.app.DatePickerDialog(
+            contexto,
+            { _, year, month, day ->
+                val fecha = "%04d-%02d-%02d".format(year, month + 1, day)
+                guardarFecha(fecha)
+                mostrarSelectorFecha = false
+            },
+            hoyLocal.get(java.util.Calendar.YEAR),
+            hoyLocal.get(java.util.Calendar.MONTH),
+            hoyLocal.get(java.util.Calendar.DAY_OF_MONTH),
+        ).also {
+            it.setOnDismissListener { mostrarSelectorFecha = false }
+            it.datePicker.minDate = System.currentTimeMillis()
+        }.show()
+        // Marcar como mostrado para que el LaunchedEffect no lo vuelva a abrir.
+        mostrarSelectorFecha = false
+    }
+    
+    // Diálogo de edición de tarjeta
+    tarjetaEnEdicion?.let { indice ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { tarjetaEnEdicion = null },
+            title = { Text(stringResource(R.string.editar_tarjeta)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(editPregunta, { editPregunta = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.pregunta)) })
+                    OutlinedTextField(editRespuesta, { editRespuesta = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.respuesta)) })
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val actualizada = lista[indice].copy(pregunta = editPregunta.trim(), respuesta = editRespuesta.trim())
+                        val nuevaLista = lista.toMutableList()
+                        nuevaLista[indice] = actualizada
+                        guardar(nuevaLista)
+                        tarjetaEnEdicion = null
+                    },
+                    enabled = editPregunta.isNotBlank() && editRespuesta.isNotBlank()
+                ) { Text(stringResource(R.string.guardar)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { tarjetaEnEdicion = null }) { Text(stringResource(R.string.cancelar)) }
+            }
+        )
     }
 }

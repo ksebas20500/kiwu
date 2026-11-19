@@ -4,14 +4,26 @@ import android.content.Context
 import android.text.format.DateUtils
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -21,11 +33,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kiwu.android.KiwuApp
@@ -57,10 +72,11 @@ fun SeccionCuenta(app: KiwuApp) {
     val contexto = LocalContext.current
     val alcance = rememberCoroutineScope()
     val sync = app.sync
-    val actividad = contexto.actividad()
     val estado by sync.estado.collectAsStateWithLifecycle()
     var correo by rememberSaveable { mutableStateOf("") }
     var clave by remember { mutableStateOf("") }
+    var modoRegistro by rememberSaveable { mutableStateOf(false) }
+    var mostrarClave by remember { mutableStateOf(false) }
     var ocupado by remember { mutableStateOf(false) }
     var mensaje by remember { mutableStateOf<String?>(null) }
     var confirmarBorrado by remember { mutableStateOf(false) }
@@ -80,80 +96,216 @@ fun SeccionCuenta(app: KiwuApp) {
         }
     }
 
-    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
         when {
-            !sync.cuenta.disponible -> Text(stringResource(R.string.cuenta_no_disponible), style = MaterialTheme.typography.bodyMedium)
+            !sync.cuenta.disponible -> {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.90f),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        stringResource(R.string.cuenta_no_disponible),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
+            }
             estado.correo == null -> {
-                Text(stringResource(R.string.cuenta_texto), style = MaterialTheme.typography.bodyMedium)
-                OutlinedTextField(
-                    correo, { correo = it }, Modifier.fillMaxWidth(), singleLine = true,
-                    label = { Text(stringResource(R.string.cuenta_correo)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                )
-                OutlinedTextField(
-                    clave, { clave = it }, Modifier.fillMaxWidth(), singleLine = true,
-                    label = { Text(stringResource(R.string.cuenta_clave)) },
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                )
-                Button(onClick = { intentar { sync.entrar(correo, clave) } }, enabled = !ocupado && correo.isNotBlank() && clave.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.cuenta_entrar))
-                }
-                OutlinedButton(onClick = { intentar { sync.registrar(correo, clave) } }, enabled = !ocupado && correo.isNotBlank() && clave.length >= 6, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.cuenta_crear))
-                }
-                if (sync.google.disponible) {
-                    OutlinedButton(
-                        onClick = {
-                            val act = contexto.actividad()
-                            if (act != null) {
-                                intentar { sync.entrarConGoogle(sync.google.token(act)) }
-                            }
-                        },
-                        enabled = !ocupado,
-                        modifier = Modifier.fillMaxWidth(),
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.90f),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        Text(stringResource(R.string.cuenta_google))
+                        Text(
+                            stringResource(R.string.cuenta_texto),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+
+                        if (sync.google.disponible) {
+                            Button(
+                                onClick = {
+                                    val act = contexto.actividad()
+                                    if (act != null) {
+                                        intentar { sync.entrarConGoogle(sync.google.token(act)) }
+                                    }
+                                },
+                                enabled = !ocupado,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(stringResource(R.string.cuenta_google))
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                HorizontalDivider(
+                                    modifier = Modifier.weight(1f),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                                )
+                                Text(
+                                    stringResource(R.string.ajustes_o_con_correo),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 8.dp),
+                                )
+                                HorizontalDivider(
+                                    modifier = Modifier.weight(1f),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                                )
+                            }
+                        }
+
+                        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                            SegmentedButton(
+                                selected = !modoRegistro,
+                                onClick = { modoRegistro = false },
+                                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                            ) {
+                                Text(
+                                    stringResource(R.string.cuenta_entrar),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            SegmentedButton(
+                                selected = modoRegistro,
+                                onClick = { modoRegistro = true },
+                                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                            ) {
+                                Text(
+                                    stringResource(R.string.cuenta_crear),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+
+                        OutlinedTextField(
+                            value = correo,
+                            onValueChange = { correo = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            label = { Text(stringResource(R.string.cuenta_correo)) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        )
+
+                        OutlinedTextField(
+                            value = clave,
+                            onValueChange = { clave = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            label = { Text(stringResource(R.string.cuenta_clave)) },
+                            visualTransformation = if (mostrarClave) VisualTransformation.None else PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            trailingIcon = {
+                                IconButton(onClick = { mostrarClave = !mostrarClave }) {
+                                    Icon(
+                                        if (mostrarClave) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                        contentDescription = null,
+                                    )
+                                }
+                            },
+                            supportingText = if (modoRegistro) {
+                                { Text(stringResource(R.string.ajustes_min_caracteres)) }
+                            } else null,
+                        )
+
+                        Button(
+                            onClick = {
+                                if (modoRegistro) {
+                                    intentar { sync.registrar(correo, clave) }
+                                } else {
+                                    intentar { sync.entrar(correo, clave) }
+                                }
+                            },
+                            enabled = !ocupado && correo.isNotBlank() && (if (modoRegistro) clave.length >= 6 else clave.isNotEmpty()),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(if (modoRegistro) R.string.cuenta_crear else R.string.cuenta_entrar))
+                        }
+
+                        TextButton(
+                            onClick = {
+                                intentar {
+                                    sync.cuenta.recuperar(correo)
+                                    mensaje = contexto.getString(R.string.cuenta_recuperar_enviado)
+                                }
+                            },
+                            enabled = !ocupado && correo.isNotBlank(),
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                        ) {
+                            Text(stringResource(R.string.cuenta_olvide))
+                        }
                     }
                 }
-                TextButton(
-                    onClick = {
-                        intentar {
-                            sync.cuenta.recuperar(correo)
-                            mensaje = contexto.getString(R.string.cuenta_recuperar_enviado)
-                        }
-                    },
-                    enabled = !ocupado && correo.isNotBlank(),
-                ) { Text(stringResource(R.string.cuenta_olvide)) }
             }
             else -> {
-                Text(estado.correo.orEmpty(), style = MaterialTheme.typography.titleMedium)
-                Text(
-                    when {
-                        estado.sincronizando -> stringResource(R.string.cuenta_sincronizando)
-                        estado.limiteDiario -> stringResource(R.string.cuenta_limite)
-                        estado.error != null -> textoErrorCuenta(contexto, estado.error!!)
-                        estado.ultima != null -> stringResource(
-                            R.string.cuenta_sincronizado,
-                            DateUtils.getRelativeTimeSpanString(estado.ultima!!, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString(),
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.90f),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(estado.correo.orEmpty(), style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            when {
+                                estado.sincronizando -> stringResource(R.string.cuenta_sincronizando)
+                                estado.limiteDiario -> stringResource(R.string.cuenta_limite)
+                                estado.error != null -> textoErrorCuenta(contexto, estado.error!!)
+                                estado.ultima != null -> stringResource(
+                                    R.string.cuenta_sincronizado,
+                                    DateUtils.getRelativeTimeSpanString(estado.ultima!!, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString(),
+                                )
+                                else -> stringResource(R.string.cuenta_sin_sincronizar)
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (estado.error != null || estado.limiteDiario) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        else -> stringResource(R.string.cuenta_sin_sincronizar)
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (estado.error != null || estado.limiteDiario) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (estado.pendientes > 0) Text(stringResource(R.string.cuenta_pendientes, estado.pendientes), style = MaterialTheme.typography.bodySmall)
-                Button(onClick = { alcance.launch { sync.sincronizar() } }, enabled = !estado.sincronizando, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.cuenta_sincronizar_ahora))
-                }
-                OutlinedButton(onClick = { sync.salir() }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.cuenta_salir)) }
-                Text(stringResource(R.string.cuenta_salir_nota), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TextButton(onClick = { confirmarBorrado = true }, enabled = !ocupado) {
-                    Text(stringResource(R.string.cuenta_borrar), color = MaterialTheme.colorScheme.error)
+                        if (estado.pendientes > 0) Text(stringResource(R.string.cuenta_pendientes, estado.pendientes), style = MaterialTheme.typography.bodySmall)
+
+                        Button(
+                            onClick = { alcance.launch { sync.sincronizar() } },
+                            enabled = !estado.sincronizando,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(R.string.cuenta_sincronizar_ahora))
+                        }
+                        OutlinedButton(
+                            onClick = { sync.salir() },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(R.string.cuenta_salir))
+                        }
+                        Text(
+                            stringResource(R.string.cuenta_salir_nota),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        TextButton(
+                            onClick = { confirmarBorrado = true },
+                            enabled = !ocupado,
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                        ) {
+                            Text(stringResource(R.string.cuenta_borrar), color = MaterialTheme.colorScheme.error)
+                        }
+                    }
                 }
             }
         }
-        mensaje?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+        mensaje?.let { Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 4.dp)) }
     }
 
     val conGoogle = sync.cuenta.sesion?.google == true
@@ -164,9 +316,11 @@ fun SeccionCuenta(app: KiwuApp) {
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(stringResource(R.string.cuenta_borrar_texto))
-                    // Borrar la cuenta es una acción delicada: Firebase pide una sesión reciente, así que se confirma con la contraseña (o con Google).
                     if (!conGoogle) OutlinedTextField(
-                        claveBorrado, { claveBorrado = it }, Modifier.fillMaxWidth(), singleLine = true,
+                        value = claveBorrado,
+                        onValueChange = { claveBorrado = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
                         label = { Text(stringResource(R.string.cuenta_clave)) },
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -181,12 +335,13 @@ fun SeccionCuenta(app: KiwuApp) {
                         claveBorrado = ""
                         intentar {
                             sync.borrarCuenta {
-                                if (conGoogle) sync.cuenta.entrarConGoogle(sync.google.token(actividad!!))
+                                val act = contexto.actividad()
+                                if (conGoogle && act != null) sync.cuenta.entrarConGoogle(sync.google.token(act))
                                 else sync.cuenta.entrar(sync.cuenta.sesion?.correo.orEmpty(), clave)
                             }
                         }
                     },
-                    enabled = conGoogle && actividad != null || claveBorrado.isNotEmpty(),
+                    enabled = (conGoogle && contexto.actividad() != null) || claveBorrado.isNotEmpty(),
                 ) {
                     Text(stringResource(R.string.cuenta_borrar_confirmar), color = MaterialTheme.colorScheme.error)
                 }

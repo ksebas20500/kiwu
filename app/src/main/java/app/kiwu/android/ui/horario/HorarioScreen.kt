@@ -110,7 +110,8 @@ val EmojisHorario = listOf("🎓", "💼", "🌴", "🏋️", "🎮", "🎵", "�
 
 private class Edicion(val grupo: String?, val dia: Int)
 
-private fun colorDe(c: Clase): ColorPastel = ColoresClase.de(c)
+private fun colorDe(c: Clase, estado: HorarioEstado): ColorPastel =
+    ColoresClase.de(c, estado.materias.firstOrNull { it.id == c.materiaId }?.color)
 
 /** Módulo de horarios: varios horarios semanales, vista por día o por semana. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -218,6 +219,7 @@ fun HorarioScreen(vm: HorarioViewModel, alAbrirMenu: () -> Unit, alAbrirTarea: (
             alAbrirTarea = { hojaId = null; alAbrirTarea(it) },
             alAbrirLista = { hojaId = null; alAbrirLista(it) },
             marcar = { id, hecha -> vm.marcarTarea(id, hecha) },
+            posponer = { vm.posponerTarea(it) },
             crearTarea = { titulo, materiaId, fecha -> vm.crearTarea(titulo, materiaId, fecha) },
             vincular = { vm.vincular(claseHoja.grupo, it) },
             crearYVincular = { vm.crearListaYVincular(claseHoja.grupo, it) },
@@ -326,7 +328,7 @@ private fun VistaDia(estado: HorarioEstado, hoy: Int, diaSel: Int, deberes: List
         }
         items(delDia, key = { it.id }) { c ->
             TarjetaClase(
-                c, nombreHorario = if (estado.seleccion == null && estado.horarios.size > 1) estado.nombres[c.horarioId] else null,
+                c, color = colorDe(c, estado), nombreHorario = if (estado.seleccion == null && estado.horarios.size > 1) estado.nombres[c.horarioId] else null,
                 enCurso = c.diaSemana == dia && minuto >= c.inicioMin && minuto < c.finMin, alClic = { alAbrir(c) }, alLargo = { alEditar(c) },
                 puntos = TareasDeClase.puntos(deberes, c.materiaId, estado.ahora),
                 faltas = estado.contadores[c.grupo]?.takeIf { ReglasFaltas.seMuestra(it) },
@@ -337,8 +339,7 @@ private fun VistaDia(estado: HorarioEstado, hoy: Int, diaSel: Int, deberes: List
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TarjetaClase(c: Clase, nombreHorario: String?, enCurso: Boolean, alClic: () -> Unit, alLargo: () -> Unit, puntos: List<PuntoTarea>, faltas: ContadorFaltas? = null) {
-    val color = colorDe(c)
+private fun TarjetaClase(c: Clase, color: ColorPastel, nombreHorario: String?, enCurso: Boolean, alClic: () -> Unit, alLargo: () -> Unit, puntos: List<PuntoTarea>, faltas: ContadorFaltas? = null) {
     Surface(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).combinedClickable(onClick = alClic, onLongClick = alLargo),
         shape = RoundedCornerShape(12.dp), color = color.fondo, contentColor = color.texto,
@@ -418,7 +419,7 @@ private fun VistaSemana(estado: HorarioEstado, hoy: Int, deberes: List<Deber>, a
                 }
                 val carriles = max(1, finDeCarril.size)
                 for (c in delDia) {
-                    val color = colorDe(c)
+                    val color = colorDe(c, estado)
                     val y = altoHora * ((c.inicioMin - primera * 60) / 60f)
                     val h = altoHora * ((c.finMin - c.inicioMin) / 60f)
                     Box(

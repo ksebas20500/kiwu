@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Reglas de respaldo de Android (API 26–30). Va todo, menos la sesión de la cuenta:
+     los tokens de Firebase no deben viajar a los respaldos en la nube. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="cuenta.xml" />
+</full-backup-content>
