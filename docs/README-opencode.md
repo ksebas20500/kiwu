@@ -12,10 +12,19 @@
 |---|---|---|---|
 | **0.7.0** | `17` | Temporizador Pomodoro, Calificaciones & Promedio Ponderado, Cuenta Atrás de Exámenes, Tarjetas de Repaso manuales. | **Room v9** (Nuevas columnas `calificaciones` en `materia`, `examen` en `deber`, `tarjetas` en `pagina`). |
 | **0.7.1** | `18` | Bloque de editor `/tarjeta`, comando `/repasar`, generador automático de tarjetas sin IA, cancelación remota de avisos, tiempo relativo mejorado. | **Room v9** (Sin cambios de esquema). |
-| **Actual** | `33` · `0.9.0` | **Eventos de Google Calendar en la sección Eventos y Calendario.** **Resumen Semanal y preparación de interfaz para Home.** **Efecto de animación estilo cómic (manga)** al completar tareas por Swipe. **Fecha de examen local** en tarjetas/notas vinculada al SRS. **Ajustes de interfaz:** Tema Oscuro unificado, AdMob en modo testing. | **Room v12** (Sin cambios de esquema). |
-| **Preparado** | siguiente | **Repaso espaciado (SRS)** de tarjetas con cajas de Leitner (`domain/Estudio.kt` → `Repaso`, JSON con `c`/`v` opcionales), **gestos de swipe** en las filas de tareas (derecha completa/reabre, izquierda pospone a mañana), **tema «Negro» (AMOLED)** en Ajustes → Apariencia, **resumen semanal** por aviso los domingos 19:00 (`domain/Resumen.kt` + `notify/AvisosResumen.kt`, ajuste `resumenSemanal`), **color propio de cada lista** (lo heredan sus clases del horario y el widget), **«Compartir PDF»** de una nota (PDF estructurado, sin librerías nuevas) y **SRS unificado**: cola global «Repasar hoy» con aviso diario a las 18:00 y prioridad para notas con examen a 7/3/1 días. **En preparación (0.8.3):** gestos unificados en la hoja de la clase, **sync de faltas de clase**, **sesiones de estudio en la nube** (Room + sync + respaldo), color de materia, exportación a PDF y repaso global. | **Room v12** (v10: `falta` gana `actualizada`/`eliminada`; v11: tabla nueva `sesion`; v12: `materia` gana `color`; el SRS unificado no cambia el esquema). |
+| [**0.9.0**](versiones/android-0.9.0.md) | `33` | Inicio, estantería de cuadernos, portadas, mejoras de editor y Ajustes. Commit `488e7a7`. | **Room v13** (migraciones acumuladas desde v9). |
+| [**0.9.1**](versiones/android-0.9.1.md) | — | Correcciones de «Para hoy» y eventos externos, menús contextuales para editar y eliminar, y rediseño de Ajustes. Atribución según las notas locales. | **Room v13**. |
+| [**0.9.2**](versiones/android-0.9.2.md) | `35` | Arrastre de listas, barra horizontal de comandos, mejoras del cursor y cola común de repaso. Atribución según las notas locales y el código actual. | **Room v13**. |
 
 ---
+
+### Cambios locales posteriores al commit de la 0.9.0
+
+El diff posterior a `488e7a7` reúne cambios de la 0.9.1 y la 0.9.2. Las notas locales permiten atribuir parte de ellos. Estos detalles quedan con versión exacta por confirmar:
+
+- Menú lateral con cabecera compacta y contador de racha, cuadrícula de Hoy, 7 días, Calendario y Eventos, accesos a Todas y Repasar, secciones plegables para listas, cuadernos y horarios, y pie fijo con Completadas, Papelera, Ajustes y selector claro/oscuro.
+- En Notas, retirada del acceso duplicado a repaso en la barra superior y navegación con Atrás dentro de un cuaderno.
+- En Cuenta, etiqueta «Crear cuenta» en el selector y «Crear cuenta (mínimo 6 caracteres)» en el botón.
 
 ## 🎯 1. Novedades e Implementaciones Detalladas (0.7.0 a Versión Actual)
 
@@ -235,9 +244,9 @@
 
 ---
 
-## 🗄️ 2. Estado de la Base de Datos (Room Schema v12)
+## 🗄️ 2. Estado de la Base de Datos (Room Schema v13)
 
-La versión del esquema de Room se mantiene en **v12** (migraciones acumuladas 1→12 en [KiwuDao.kt](file:///Users/ksebas/Documents/kiwu-android/kiwu/app/src/main/java/app/kiwu/android/data/KiwuDao.kt)).
+La versión del esquema de Room es **v13** (migraciones acumuladas 1→13 en [KiwuDao.kt](file:///Users/ksebas/Documents/kiwu-android/kiwu/app/src/main/java/app/kiwu/android/data/KiwuDao.kt)).
 
 ```sql
 -- Estructura de las columnas añadidas en v9 (0.7.0+):
@@ -263,6 +272,10 @@ CREATE INDEX IF NOT EXISTS index_sesion_dia ON sesion (dia);
 
 -- v12 (0.8.3): color propio de cada lista (null = automático por hash).
 ALTER TABLE materia ADD COLUMN color TEXT;
+
+-- v13: portada opcional de cuaderno.
+ALTER TABLE cuaderno ADD COLUMN cover_image_path TEXT;
+ALTER TABLE cuaderno ADD COLUMN cover_color_hex TEXT;
 ```
 
 > [!IMPORTANT]
@@ -278,7 +291,7 @@ app/src/main/java/app/kiwu/android/
 ├── KiwuApp.kt                    # Service Locator (Db, Repo, Ajustes, ServicioSync, Billing)
 ├── MainActivity.kt               # Entrypoint, Edge-to-Edge, Handlers de Intents
 ├── data/
-│   ├── KiwuDao.kt                # Room DAO & Migraciones 1->12 (KiwuDb, singleton manual)
+│   ├── KiwuDao.kt                # Room DAO & Migraciones 1->13 (KiwuDb, singleton manual)
 │   ├── Repositorio.kt            # Fachada principal de datos para ViewModels
 │   ├── CalendarioTelefono.kt     # Lógica de consulta a CalendarContract
 │   ├── Firebase.kt / SyncLocal.kt# Motor de sincronización (REST propio, sin SDK; tablas materia, grupo_lista, horario, falta, sesion, cuaderno, deber, clase, pagina)
