@@ -1,6 +1,7 @@
 package app.kiwu.android.ui.notas
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -13,6 +14,9 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -138,12 +142,21 @@ fun NotasScreen(
     val esNivelPrincipal = estado.filtro == FiltroNotas.Todas && !buscando
     val cuadernoActual = estado.cuadernoActual
 
+    BackHandler(enabled = !esNivelPrincipal) {
+        if (buscando) {
+            buscando = false
+            vm.buscar("")
+        } else {
+            vm.filtrar(FiltroNotas.Todas)
+        }
+    }
+
     val app = contexto.applicationContext as? KiwuApp
     val ajustes by (app?.ajustes?.flujo?.collectAsStateWithLifecycle(AjustesUi()) ?: remember { mutableStateOf(AjustesUi()) })
 
     Box(Modifier.fillMaxSize()) {
         if (ajustes.fondoUri != null) {
-            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background.copy(alpha = 0.72f)))
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background.copy(alpha = 0.18f)))
         }
 
         Scaffold(
@@ -204,9 +217,6 @@ fun NotasScreen(
                             IconButton(onClick = { buscando = true }) {
                                 Icon(Icons.Filled.Search, stringResource(R.string.buscar))
                             }
-                            IconButton(onClick = alRepasoHoy) {
-                                Icon(Icons.Filled.Style, stringResource(R.string.repaso_hoy))
-                            }
 
                             if (!esNivelPrincipal && estado.filtro is FiltroNotas.DeCuaderno) {
                                 Box {
@@ -255,7 +265,8 @@ fun NotasScreen(
                     ) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.90f),
+                            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.76f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)),
                             modifier = Modifier.weight(1f).clickable { vm.filtrar(FiltroNotas.Favoritas) },
                         ) {
                             Row(
@@ -274,7 +285,7 @@ fun NotasScreen(
                             }
                         }
 
-                        val tienePendientesSRS = estado.todasLasPaginas.isNotEmpty()
+                        val tienePendientesSRS = estado.tarjetasPendientes > 0
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = if (tienePendientesSRS) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.90f),
@@ -431,7 +442,8 @@ private fun NotebookCard(
         // Pie del cuaderno sobre superficie legible
         Surface(
             shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.90f),
+            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.76f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)),
             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
         ) {
             Row(
@@ -527,7 +539,8 @@ private fun TarjetaNotaIndividual(
 
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.90f),
+        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.76f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)),
         modifier = Modifier.fillMaxWidth().combinedClickable(onClick = { alAbrir(p.id) }, onLongClick = { menu = true }),
     ) {
         Row(
@@ -822,13 +835,53 @@ fun DialogoCuaderno(
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun SelectorEmoji(actual: String, emojis: List<String> = EmojisCuaderno, alElegir: (String) -> Unit) {
-    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        for (e in emojis) {
-            Surface(
-                onClick = { alElegir(e) },
-                shape = RoundedCornerShape(8.dp),
-                color = if (e == actual) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-            ) { Text(e, fontSize = 22.sp, modifier = Modifier.padding(6.dp)) }
+    var textoLibre by remember { mutableStateOf("") }
+
+    val categorias = listOf(
+        "Estudio" to listOf("📚", "📖", "📝", "📓", "🎓", "🧠", "🎒", "🏫", "✏️", "📋"),
+        "Ciencias y Tech" to listOf("🧪", "🔬", "🔭", "🧮", "💻", "⌨️", "📱", "📐", "🌐", "🔋"),
+        "Estados y Prioridad" to listOf("⭐", "🔥", "✅", "📌", "🚨", "🎯", "💡", "🛑", "⚠️", "⏳"),
+        "Rutina" to listOf("🏃", "🍎", "☕", "🛌", "🧘", "🍽️", "🏋️", "🚿", "🌅", "🌙"),
+        "Símbolos" to listOf("❤️", "✨", "🎵", "🎨", "🌱", "🌍", "✈️", "💰", "🎉", "🏆")
+    )
+
+    Column(Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
+        Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = textoLibre,
+                onValueChange = { textoLibre = it },
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("O escribe un emoji...") },
+                singleLine = true
+            )
+            TextButton(
+                onClick = {
+                    val trim = textoLibre.trim()
+                    if (trim.isNotEmpty()) {
+                        val iter = java.text.BreakIterator.getCharacterInstance()
+                        iter.setText(trim)
+                        val end = iter.next()
+                        val primerGrafema = if (end != java.text.BreakIterator.DONE) trim.substring(0, end) else trim
+                        alElegir(primerGrafema)
+                    }
+                },
+                enabled = textoLibre.isNotBlank()
+            ) { Text(stringResource(R.string.guardar)) }
+        }
+
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+            for ((cat, lista) in categorias) {
+                Text(cat, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    for (e in lista) {
+                        Surface(
+                            onClick = { alElegir(e) },
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (e == actual) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                        ) { Text(e, fontSize = 22.sp, modifier = Modifier.padding(6.dp)) }
+                    }
+                }
+            }
         }
     }
 }

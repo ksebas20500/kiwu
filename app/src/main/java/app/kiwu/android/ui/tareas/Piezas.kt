@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -121,6 +123,7 @@ fun TarjetaEventoAgenda(
     alAbrir: () -> Unit,
 ) {
     val esSoloLectura = d.esExterno
+    val colorTextoEvento = MaterialTheme.colorScheme.primary
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -128,25 +131,59 @@ fun TarjetaEventoAgenda(
             .then(if (!esSoloLectura) Modifier.clickable(onClick = alAbrir) else Modifier),
         shape = RoundedCornerShape(12.dp),
         color = AzulEvento.copy(alpha = 0.35f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, AzulEventoTexto.copy(alpha = 0.3f))
+        border = androidx.compose.foundation.BorderStroke(1.dp, colorTextoEvento.copy(alpha = 0.3f))
     ) {
         Row(
             Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(Modifier.size(36.dp).background(AzulEvento, androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Event, null, Modifier.size(20.dp), tint = AzulEventoTexto)
+                Icon(Icons.Filled.Event, null, Modifier.size(20.dp), tint = colorTextoEvento)
             }
             Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                Text(d.titulo, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    d.titulo,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 if (nombreLista != null || d.fechaEntrega != null || esSoloLectura) {
-                    Row(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        if (esSoloLectura) {
-                            Text(stringResource(R.string.ver_google_calendar), style = MaterialTheme.typography.labelSmall, color = AzulEventoTexto, fontWeight = FontWeight.Bold)
-                        } else if (nombreLista != null) {
-                            Text(nombreLista, style = MaterialTheme.typography.bodySmall, color = AzulEventoTexto)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            if (esSoloLectura) {
+                                Text(
+                                    stringResource(R.string.ver_google_calendar),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = colorTextoEvento,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            } else if (nombreLista != null) {
+                                Text(
+                                    nombreLista,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = colorTextoEvento,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
                         }
-                        d.fechaEntrega?.let { Text(fechaCorta(it, System.currentTimeMillis()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        d.fechaEntrega?.let { fecha ->
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                fechaCorta(fecha, System.currentTimeMillis()),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }

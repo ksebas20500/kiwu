@@ -1,6 +1,50 @@
 package app.kiwu.android.ui.tareas
 
+import app.kiwu.android.domain.Cuaderno
+import app.kiwu.android.domain.Horario
+import app.kiwu.android.KiwuApp
+import app.kiwu.android.data.AjustesUi
+import app.kiwu.android.domain.ReglasHorario
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.NightsStay
+import androidx.compose.material.icons.filled.Style
+import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material3.IconButtonDefaults
+import app.kiwu.android.ui.notas.DialogoCuaderno
+import app.kiwu.android.ui.horario.DialogoHorario
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -66,6 +110,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.graphics.vector.ImageVector
+import kotlinx.coroutines.launch
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -97,11 +146,11 @@ val EmojisListas = listOf(
     "📁", "📚", "🎓", "💼", "🧪", "📐", "💻", "🎨", "🎵", "🌍", "🏋️", "🏠", "🛒", "✈️", "💡", "📝", "⭐", "❤️", "🔥", "🌱", "🧠", "⚽", "🎮", "🍽️",
 )
 
-/** Dónde cae una lista al soltarla: dentro de una carpeta o suelta (grupoId = null). */
-private data class Destino(val grupoId: String?)
-
-/** Las acciones de arrastrar una lista con el dedo (mantener pulsada y mover). */
-private class ArrastreLista(val inicio: (Offset) -> Unit, val mover: (Offset) -> Unit, val soltar: () -> Unit, val cancelar: () -> Unit)
+/** Dónde cae una lista al soltarla: dentro de una carpeta o suelta a la raíz. */
+private sealed interface DestinoDrag {
+    data class Carpeta(val grupoId: String) : DestinoDrag
+    object Raiz : DestinoDrag
+}
 
 /** Pide un nombre y, si se quiere, un emoji. Sirve para crear o editar una lista o una carpeta. */
 @Composable
@@ -114,14 +163,19 @@ fun DialogoNuevoElemento(
     /** Color de la lista (`#RRGGBB`); solo se muestra el selector si [conColor]. */
     colorInicial: String? = null,
     conColor: Boolean = false,
+    grupos: List<GrupoLista> = emptyList(),
+    grupoIdInicial: String? = null,
+    conSelectorCarpeta: Boolean = false,
     alCerrar: () -> Unit,
-    alConfirmar: (nombre: String, emoji: String?, color: String?) -> Unit,
+    alConfirmar: (nombre: String, emoji: String?, color: String?, grupoId: String?) -> Unit,
 ) {
     var texto by remember { mutableStateOf(inicial) }
     var emoji by remember { mutableStateOf(emojiInicial) }
     var color by remember { mutableStateOf(colorInicial) }
+    var grupoElegidoId by remember { mutableStateOf(grupoIdInicial) }
+    var menuCarpetas by remember { mutableStateOf(false) }
     var elegirEmoji by remember { mutableStateOf(false) }
-    val enviar = { if (texto.isNotBlank()) { alConfirmar(texto.trim(), emoji, color); alCerrar() } }
+    val enviar = { if (texto.isNotBlank()) { alConfirmar(texto.trim(), emoji, color, grupoElegidoId); alCerrar() } }
     AlertDialog(
         onDismissRequest = alCerrar,
         title = { Text(titulo, maxLines = 2) },
@@ -132,6 +186,46 @@ fun DialogoNuevoElemento(
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { enviar() }),
                 )
+
+                if (conSelectorCarpeta && grupos.isNotEmpty()) {
+                    val nombreGrupoActual = grupos.firstOrNull { it.id == grupoElegidoId }?.let { "${it.icono} ${it.nombre}" }
+                        ?: stringResource(R.string.sin_carpeta)
+                    Text(stringResource(R.string.carpeta), style = MaterialTheme.typography.labelLarge)
+                    Box {
+                        OutlinedButton(
+                            onClick = { menuCarpetas = true },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(nombreGrupoActual, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                Icon(Icons.Filled.ExpandMore, contentDescription = null)
+                            }
+                        }
+                        DropdownMenu(expanded = menuCarpetas, onDismissRequest = { menuCarpetas = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.sin_carpeta)) },
+                                onClick = {
+                                    grupoElegidoId = null
+                                    menuCarpetas = false
+                                },
+                            )
+                            for (g in grupos) {
+                                DropdownMenuItem(
+                                    text = { Text("${g.icono} ${g.nombre}") },
+                                    onClick = {
+                                        grupoElegidoId = g.id
+                                        menuCarpetas = false
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Emoji opcional: un solo toque abre la cuadrícula; no hace falta editar después.
                 Row(Modifier.fillMaxWidth().clickable { elegirEmoji = !elegirEmoji }, verticalAlignment = Alignment.CenterVertically) {
                     Box(
@@ -159,15 +253,37 @@ private sealed interface Dialogo {
     data object NuevaCarpeta : Dialogo
     data class EditarLista(val materia: Materia) : Dialogo
     data class EditarCarpeta(val grupo: GrupoLista) : Dialogo
+    data class EditarCuaderno(val cuaderno: Cuaderno) : Dialogo
+    data class EditarHorario(val horario: Horario) : Dialogo
 }
 
 /** Menú lateral de Tareas. Se dibuja sobre toda la pantalla (también sobre la barra inferior). */
 @Composable
-fun MenuTareas(vm: TareasViewModel, cerrarYLuego: (() -> Unit) -> Unit, alAjustes: () -> Unit, alRacha: () -> Unit = {}) {
+fun MenuTareas(
+    vm: TareasViewModel,
+    cerrarYLuego: (() -> Unit) -> Unit,
+    alAjustes: () -> Unit,
+    alRacha: () -> Unit = {},
+    cuadernos: List<Cuaderno> = emptyList(),
+    horarios: List<Horario> = emptyList(),
+    flashcardsPendientes: Int = 0,
+    alElegirCuaderno: ((String) -> Unit)? = null,
+    alElegirHorario: ((String) -> Unit)? = null,
+    alRepasoHoy: () -> Unit = {},
+    alNuevoCuaderno: () -> Unit = {},
+    alNuevoHorario: () -> Unit = {},
+    alPapelera: () -> Unit = {},
+    app: KiwuApp? = null,
+    ajustes: AjustesUi = AjustesUi(),
+    alCambiarArrastre: (Boolean) -> Unit = {},
+) {
     val estado by vm.estado.collectAsStateWithLifecycle()
+    val alcance = rememberCoroutineScope()
     var dialogo by remember { mutableStateOf<Dialogo?>(null) }
     var eliminarLista by remember { mutableStateOf<Materia?>(null) }
     var eliminarCarpeta by remember { mutableStateOf<GrupoLista?>(null) }
+    var eliminarCuaderno by remember { mutableStateOf<Cuaderno?>(null) }
+    var eliminarHorario by remember { mutableStateOf<Horario?>(null) }
     var moverLista by remember { mutableStateOf<Materia?>(null) }
 
     PanelLateral(
@@ -182,26 +298,67 @@ fun MenuTareas(vm: TareasViewModel, cerrarYLuego: (() -> Unit) -> Unit, alAjuste
         alMoverAGrupo = { m, g -> vm.moverAGrupo(m, g) }, alMoverOrdenLista = { m, d -> vm.moverOrdenLista(m.id, d) },
         alEditarCarpeta = { dialogo = Dialogo.EditarCarpeta(it) },
         alEliminarCarpeta = { eliminarCarpeta = it }, alMoverOrdenCarpeta = { g, d -> vm.moverOrdenGrupo(g.id, d) },
+        alEditarCuaderno = { dialogo = Dialogo.EditarCuaderno(it) },
+        alEliminarCuaderno = { eliminarCuaderno = it },
+        alEditarHorario = { dialogo = Dialogo.EditarHorario(it) },
+        alEliminarHorario = { eliminarHorario = it },
         alAjustes = { cerrarYLuego(alAjustes) },
         alRacha = { cerrarYLuego(alRacha) },
+        cuadernos = cuadernos,
+        horarios = horarios,
+        flashcardsPendientes = flashcardsPendientes,
+        alElegirCuaderno = { id -> cerrarYLuego { alElegirCuaderno?.invoke(id) } },
+        alElegirHorario = { id -> cerrarYLuego { alElegirHorario?.invoke(id) } },
+        alRepasoHoy = { cerrarYLuego(alRepasoHoy) },
+        alNuevoCuaderno = { cerrarYLuego(alNuevoCuaderno) },
+        alNuevoHorario = { cerrarYLuego(alNuevoHorario) },
+        alPapelera = { cerrarYLuego(alPapelera) },
+        app = app,
+        ajustes = ajustes,
+        alCambiarArrastre = alCambiarArrastre,
     )
 
     when (val d = dialogo) {
         is Dialogo.NuevaLista -> DialogoNuevoElemento(
             titulo = if (d.nombreCarpeta != null) stringResource(R.string.lista_nueva_en, d.nombreCarpeta) else stringResource(R.string.lista_nueva),
-            etiqueta = stringResource(R.string.lista_nombre_materia), conColor = true, alCerrar = { dialogo = null },
-        ) { nombre, emoji, color -> cerrarYLuego { vm.crearLista(nombre, emoji, d.grupoId, color) } }
-        Dialogo.NuevaCarpeta -> DialogoNuevoElemento(stringResource(R.string.carpeta_nueva), stringResource(R.string.carpeta_nombre), alCerrar = { dialogo = null }) { nombre, emoji, _ ->
+            etiqueta = stringResource(R.string.lista_nombre_materia), conColor = true,
+            grupos = estado.grupos, grupoIdInicial = d.grupoId, conSelectorCarpeta = true,
+            alCerrar = { dialogo = null },
+        ) { nombre, emoji, color, grupoId ->
+            cerrarYLuego {
+                vm.crearLista(nombre, emoji, grupoId, color)
+                if (grupoId != null) {
+                    vm.plegarGrupo(grupoId, false)
+                }
+            }
+        }
+        Dialogo.NuevaCarpeta -> DialogoNuevoElemento(stringResource(R.string.carpeta_nueva), stringResource(R.string.carpeta_nombre), alCerrar = { dialogo = null }) { nombre, emoji, _, _ ->
             cerrarYLuego { vm.crearGrupo(nombre, emoji) }
         }
         is Dialogo.EditarLista -> DialogoNuevoElemento(
             stringResource(R.string.lista_editar), stringResource(R.string.nombre), accion = stringResource(R.string.guardar), inicial = d.materia.nombre,
             emojiInicial = d.materia.emoji, colorInicial = d.materia.color, conColor = true, alCerrar = { dialogo = null },
-        ) { nombre, emoji, color -> vm.editarLista(d.materia.id, nombre, emoji, color) }
+        ) { nombre, emoji, color, _ -> vm.editarLista(d.materia.id, nombre, emoji, color) }
         is Dialogo.EditarCarpeta -> DialogoNuevoElemento(
             stringResource(R.string.carpeta_editar), stringResource(R.string.nombre), accion = stringResource(R.string.guardar), inicial = d.grupo.nombre,
             emojiInicial = d.grupo.icono.takeIf { it != "📁" }, alCerrar = { dialogo = null },
-        ) { nombre, emoji, _ -> vm.editarGrupo(d.grupo.id, nombre, emoji) }
+        ) { nombre, emoji, _, _ -> vm.editarGrupo(d.grupo.id, nombre, emoji) }
+        is Dialogo.EditarCuaderno -> DialogoCuaderno(
+            cuaderno = d.cuaderno,
+            alCerrar = { dialogo = null },
+        ) { nombre, icono, photoPath, colorHex ->
+            app?.let { kApp ->
+                alcance.launch { kApp.repo.editarCuaderno(d.cuaderno.id, nombre, icono, photoPath, colorHex) }
+            }
+        }
+        is Dialogo.EditarHorario -> DialogoHorario(
+            horario = d.horario,
+            alCerrar = { dialogo = null },
+        ) { nombre, icono ->
+            app?.let { kApp ->
+                alcance.launch { kApp.repo.editarHorario(d.horario.id, nombre, icono) }
+            }
+        }
         null -> Unit
     }
     eliminarLista?.let { m ->
@@ -219,6 +376,30 @@ fun MenuTareas(vm: TareasViewModel, cerrarYLuego: (() -> Unit) -> Unit, alAjuste
             accion = stringResource(R.string.carpeta_eliminar),
             alCerrar = { eliminarCarpeta = null },
         ) { vm.eliminarGrupo(g.id) }
+    }
+    eliminarCuaderno?.let { c ->
+        DialogoConfirmar(
+            titulo = stringResource(R.string.cuaderno_eliminar_titulo, c.nombre),
+            mensaje = stringResource(R.string.cuaderno_eliminar_texto),
+            accion = stringResource(R.string.cuaderno_eliminar_boton),
+            alCerrar = { eliminarCuaderno = null },
+        ) {
+            app?.let { kApp ->
+                alcance.launch { kApp.repo.eliminarCuaderno(c.id) }
+            }
+        }
+    }
+    eliminarHorario?.let { h ->
+        DialogoConfirmar(
+            titulo = stringResource(R.string.horario_eliminar_titulo, h.nombre),
+            mensaje = stringResource(R.string.horario_eliminar_texto),
+            accion = stringResource(R.string.horario_eliminar),
+            alCerrar = { eliminarHorario = null },
+        ) {
+            app?.let { kApp ->
+                alcance.launch { kApp.repo.eliminarHorario(h.id) }
+            }
+        }
     }
     moverLista?.let { m ->
         DialogoMoverLista(m, estado.grupos, alCerrar = { moverLista = null }, alElegir = { vm.moverAGrupo(m.id, it) }, alNuevaCarpeta = { nombre, emoji -> vm.crearGrupoYMover(nombre, emoji, m.id) })
@@ -242,155 +423,650 @@ private fun PanelLateral(
     alEditarCarpeta: (GrupoLista) -> Unit,
     alEliminarCarpeta: (GrupoLista) -> Unit,
     alMoverOrdenCarpeta: (GrupoLista, Int) -> Unit,
+    alEditarCuaderno: (Cuaderno) -> Unit = {},
+    alEliminarCuaderno: (Cuaderno) -> Unit = {},
+    alEditarHorario: (Horario) -> Unit = {},
+    alEliminarHorario: (Horario) -> Unit = {},
     alAjustes: () -> Unit,
     alRacha: () -> Unit,
+    cuadernos: List<Cuaderno> = emptyList(),
+    horarios: List<Horario> = emptyList(),
+    flashcardsPendientes: Int = 0,
+    alElegirCuaderno: ((String) -> Unit)? = null,
+    alElegirHorario: ((String) -> Unit)? = null,
+    alRepasoHoy: () -> Unit = {},
+    alNuevoCuaderno: () -> Unit = {},
+    alNuevoHorario: () -> Unit = {},
+    alPapelera: () -> Unit = {},
+    app: KiwuApp? = null,
+    ajustes: AjustesUi = AjustesUi(),
+    alCambiarArrastre: (Boolean) -> Unit = {},
 ) {
-    val compacto = estado.aspecto == "compacto"
-    // Los contadores los manda solo su interruptor en Ajustes; «Compacto» solo hace las filas más bajas.
-    val mostrarCuenta = estado.contadores
     var menuNueva by remember { mutableStateOf(false) }
+    var listasPlegadas by rememberSaveable { mutableStateOf(false) }
+    var cuadernosPlegados by rememberSaveable { mutableStateOf(false) }
+    var horariosPlegados by rememberSaveable { mutableStateOf(true) }
 
-    // Arrastrar y soltar: cada fila que puede recibir una lista apunta aquí dónde está en pantalla y a qué carpeta pertenece.
-    val limites = remember { mutableMapOf<String, Pair<Rect, Destino>>() }
-    var arrastrando by remember { mutableStateOf<Materia?>(null) }
-    var dedo by remember { mutableStateOf(Offset.Zero) }
-    var raiz by remember { mutableStateOf(Offset.Zero) }
-    fun destinoEn(p: Offset): Destino? = limites.values.firstOrNull { it.first.contains(p) }?.second
-    val sobre = if (arrastrando != null) destinoEn(dedo) else null
-    val arrastre = ArrastreLista(
-        inicio = { p -> dedo = p },
-        mover = { d -> dedo += d },
-        soltar = {
-            val m = arrastrando
-            val d = destinoEn(dedo)
-            arrastrando = null
-            if (m != null && d != null && d.grupoId != m.grupoId) alMoverAGrupo(m.id, d.grupoId)
-        },
-        cancelar = { arrastrando = null },
-    )
+    val alcance = rememberCoroutineScope()
 
-    ModalDrawerSheet(drawerShape = RoundedCornerShape(topEnd = 28.dp, bottomEnd = 28.dp)) {
-        Box(Modifier.fillMaxSize().onGloballyPositioned { raiz = it.positionInRoot() }) {
-            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = 20.dp, bottom = 16.dp)) {
-                item { CabeceraMenu("Kiwu", stringResource(R.string.menu_tareas_sub)) }
-                estado.racha?.let { r -> item { FilaRacha(r, alRacha) } }
-                val fijos = listOf(
-                    Triple(Elemento.Hoy, R.string.hoy, Icons.Filled.Today),
-                    Triple(Elemento.Proximos, R.string.proximos_7, Icons.Filled.DateRange),
-                    Triple(Elemento.Calendario, R.string.calendario, Icons.Filled.CalendarMonth),
-                    Triple(Elemento.Todos, R.string.todas_tareas, Icons.Filled.ViewList),
-                    // Los eventos viven en su propia lista fija, fuera de las carpetas.
-                    Triple(Elemento.DeMateria(ID_EVENTOS), R.string.eventos, Icons.Filled.Event),
-                )
-                items(fijos) { (e, titulo, icono) -> FilaMenu(stringResource(titulo), icono, estado.elemento == e, estado.cuentas[e] ?: 0) { alElegir(e) } }
+    ModalDrawerSheet(
+        drawerShape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp),
+        modifier = Modifier.width(310.dp),
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // --- ZONA 1: CABECERA COMPACTA ---
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.kiwu_icon),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                    )
+                    Text(
+                        "Kiwu",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
 
-                item {
+                // Racha
+                val streakCount = estado.racha?.actual ?: 0
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = Color(0xFFFFF3E0),
+                    modifier = Modifier.clickable { alRacha() },
+                ) {
                     Row(
-                        Modifier.fillMaxWidth().padding(start = 28.dp, end = 12.dp, top = 14.dp).registrar("cabecera", Destino(null), limites),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        val sacando = arrastrando?.grupoId != null
-                        Text(
-                            stringResource(if (sacando) R.string.menu_soltar_aqui else R.string.listas), Modifier.weight(1f),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = if (sacando && sobre == Destino(null)) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        Icon(
+                            Icons.Rounded.LocalFireDepartment,
+                            contentDescription = null,
+                            tint = Color(0xFFFF9800),
+                            modifier = Modifier.size(18.dp),
                         )
-                        Box {
-                            IconButton(onClick = { menuNueva = true }) { Icon(Icons.Filled.Add, stringResource(R.string.lista_o_carpeta_nueva)) }
-                            DropdownMenu(expanded = menuNueva, onDismissRequest = { menuNueva = false }) {
-                                DropdownMenuItem(text = { Text(stringResource(R.string.lista_nueva)) }, onClick = { menuNueva = false; alNuevaLista() })
-                                DropdownMenuItem(text = { Text(stringResource(R.string.carpeta_nueva)) }, onClick = { menuNueva = false; alNuevaCarpeta() })
+                        Text(
+                            if (streakCount == 1) "1 día" else "$streakCount días",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFE65100),
+                        )
+                    }
+                }
+            }
+
+            // --- ZONA 2: CUERPO CON SCROLL VERTICAL ---
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                // A. Cuadrícula 2x2 de Accesos Rápidos
+                val hoyCuenta = estado.cuentas[Elemento.Hoy] ?: 0
+                val proxCuenta = estado.cuentas[Elemento.Proximos] ?: 0
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        TarjetaAccesoRapido(
+                            titulo = stringResource(R.string.hoy),
+                            icono = Icons.Filled.WbSunny,
+                            cuenta = hoyCuenta,
+                            seleccionado = estado.elemento == Elemento.Hoy,
+                            modifier = Modifier.weight(1f),
+                            onClick = { alElegir(Elemento.Hoy) },
+                        )
+                        TarjetaAccesoRapido(
+                            titulo = "7 días",
+                            icono = Icons.Filled.DateRange,
+                            cuenta = proxCuenta,
+                            seleccionado = estado.elemento == Elemento.Proximos,
+                            modifier = Modifier.weight(1f),
+                            onClick = { alElegir(Elemento.Proximos) },
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        TarjetaAccesoRapido(
+                            titulo = stringResource(R.string.calendario),
+                            icono = Icons.Filled.CalendarMonth,
+                            cuenta = 0,
+                            seleccionado = estado.elemento == Elemento.Calendario,
+                            modifier = Modifier.weight(1f),
+                            onClick = { alElegir(Elemento.Calendario) },
+                        )
+                        TarjetaAccesoRapido(
+                            titulo = stringResource(R.string.eventos),
+                            icono = Icons.Filled.AutoAwesome,
+                            cuenta = 0,
+                            seleccionado = estado.elemento == Elemento.DeMateria(ID_EVENTOS),
+                            modifier = Modifier.weight(1f),
+                            onClick = { alElegir(Elemento.DeMateria(ID_EVENTOS)) },
+                        )
+                    }
+                }
+
+                // B. Fila Dividida Intermedia (Todas las tareas | Repasar hoy)
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // Izquierda: Todas las tareas
+                        Row(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { alElegir(Elemento.Todos) }
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(Icons.Filled.Inbox, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                                Text(
+                                    "Todas",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            val cuentaTodos = estado.cuentas[Elemento.Todos] ?: 0
+                            if (cuentaTodos > 0) {
+                                Text("$cuentaTodos", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+
+                        VerticalDivider(modifier = Modifier.height(20.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                        // Derecha: Repasar
+                        Row(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { alRepasoHoy() }
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.weight(1f, fill = false),
+                            ) {
+                                Icon(Icons.Filled.Style, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                                Text(
+                                    "Repasar",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            if (flashcardsPendientes > 0) {
+                                Spacer(Modifier.width(6.dp))
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primary,
+                                ) {
+                                    Text(
+                                        "$flashcardsPendientes",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                                    )
+                                }
                             }
                         }
                     }
                 }
 
-                for (nodo in estado.menu) {
-                    when (nodo) {
-                        is NodoMenu.Carpeta -> {
-                            val g = nodo.grupo
-                            item(key = "g-${g.id}") {
-                                FilaLista(
-                                    clave = "g-${g.id}", destino = Destino(g.id), limites = limites,
-                                    titulo = g.nombre, compacta = compacto, sangria = 0.dp,
-                                    seleccionado = estado.elemento == Elemento.DeGrupo(g.id), resaltada = arrastrando != null && sobre == Destino(g.id),
-                                    cuenta = nodo.pendientes, mostrarCuenta = mostrarCuenta, alClic = { alElegir(Elemento.DeGrupo(g.id)) },
-                                    inicio = {
-                                        IconButton(onClick = { alPlegar(g, !g.plegado) }, Modifier.size(36.dp)) {
-                                            Icon(if (g.plegado) Icons.Filled.ChevronRight else Icons.Filled.ExpandMore, stringResource(if (g.plegado) R.string.desplegar_n else R.string.plegar_n, g.nombre))
-                                        }
-                                    },
-                                    icono = { Text(g.icono, fontSize = 20.sp) },
-                                    arrastre = null, // las carpetas no se arrastran: así nunca queda una carpeta dentro de otra
-                                    menu = { cerrar ->
-                                        DropdownMenuItem(text = { Text(stringResource(R.string.lista_nueva_aqui)) }, onClick = { cerrar(); alNuevaListaEn(g) })
-                                        DropdownMenuItem(text = { Text(stringResource(R.string.editar_nombre_emoji)) }, onClick = { cerrar(); alEditarCarpeta(g) })
-                                        DropdownMenuItem(text = { Text(stringResource(R.string.subir)) }, onClick = { cerrar(); alMoverOrdenCarpeta(g, -1) })
-                                        DropdownMenuItem(text = { Text(stringResource(R.string.bajar)) }, onClick = { cerrar(); alMoverOrdenCarpeta(g, 1) })
-                                        DropdownMenuItem(text = { Text(stringResource(R.string.carpeta_eliminar), color = MaterialTheme.colorScheme.error) }, onClick = { cerrar(); alEliminarCarpeta(g) })
-                                    },
-                                )
-                            }
-                            if (!g.plegado) {
-                                if (nodo.listas.isEmpty()) {
-                                    // Una carpeta vacía se ve y se puede llenar: crear una lista aquí o arrastrar una hasta ella.
-                                    item(key = "v-${g.id}") {
-                                        Row(
-                                            Modifier.fillMaxWidth().padding(start = 60.dp, end = 16.dp).registrar("v-${g.id}", Destino(g.id), limites),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            Text(stringResource(R.string.carpeta_vacia), Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                                            TextButton(onClick = { alNuevaListaEn(g) }) { Text(stringResource(R.string.lista_nueva_mas)) }
-                                        }
-                                    }
+                // C. Sección TUS ESPACIOS
+                Text(
+                    "TUS ESPACIOS",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.padding(start = 20.dp, top = 16.dp, bottom = 4.dp),
+                )
+
+                // 1. Listas de Tareas Accordion
+                Box {
+                    EncabezamientoAcordeon(
+                        titulo = stringResource(R.string.listas),
+                        expandido = !listasPlegadas,
+                        alToggle = { listasPlegadas = !listasPlegadas },
+                        alAdd = { menuNueva = true },
+                    )
+                    DropdownMenu(expanded = menuNueva, onDismissRequest = { menuNueva = false }) {
+                        DropdownMenuItem(text = { Text(stringResource(R.string.lista_nueva)) }, onClick = { menuNueva = false; alNuevaLista() })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.carpeta_nueva)) }, onClick = { menuNueva = false; alNuevaCarpeta() })
+                    }
+                }
+
+                AnimatedVisibility(visible = !listasPlegadas) {
+                    var arrastrandoListaId by remember { mutableStateOf<String?>(null) }
+                    var dragOffsetY by remember { mutableFloatStateOf(0f) }
+                    var targetActual by remember { mutableStateOf<DestinoDrag?>(null) }
+                    var itemBoundsWindow by remember { mutableStateOf<Map<String, Rect>>(emptyMap()) }
+                    var targetBoundsWindow by remember { mutableStateOf<Map<DestinoDrag, Rect>>(emptyMap()) }
+                    var startPointerWindowPos by remember { mutableStateOf(Offset.Zero) }
+                    var currentPointerWindowPos by remember { mutableStateOf(Offset.Zero) }
+
+                    val haptic = LocalHapticFeedback.current
+
+                    LaunchedEffect(arrastrandoListaId) {
+                        alCambiarArrastre(arrastrandoListaId != null)
+                    }
+
+                    Column {
+                        val todasLasMaterias = remember(estado.menu) {
+                            estado.menu.flatMap {
+                                when (it) {
+                                    is NodoMenu.Carpeta -> it.listas.map { l -> l.materia }
+                                    is NodoMenu.Lista -> listOf(it.entrada.materia)
                                 }
-                                items(nodo.listas, key = { "l-${it.materia.id}" }) { e ->
-                                    FilaDeLista(
-                                        e.materia, e.pendientes, estado, mostrarCuenta, compacto, 20.dp, Destino(g.id), limites,
-                                        arrastrando?.id == e.materia.id, alElegir, alEditarLista, alEliminarLista, alMoverLista, alSacarLista, alMoverOrdenLista,
-                                        ArrastreLista(
-                                            inicio = { p -> arrastrando = e.materia; arrastre.inicio(p) }, mover = arrastre.mover, soltar = arrastre.soltar, cancelar = arrastre.cancelar,
-                                        ),
+                            }
+                        }
+                        val listaEnArrastre = todasLasMaterias.firstOrNull { it.id == arrastrandoListaId }
+                        val esDeCarpeta = listaEnArrastre?.grupoId != null
+
+                        if (arrastrandoListaId != null && esDeCarpeta) {
+                            val resaltadoRaiz = targetActual == DestinoDrag.Raiz
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (resaltadoRaiz) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                border = BorderStroke(1.5.dp, if (resaltadoRaiz) MaterialTheme.colorScheme.primary else Color.Transparent),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                                    .onGloballyPositioned { coords ->
+                                        targetBoundsWindow = targetBoundsWindow + (DestinoDrag.Raiz to coords.boundsInWindow())
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(Icons.Filled.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                    Text(
+                                        stringResource(R.string.sacar_de_carpeta),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                 }
                             }
                         }
-                        is NodoMenu.Lista -> item(key = "l-${nodo.entrada.materia.id}") {
-                            val m = nodo.entrada.materia
-                            FilaDeLista(
-                                m, nodo.entrada.pendientes, estado, mostrarCuenta, compacto, 0.dp, Destino(null), limites,
-                                arrastrando?.id == m.id, alElegir, alEditarLista, alEliminarLista, alMoverLista, alSacarLista, alMoverOrdenLista,
-                                ArrastreLista(
-                                    inicio = { p -> arrastrando = m; arrastre.inicio(p) }, mover = arrastre.mover, soltar = arrastre.soltar, cancelar = arrastre.cancelar,
-                                ),
+
+                        for (nodo in estado.menu) {
+                            when (nodo) {
+                                is NodoMenu.Carpeta -> {
+                                    val g = nodo.grupo
+                                    val isTarget = targetActual == DestinoDrag.Carpeta(g.id) && arrastrandoListaId != null && listaEnArrastre?.grupoId != g.id
+                                    FilaCarpetaDrawer(
+                                        grupo = g,
+                                        pendientes = nodo.pendientes,
+                                        seleccionado = estado.elemento == Elemento.DeGrupo(g.id),
+                                        resaltada = isTarget,
+                                        onPositioned = { bounds ->
+                                            targetBoundsWindow = targetBoundsWindow + (DestinoDrag.Carpeta(g.id) to bounds)
+                                        },
+                                        alClic = { alElegir(Elemento.DeGrupo(g.id)) },
+                                        alPlegar = { alPlegar(g, !g.plegado) },
+                                        alNuevaListaEn = { alNuevaListaEn(g) },
+                                        alEditar = { alEditarCarpeta(g) },
+                                        alEliminar = { alEliminarCarpeta(g) },
+                                    )
+                                    if (!g.plegado) {
+                                        for (e in nodo.listas) {
+                                            val m = e.materia
+                                            val isBeingDragged = arrastrandoListaId == m.id
+                                            val dragModifier = Modifier.pointerInput(m.id) {
+                                                detectDragGesturesAfterLongPress(
+                                                    onDragStart = { startOffset ->
+                                                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                                        arrastrandoListaId = m.id
+                                                        dragOffsetY = 0f
+                                                        val itemRect = itemBoundsWindow[m.id] ?: Rect.Zero
+                                                        startPointerWindowPos = itemRect.topLeft + startOffset
+                                                        currentPointerWindowPos = startPointerWindowPos
+                                                        targetActual = null
+                                                    },
+                                                    onDrag = { change, dragAmount ->
+                                                        change.consume()
+                                                        dragOffsetY += dragAmount.y
+                                                        currentPointerWindowPos += dragAmount
+                                                        targetActual = targetBoundsWindow.entries.firstOrNull { (_, rect) ->
+                                                            rect.contains(currentPointerWindowPos)
+                                                        }?.key
+                                                    },
+                                                    onDragEnd = {
+                                                        val finalTarget = targetActual
+                                                        val draggedId = m.id
+                                                        if (finalTarget != null) {
+                                                            when (finalTarget) {
+                                                                is DestinoDrag.Carpeta -> {
+                                                                    if (m.grupoId != finalTarget.grupoId) {
+                                                                        alMoverAGrupo(draggedId, finalTarget.grupoId)
+                                                                        val targetGrupo = estado.grupos.firstOrNull { it.id == finalTarget.grupoId }
+                                                                        if (targetGrupo != null && targetGrupo.plegado) {
+                                                                            alPlegar(targetGrupo, false)
+                                                                        }
+                                                                    }
+                                                                }
+                                                                DestinoDrag.Raiz -> {
+                                                                    if (m.grupoId != null) {
+                                                                        alMoverAGrupo(draggedId, null)
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        arrastrandoListaId = null
+                                                        dragOffsetY = 0f
+                                                        targetActual = null
+                                                    },
+                                                    onDragCancel = {
+                                                        arrastrandoListaId = null
+                                                        dragOffsetY = 0f
+                                                        targetActual = null
+                                                    }
+                                                )
+                                            }
+                                            FilaListaDrawer(
+                                                materia = m,
+                                                cuenta = e.pendientes,
+                                                seleccionado = estado.elemento == Elemento.DeMateria(m.id),
+                                                sangria = 16.dp,
+                                                isBeingDragged = isBeingDragged,
+                                                dragOffsetY = dragOffsetY,
+                                                dragModifier = dragModifier,
+                                                onPositioned = { bounds ->
+                                                    itemBoundsWindow = itemBoundsWindow + (m.id to bounds)
+                                                },
+                                                alClic = { alElegir(Elemento.DeMateria(m.id)) },
+                                                alEditar = { alEditarLista(m) },
+                                                alMover = { alMoverLista(m) },
+                                                alSacar = { alSacarLista(m) },
+                                                alEliminar = { alEliminarLista(m) },
+                                            )
+                                        }
+                                    }
+                                }
+                                is NodoMenu.Lista -> {
+                                    val m = nodo.entrada.materia
+                                    val isBeingDragged = arrastrandoListaId == m.id
+                                    val dragModifier = Modifier.pointerInput(m.id) {
+                                        detectDragGesturesAfterLongPress(
+                                            onDragStart = { startOffset ->
+                                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                                arrastrandoListaId = m.id
+                                                dragOffsetY = 0f
+                                                val itemRect = itemBoundsWindow[m.id] ?: Rect.Zero
+                                                startPointerWindowPos = itemRect.topLeft + startOffset
+                                                currentPointerWindowPos = startPointerWindowPos
+                                                targetActual = null
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                change.consume()
+                                                dragOffsetY += dragAmount.y
+                                                currentPointerWindowPos += dragAmount
+                                                targetActual = targetBoundsWindow.entries.firstOrNull { (_, rect) ->
+                                                    rect.contains(currentPointerWindowPos)
+                                                }?.key
+                                            },
+                                            onDragEnd = {
+                                                val finalTarget = targetActual
+                                                val draggedId = m.id
+                                                if (finalTarget != null) {
+                                                    when (finalTarget) {
+                                                        is DestinoDrag.Carpeta -> {
+                                                            if (m.grupoId != finalTarget.grupoId) {
+                                                                alMoverAGrupo(draggedId, finalTarget.grupoId)
+                                                                val targetGrupo = estado.grupos.firstOrNull { it.id == finalTarget.grupoId }
+                                                                if (targetGrupo != null && targetGrupo.plegado) {
+                                                                    alPlegar(targetGrupo, false)
+                                                                }
+                                                            }
+                                                        }
+                                                        DestinoDrag.Raiz -> {
+                                                            if (m.grupoId != null) {
+                                                                alMoverAGrupo(draggedId, null)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                arrastrandoListaId = null
+                                                dragOffsetY = 0f
+                                                targetActual = null
+                                            },
+                                            onDragCancel = {
+                                                arrastrandoListaId = null
+                                                dragOffsetY = 0f
+                                                targetActual = null
+                                            }
+                                        )
+                                    }
+                                    FilaListaDrawer(
+                                        materia = m,
+                                        cuenta = nodo.entrada.pendientes,
+                                        seleccionado = estado.elemento == Elemento.DeMateria(m.id),
+                                        sangria = 0.dp,
+                                        isBeingDragged = isBeingDragged,
+                                        dragOffsetY = dragOffsetY,
+                                        dragModifier = dragModifier,
+                                        onPositioned = { bounds ->
+                                            itemBoundsWindow = itemBoundsWindow + (m.id to bounds)
+                                        },
+                                        alClic = { alElegir(Elemento.DeMateria(m.id)) },
+                                        alEditar = { alEditarLista(m) },
+                                        alMover = { alMoverLista(m) },
+                                        alSacar = { alSacarLista(m) },
+                                        alEliminar = { alEliminarLista(m) },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2. Cuadernos Accordion
+                EncabezamientoAcordeon(
+                    titulo = stringResource(R.string.cuadernos),
+                    expandido = !cuadernosPlegados,
+                    alToggle = { cuadernosPlegados = !cuadernosPlegados },
+                    alAdd = { alNuevoCuaderno() },
+                )
+                AnimatedVisibility(visible = !cuadernosPlegados) {
+                    Column {
+                        for (c in cuadernos) {
+                            FilaCuadernoDrawer(
+                                cuaderno = c,
+                                seleccionado = false,
+                                alClic = { alElegirCuaderno?.invoke(c.id) },
+                                alLongClick = { alEditarCuaderno(c) },
+                                alEditar = { alEditarCuaderno(c) },
+                                alEliminar = { alEliminarCuaderno(c) },
                             )
                         }
                     }
                 }
 
-                item { HorizontalDivider(Modifier.padding(vertical = 8.dp, horizontal = 28.dp)) }
-                item {
-                    FilaMenu(stringResource(R.string.completadas), Icons.Filled.CheckCircle, estado.elemento == Elemento.Completadas, 0) { alElegir(Elemento.Completadas) }
+                // 3. Mis Horarios Accordion
+                EncabezamientoAcordeon(
+                    titulo = stringResource(R.string.horario_mis),
+                    expandido = !horariosPlegados,
+                    alToggle = { horariosPlegados = !horariosPlegados },
+                    alAdd = { alNuevoHorario() },
+                )
+                AnimatedVisibility(visible = !horariosPlegados) {
+                    Column {
+                        for (h in horarios) {
+                            FilaHorarioDrawer(
+                                horario = h,
+                                seleccionado = false,
+                                alClic = { alElegirHorario?.invoke(h.id) },
+                                alLongClick = { alEditarHorario(h) },
+                                alEditar = { alEditarHorario(h) },
+                                alEliminar = { alEliminarHorario(h) },
+                            )
+                        }
+                    }
                 }
-                item {
-                    NavigationDrawerItem(
-                        label = { Text(stringResource(R.string.ajustes)) }, icon = { Icon(Icons.Filled.Settings, null) }, selected = false, onClick = alAjustes,
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-                    )
-                }
+
+                Spacer(Modifier.height(16.dp))
             }
 
-            // La lista que se lleva con el dedo.
-            arrastrando?.let { m ->
-                val px = LocalDensity.current
-                Surface(
-                    shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.primaryContainer, shadowElevation = 8.dp,
-                    modifier = Modifier.offset { IntOffset((dedo.x - raiz.x - 60 * px.density).toInt(), (dedo.y - raiz.y - 24 * px.density).toInt()) },
+            // --- ZONA 3: PIE FIJO ANCLADO ABAJO (Sticky Footer) ---
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding(),
+            ) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                // Fila superior: Completadas | Papelera
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(m.emoji ?: "📋", fontSize = 18.sp)
-                        Text(m.nombre, Modifier.padding(start = 8.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { alElegir(Elemento.Completadas) }
+                            .padding(vertical = 12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.completadas), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+
+                    VerticalDivider(modifier = Modifier.height(20.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { alPapelera() }
+                            .padding(vertical = 12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Filled.DeleteOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.papelera), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                // Fila inferior: Ajustes + Selector de Tema (Pill)
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 12.dp, end = 12.dp, bottom = 8.dp)
+                        .heightIn(min = 52.dp),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { alAjustes() },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Icon(Icons.Filled.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                            Text(
+                                stringResource(R.string.ajustes),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+
+                        // Theme selector pill (Sol / Luna)
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                val esOscuroActual = ajustes.tema == "oscuro"
+                                IconButton(
+                                    onClick = {
+                                        app?.let { kApp ->
+                                            alcance.launch {
+                                                kApp.ajustes.cambiar { it.copy(tema = "claro") }
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.size(32.dp),
+                                    colors = IconButtonDefaults.iconButtonColors(
+                                        containerColor = if (!esOscuroActual) MaterialTheme.colorScheme.surface else Color.Transparent,
+                                        contentColor = if (!esOscuroActual) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    ),
+                                ) {
+                                    Icon(Icons.Filled.WbSunny, contentDescription = null, modifier = Modifier.size(16.dp))
+                                }
+                                IconButton(
+                                    onClick = {
+                                        app?.let { kApp ->
+                                            alcance.launch {
+                                                kApp.ajustes.cambiar { it.copy(tema = "oscuro") }
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.size(32.dp),
+                                    colors = IconButtonDefaults.iconButtonColors(
+                                        containerColor = if (esOscuroActual) MaterialTheme.colorScheme.surface else Color.Transparent,
+                                        contentColor = if (esOscuroActual) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    ),
+                                ) {
+                                    Icon(Icons.Filled.NightsStay, contentDescription = null, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -398,108 +1074,497 @@ private fun PanelLateral(
     }
 }
 
-/** Apunta dónde está en pantalla una fila y a qué carpeta pertenece, para saber sobre qué se suelta una lista. */
 @Composable
-private fun Modifier.registrar(clave: String, destino: Destino, limites: MutableMap<String, Pair<Rect, Destino>>): Modifier {
-    DisposableEffect(clave) { onDispose { limites.remove(clave) } }
-    return onGloballyPositioned { limites[clave] = it.boundsInRoot() to destino }
-}
-
-/** Una lista dentro del menú (suelta o dentro de una carpeta). */
-@Composable
-private fun FilaDeLista(
-    m: Materia, pendientes: Int, estado: TareasEstado, mostrarCuenta: Boolean, compacta: Boolean, sangria: Dp,
-    destino: Destino, limites: MutableMap<String, Pair<Rect, Destino>>, arrastrada: Boolean,
-    alElegir: (Elemento) -> Unit, alEditar: (Materia) -> Unit, alEliminar: (Materia) -> Unit,
-    alMover: (Materia) -> Unit, alSacar: (Materia) -> Unit, alMoverOrden: (Materia, Int) -> Unit, arrastre: ArrastreLista,
+private fun TarjetaAccesoRapido(
+    titulo: String,
+    icono: ImageVector,
+    cuenta: Int,
+    seleccionado: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
 ) {
-    val e = Elemento.DeMateria(m.id)
-    FilaLista(
-        clave = "l-${m.id}", destino = destino, limites = limites,
-        titulo = m.nombre, compacta = compacta, sangria = sangria, seleccionado = estado.elemento == e, resaltada = false, atenuada = arrastrada,
-        cuenta = pendientes, mostrarCuenta = mostrarCuenta, alClic = { alElegir(e) }, inicio = null,
-        icono = { IconoLista(m, estado.aspecto) }, arrastre = arrastre,
-        menu = { cerrar ->
-            DropdownMenuItem(text = { Text(stringResource(R.string.editar_nombre_emoji_color)) }, onClick = { cerrar(); alEditar(m) })
-            DropdownMenuItem(text = { Text(stringResource(R.string.mover_a_carpeta)) }, onClick = { cerrar(); alMover(m) })
-            if (m.grupoId != null) DropdownMenuItem(text = { Text(stringResource(R.string.sacar_de_carpeta)) }, onClick = { cerrar(); alSacar(m) })
-            DropdownMenuItem(text = { Text(stringResource(R.string.subir)) }, onClick = { cerrar(); alMoverOrden(m, -1) })
-            DropdownMenuItem(text = { Text(stringResource(R.string.bajar)) }, onClick = { cerrar(); alMoverOrden(m, 1) })
-            DropdownMenuItem(text = { Text(stringResource(R.string.lista_eliminar), color = MaterialTheme.colorScheme.error) }, onClick = { cerrar(); alEliminar(m) })
-        },
-    )
-}
-
-/**
- * El icono de una lista: su emoji si tiene; si no, según el aspecto del menú, un punto de color (aspecto «color») o la
- * carpeta de siempre.
- */
-@Composable
-private fun IconoLista(m: Materia, aspecto: String) {
-    val propio = app.kiwu.android.domain.ReglasHorario.colorValido(m.color)
-    when {
-        m.emoji != null -> Text(m.emoji, fontSize = 20.sp)
-        propio != null -> Box(Modifier.size(14.dp).clip(CircleShape).background(Color(android.graphics.Color.parseColor(propio))))
-        aspecto == "color" -> Box(Modifier.size(14.dp).clip(CircleShape).background(Pasteles.colores[Pasteles.indicePreferido(m.id)].fondo))
-        else -> Icon(Icons.Filled.Folder, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-/**
- * Fila del menú de listas y carpetas. En el aspecto compacto es más baja; [inicio] es el botón de plegar de las carpetas y
- * [sangria] mete las listas que están dentro de una carpeta. Si tiene [arrastre], mantenerla pulsada permite moverla.
- */
-@Composable
-private fun FilaLista(
-    clave: String, destino: Destino, limites: MutableMap<String, Pair<Rect, Destino>>,
-    titulo: String, compacta: Boolean, sangria: Dp, seleccionado: Boolean, cuenta: Int, mostrarCuenta: Boolean,
-    alClic: () -> Unit, inicio: (@Composable () -> Unit)?, icono: @Composable () -> Unit, arrastre: ArrastreLista?,
-    menu: @Composable (cerrar: () -> Unit) -> Unit,
-    resaltada: Boolean = false, atenuada: Boolean = false,
-) {
-    var abierto by remember { mutableStateOf(false) }
-    var origen by remember { mutableStateOf(Offset.Zero) }
-    val accion = rememberUpdatedState(arrastre)
-    val relleno = NavigationDrawerItemDefaults.ItemPadding
-    val fondo = when {
-        resaltada -> MaterialTheme.colorScheme.primaryContainer
-        seleccionado -> MaterialTheme.colorScheme.secondaryContainer
-        else -> Color.Transparent
-    }
     Surface(
-        shape = RoundedCornerShape(28.dp),
-        color = fondo,
-        modifier = Modifier.padding(relleno).padding(start = sangria).fillMaxWidth().height(if (compacta) 40.dp else 52.dp)
-            .registrar(clave, destino, limites)
-            .onGloballyPositioned { origen = it.positionInRoot() }
-            .clip(RoundedCornerShape(28.dp)).clickable(onClick = alClic)
-            .then(
-                if (arrastre == null) Modifier else Modifier.pointerInput(clave) {
-                    detectDragGesturesAfterLongPress(
-                        onDragStart = { p -> accion.value?.inicio?.invoke(origen + p) },
-                        onDrag = { cambio, d -> cambio.consume(); accion.value?.mover?.invoke(d) },
-                        onDragEnd = { accion.value?.soltar?.invoke() },
-                        onDragCancel = { accion.value?.cancelar?.invoke() },
-                    )
-                },
-            ),
+        shape = RoundedCornerShape(14.dp),
+        color = if (seleccionado) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+        border = if (seleccionado) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+        modifier = modifier
+            .heightIn(min = 52.dp)
+            .clickable(onClick = onClick),
     ) {
         Row(
-            Modifier.padding(start = if (inicio == null) 16.dp else 4.dp, end = 2.dp).then(if (atenuada) Modifier.background(Color.Transparent) else Modifier),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            inicio?.invoke()
-            Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) { icono() }
-            Spacer(Modifier.width(10.dp))
-            Text(
-                titulo, Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                style = if (compacta) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.labelLarge,
-                color = if (atenuada) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f) else MaterialTheme.colorScheme.onSurface,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(
+                    icono,
+                    contentDescription = null,
+                    tint = if (seleccionado) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+                Text(
+                    titulo,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (seleccionado) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (cuenta > 0) {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = if (seleccionado) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceContainerHigh,
+                ) {
+                    Text(
+                        "$cuenta",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EncabezamientoAcordeon(
+    titulo: String,
+    expandido: Boolean,
+    alToggle: () -> Unit,
+    alAdd: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = alToggle)
+            .padding(start = 20.dp, end = 8.dp, top = 10.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Icon(
+                if (expandido) Icons.Filled.KeyboardArrowDown else Icons.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
             )
-            if (mostrarCuenta && cuenta > 0) Text(cuenta.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                titulo,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        IconButton(
+            onClick = alAdd,
+            modifier = Modifier.size(36.dp),
+        ) {
+            Icon(
+                Icons.Filled.Add,
+                contentDescription = stringResource(R.string.lista_o_carpeta_nueva),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun FilaCarpetaDrawer(
+    grupo: GrupoLista,
+    pendientes: Int,
+    seleccionado: Boolean,
+    resaltada: Boolean = false,
+    onPositioned: ((Rect) -> Unit)? = null,
+    alClic: () -> Unit,
+    alPlegar: () -> Unit,
+    alNuevaListaEn: () -> Unit,
+    alEditar: () -> Unit,
+    alEliminar: () -> Unit,
+) {
+    var menuAbierto by remember { mutableStateOf(false) }
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = when {
+            resaltada -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+            seleccionado -> MaterialTheme.colorScheme.primaryContainer
+            else -> Color.Transparent
+        },
+        border = if (resaltada) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 2.dp)
+            .heightIn(min = 46.dp)
+            .then(if (onPositioned != null) Modifier.onGloballyPositioned { onPositioned(it.boundsInWindow()) } else Modifier)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = alClic),
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 8.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f),
+            ) {
+                IconButton(onClick = alPlegar, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        if (grupo.plegado) Icons.Filled.ChevronRight else Icons.Filled.ExpandMore,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                Text(grupo.icono.ifBlank { "📁" }, fontSize = 18.sp)
+                Text(
+                    grupo.nombre,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (seleccionado) FontWeight.Bold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (pendientes > 0) {
+                    Text(
+                        "$pendientes",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.width(4.dp))
+                Box {
+                    IconButton(
+                        onClick = { menuAbierto = true },
+                        modifier = Modifier.size(36.dp),
+                    ) {
+                        Icon(
+                            Icons.Rounded.MoreVert,
+                            contentDescription = stringResource(R.string.opciones_de, grupo.nombre),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    DropdownMenu(expanded = menuAbierto, onDismissRequest = { menuAbierto = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.lista_nueva_aqui)) },
+                            onClick = { menuAbierto = false; alNuevaListaEn() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.carpeta_editar)) },
+                            onClick = { menuAbierto = false; alEditar() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.carpeta_eliminar), color = MaterialTheme.colorScheme.error) },
+                            onClick = { menuAbierto = false; alEliminar() },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilaListaDrawer(
+    materia: Materia,
+    cuenta: Int,
+    seleccionado: Boolean,
+    sangria: androidx.compose.ui.unit.Dp = 0.dp,
+    isBeingDragged: Boolean = false,
+    dragOffsetY: Float = 0f,
+    dragModifier: Modifier = Modifier,
+    onPositioned: ((Rect) -> Unit)? = null,
+    alClic: () -> Unit,
+    alEditar: () -> Unit,
+    alMover: () -> Unit,
+    alSacar: () -> Unit,
+    alEliminar: () -> Unit,
+) {
+    var menuAbierto by remember { mutableStateOf(false) }
+
+    val colorMateria = remember(materia.color) {
+        val valido = ReglasHorario.colorValido(materia.color)
+        if (valido != null) {
+            try { Color(android.graphics.Color.parseColor(valido)) } catch (_: Exception) { Color(0xFF6750A4) }
+        } else Color(0xFF6750A4)
+    }
+
+    val dragVisualModifier = if (isBeingDragged) {
+        Modifier
+            .zIndex(10f)
+            .graphicsLayer {
+                translationY = dragOffsetY
+                scaleX = 1.03f
+                scaleY = 1.03f
+                shadowElevation = 12f
+                alpha = 0.92f
+            }
+    } else {
+        Modifier
+    }
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = when {
+            seleccionado -> MaterialTheme.colorScheme.primaryContainer
+            else -> Color.Transparent
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 12.dp + sangria, end = 12.dp, top = 2.dp, bottom = 2.dp)
+            .heightIn(min = 46.dp)
+            .then(if (onPositioned != null) Modifier.onGloballyPositioned { onPositioned(it.boundsInWindow()) } else Modifier)
+            .then(dragModifier)
+            .then(dragVisualModifier)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = alClic),
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.weight(1f),
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = colorMateria.copy(alpha = 0.25f),
+                    modifier = Modifier.size(28.dp),
+                ) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(materia.emoji ?: "📋", fontSize = 16.sp)
+                    }
+                }
+                Text(
+                    materia.nombre,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (seleccionado) FontWeight.Bold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (cuenta > 0) {
+                    Text(
+                        "$cuenta",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.width(4.dp))
+                Box {
+                    IconButton(
+                        onClick = { menuAbierto = true },
+                        modifier = Modifier.size(36.dp),
+                    ) {
+                        Icon(
+                            Icons.Rounded.MoreVert,
+                            contentDescription = stringResource(R.string.opciones_de, materia.nombre),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    DropdownMenu(expanded = menuAbierto, onDismissRequest = { menuAbierto = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.lista_editar)) },
+                            onClick = { menuAbierto = false; alEditar() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.mover_a_carpeta)) },
+                            onClick = { menuAbierto = false; alMover() },
+                        )
+                        if (materia.grupoId != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.sacar_de_carpeta)) },
+                                onClick = { menuAbierto = false; alSacar() },
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.lista_eliminar), color = MaterialTheme.colorScheme.error) },
+                            onClick = { menuAbierto = false; alEliminar() },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilaCuadernoDrawer(
+    cuaderno: Cuaderno,
+    seleccionado: Boolean,
+    alClic: () -> Unit,
+    alLongClick: () -> Unit,
+    alEditar: () -> Unit,
+    alEliminar: () -> Unit,
+) {
+    var menuAbierto by remember { mutableStateOf(false) }
+
+    val colorBook = remember(cuaderno.coverColorHex) {
+        val hex = cuaderno.coverColorHex
+        if (!hex.isNullOrBlank()) {
+            try { Color(android.graphics.Color.parseColor(hex)) } catch (e: Exception) { Color(0xFF6750A4) }
+        } else Color(0xFF6750A4)
+    }
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = if (seleccionado) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 2.dp)
+            .heightIn(min = 46.dp)
+            .clickable(onClick = alClic),
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.weight(1f),
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(topStart = 2.dp, bottomStart = 2.dp, topEnd = 5.dp, bottomEnd = 5.dp),
+                    color = colorBook,
+                    modifier = Modifier.size(width = 20.dp, height = 26.dp),
+                ) {
+                    Box(Modifier.fillMaxSize()) {
+                        Box(
+                            modifier = Modifier
+                                .width(2.5.dp)
+                                .fillMaxHeight()
+                                .background(Color.Black.copy(alpha = 0.15f))
+                                .align(Alignment.CenterStart)
+                        )
+                    }
+                }
+                Text(
+                    cuaderno.nombre,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (seleccionado) FontWeight.Bold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
             Box {
-                IconButton(onClick = { abierto = true }, Modifier.size(36.dp)) { Icon(Icons.Filled.MoreVert, stringResource(R.string.opciones_de, titulo)) }
-                DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) { menu { abierto = false } }
+                IconButton(
+                    onClick = { menuAbierto = true },
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        Icons.Rounded.MoreVert,
+                        contentDescription = stringResource(R.string.opciones_de, cuaderno.nombre),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                DropdownMenu(expanded = menuAbierto, onDismissRequest = { menuAbierto = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.cuaderno_editar)) },
+                        onClick = { menuAbierto = false; alEditar() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.cuaderno_eliminar), color = MaterialTheme.colorScheme.error) },
+                        onClick = { menuAbierto = false; alEliminar() },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilaHorarioDrawer(
+    horario: Horario,
+    seleccionado: Boolean,
+    alClic: () -> Unit,
+    alLongClick: () -> Unit,
+    alEditar: () -> Unit,
+    alEliminar: () -> Unit,
+) {
+    var menuAbierto by remember { mutableStateOf(false) }
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = if (seleccionado) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 2.dp)
+            .heightIn(min = 46.dp)
+            .clickable(onClick = alClic),
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(horario.icono.ifBlank { "🎓" }, fontSize = 20.sp)
+                Text(
+                    horario.nombre,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (seleccionado) FontWeight.Bold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            Box {
+                IconButton(
+                    onClick = { menuAbierto = true },
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        Icons.Rounded.MoreVert,
+                        contentDescription = stringResource(R.string.opciones_de, horario.nombre),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                DropdownMenu(expanded = menuAbierto, onDismissRequest = { menuAbierto = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.horario_editar)) },
+                        onClick = { menuAbierto = false; alEditar() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.horario_eliminar), color = MaterialTheme.colorScheme.error) },
+                        onClick = { menuAbierto = false; alEliminar() },
+                    )
+                }
             }
         }
     }
@@ -542,7 +1607,7 @@ private fun DialogoMoverLista(
         },
         confirmButton = { TextButton(onClick = alCerrar) { Text(stringResource(R.string.cerrar)) } },
     )
-    if (nueva) DialogoNuevoElemento(stringResource(R.string.carpeta_nueva), stringResource(R.string.carpeta_nombre), accion = stringResource(R.string.crear_y_mover), alCerrar = { nueva = false }) { nombre, emoji, _ ->
+    if (nueva) DialogoNuevoElemento(stringResource(R.string.carpeta_nueva), stringResource(R.string.carpeta_nombre), accion = stringResource(R.string.crear_y_mover), alCerrar = { nueva = false }) { nombre, emoji, _, _ ->
         alNuevaCarpeta(nombre, emoji); alCerrar()
     }
 }

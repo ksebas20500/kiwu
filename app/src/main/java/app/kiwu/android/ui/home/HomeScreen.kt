@@ -1,5 +1,6 @@
 package app.kiwu.android.ui.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -56,6 +57,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.rounded.Event
+import app.kiwu.android.domain.esEvento
+import app.kiwu.android.ui.tareas.AzulEvento
+import app.kiwu.android.ui.tareas.AzulEventoTexto
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kiwu.android.KiwuApp
@@ -128,7 +133,7 @@ fun HomeScreen(
 
     Box(Modifier.fillMaxSize()) {
         if (ajustes.fondoUri != null) {
-            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background.copy(alpha = 0.72f)))
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background.copy(alpha = 0.18f)))
         }
 
         Scaffold(
@@ -198,7 +203,8 @@ private fun BloqueSiguienteClase(estadoHorario: HorarioEstado, alHorario: () -> 
     if (claseMostrar != null) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.90f),
+            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.76f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)),
             modifier = Modifier.fillMaxWidth().clickable { alHorario() },
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -266,7 +272,8 @@ private fun BloqueSiguienteClase(estadoHorario: HorarioEstado, alHorario: () -> 
     } else {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.90f),
+            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.76f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)),
             modifier = Modifier.fillMaxWidth().clickable { alHorario() },
         ) {
             Row(
@@ -302,22 +309,46 @@ private fun BloqueParaHoy(
     alAbrirTarea: (String) -> Unit,
     alRepasoHoy: () -> Unit,
 ) {
-    val tareasParaHoy = remember(estadoTareas.deberes, estadoTareas.ahora) {
-        val hoy = LocalDate.now(ZoneId.systemDefault())
-        estadoTareas.deberes.filter { d ->
-            !d.completado && d.fechaEntrega != null && (
-                Instant.ofEpochMilli(d.fechaEntrega).atZone(ZoneId.systemDefault()).toLocalDate() <= hoy
-            )
-        }.sortedBy { it.fechaEntrega ?: Long.MAX_VALUE }.take(3)
+    val zona = remember { ZoneId.systemDefault() }
+    val tareasParaHoy = remember(estadoTareas.pendientes, estadoTareas.ahora) {
+        val hoyDate = LocalDate.now(zona)
+        val startOfToday = hoyDate.atStartOfDay(zona).toInstant().toEpochMilli()
+        val endOfToday = hoyDate.atTime(LocalTime.MAX).atZone(zona).toInstant().toEpochMilli()
+
+        val itemsFiltrados = estadoTareas.pendientes.mapNotNull { d ->
+            val entrega = d.fechaEntrega ?: return@mapNotNull null
+            val fechaDate = Instant.ofEpochMilli(entrega).atZone(zona).toLocalDate()
+
+            if (d.esEvento) {
+                // Evento: incluir ÚNICAMENTE si su fecha cae estrictamente dentro de HOY
+                if (entrega in startOfToday..endOfToday || fechaDate == hoyDate) {
+                    Triple(d, false, 0)
+                } else {
+                    null
+                }
+            } else {
+                // Tarea normal: pendiente de hoy o vencida
+                if (!d.completado && entrega <= endOfToday) {
+                    val esVencida = fechaDate < hoyDate
+                    val prioridadOrden = if (!esVencida) 1 else 2
+                    Triple(d, esVencida, prioridadOrden)
+                } else {
+                    null
+                }
+            }
+        }
+
+        itemsFiltrados
+            .sortedWith(compareBy({ it.third }, { it.first.fechaEntrega ?: Long.MAX_VALUE }))
+            .take(3)
     }
 
-    val flashcardsDueCount = remember(estadoNotas.todasLasPaginas) {
-        estadoNotas.todasLasPaginas.size
-    }
+    val flashcardsDueCount = estadoNotas.tarjetasPendientes
 
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.90f),
+        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.76f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -344,23 +375,79 @@ private fun BloqueParaHoy(
                     Text(stringResource(R.string.todo_al_dia_hoy), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    for (d in tareasParaHoy) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for ((d, esVencida, _) in tareasParaHoy) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().clickable { alAbrirTarea(d.id) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(enabled = !d.esExterno) { alAbrirTarea(d.id) },
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Checkbox(
-                                checked = d.completado,
-                                onCheckedChange = { tareasVm.marcar(d.id, it) },
-                            )
-                            Text(
-                                d.titulo,
-                                style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f).padding(start = 4.dp),
-                            )
+                            if (d.esEvento) {
+                                // Evento de hoy: Ícono circular de calendario (sin Checkbox) y hora a la derecha
+                                Box(
+                                    modifier = Modifier
+                                        .padding(start = 4.dp, end = 8.dp)
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(AzulEvento),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Event,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = AzulEventoTexto,
+                                    )
+                                }
+                                Text(
+                                    d.titulo,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                val horaTexto = if (d.fechaEntrega != null) {
+                                    val localTime = Instant.ofEpochMilli(d.fechaEntrega).atZone(zona).toLocalTime()
+                                    if (localTime == LocalTime.MIDNIGHT) {
+                                        stringResource(R.string.todo_el_dia)
+                                    } else {
+                                        Fechas.hora(d.fechaEntrega)
+                                    }
+                                } else null
+
+                                if (horaTexto != null) {
+                                    Text(
+                                        horaTexto,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(start = 8.dp),
+                                    )
+                                }
+                            } else {
+                                // Tarea normal: Checkbox interactivo
+                                Checkbox(
+                                    checked = d.completado,
+                                    onCheckedChange = { tareasVm.marcar(d.id, it) },
+                                )
+                                Text(
+                                    d.titulo,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f).padding(start = 4.dp),
+                                )
+                                if (esVencida && d.fechaEntrega != null) {
+                                    val fechaTexto = app.kiwu.android.ui.fechaCorta(d.fechaEntrega, estadoTareas.ahora)
+                                    Text(
+                                        "Vencida · $fechaTexto",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.padding(start = 8.dp),
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -377,7 +464,7 @@ private fun BloqueParaHoy(
                     Row(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -395,6 +482,7 @@ private fun BloqueParaHoy(
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f),
                             )
                         }
                         Button(
@@ -423,7 +511,8 @@ private fun BloqueCuadernosRecientes(
 
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.90f),
+        color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.76f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

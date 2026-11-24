@@ -704,7 +704,8 @@
     <string name="cuenta_correo">Correo</string>
     <string name="cuenta_clave">Contraseña</string>
     <string name="cuenta_entrar">Iniciar sesión</string>
-    <string name="cuenta_crear">Crear cuenta (mínimo 6 caracteres)</string>
+    <string name="cuenta_crear">Crear cuenta</string>
+    <string name="cuenta_crear_boton">Crear cuenta (mínimo 6 caracteres)</string>
     <string name="cuenta_olvide">Olvidé mi contraseña</string>
     <string name="cuenta_recuperar_enviado">Te enviamos un correo para cambiar la contraseña.</string>
     <string name="cuenta_sincronizando">Sincronizando…</string>

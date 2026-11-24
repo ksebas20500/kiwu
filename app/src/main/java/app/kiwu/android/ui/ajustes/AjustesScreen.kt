@@ -42,7 +42,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SystemUpdate
-import androidx.compose.material.icons.filled.ViewList
+
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -127,7 +127,7 @@ private fun textoErrorCopia(contexto: android.content.Context, e: ErrorCopia): S
 /** Ajustes: apariencia, fondo, avisos del sistema y copia de seguridad. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit, alVerGuia: () -> Unit = {}) {
+fun AjustesScreen(app: KiwuApp, seccionInicial: String? = null, alVolver: () -> Unit, alVerGuia: () -> Unit = {}) {
     val contexto = LocalContext.current
     val alcance = rememberCoroutineScope()
     val ajustes by app.ajustes.flujo.collectAsStateWithLifecycle(AjustesUi())
@@ -231,7 +231,7 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit, alVerGuia: () -> Unit = {}
     var confirmarRestaurarDrive by remember { mutableStateOf(false) }
     var confirmarImportarLocal by remember { mutableStateOf(false) }
 
-    var elegida by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    var elegida by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(seccionInicial) }
     val seccionActual = SeccionAjustes.deId(elegida)
     androidx.activity.compose.BackHandler(enabled = seccionActual != null) { elegida = null }
 
@@ -283,8 +283,6 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit, alVerGuia: () -> Unit = {}
                                     FilaAjuste(Icons.Filled.Language, stringResource(R.string.idioma), nombreIdioma(contexto)) {
                                         if (Idioma.delSistema) Idioma.abrirAjusteDelSistema(contexto) else elegirIdioma = true
                                     }
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                                    FilaAjuste(Icons.Filled.ViewList, stringResource(SeccionAjustes.MENU.titulo), resumen.menu(ajustes)) { elegida = SeccionAjustes.MENU.id }
                                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                                     FilaAjuste(Icons.Filled.Notifications, stringResource(SeccionAjustes.AVISOS.titulo), resumen.avisos(ajustes, notificaciones)) { elegida = SeccionAjustes.AVISOS.id }
                                 }
@@ -428,40 +426,6 @@ fun AjustesScreen(app: KiwuApp, alVolver: () -> Unit, alVerGuia: () -> Unit = {}
                                                 velo, { v -> velo = v; FondoEnVivo.velo = v },
                                                 onValueChangeFinished = { cambiar { it.copy(opacidadPaneles = velo) }; FondoEnVivo.velo = null },
                                             )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        SeccionAjustes.MENU -> {
-                            Surface(
-                                shape = RoundedCornerShape(16.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.90f),
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                            ) {
-                                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                                    Seccion(stringResource(R.string.ajustes_aspecto_listas)) {
-                                        SelectorAspectoMenu(ajustes.menuAspecto, ajustes.menuContadores) { id -> cambiar { it.copy(menuAspecto = id) } }
-                                    }
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                                    Seccion(stringResource(R.string.ajustes_orden)) {
-                                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            for ((id, texto) in listOf("manual" to stringResource(R.string.orden_manual), "alfabetico" to stringResource(R.string.orden_alfabetico), "pendientes" to stringResource(R.string.orden_pendientes))) {
-                                                FilterChip(
-                                                    selected = ajustes.menuOrden == id, onClick = { cambiar { it.copy(menuOrden = id) } }, label = { Text(texto) },
-                                                )
-                                            }
-                                        }
-                                    }
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                                    Seccion("") {
-                                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                                            Text(stringResource(R.string.ajustes_mostrar_numero), style = MaterialTheme.typography.bodyMedium)
-                                            Switch(checked = ajustes.menuContadores, onCheckedChange = { v -> cambiar { it.copy(menuContadores = v) } })
-                                        }
-                                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                                            Text(stringResource(R.string.ajustes_mostrar_racha), style = MaterialTheme.typography.bodyMedium)
-                                            Switch(checked = ajustes.rachaVisible, onCheckedChange = { v -> cambiar { it.copy(rachaVisible = v) } })
                                         }
                                     }
                                 }

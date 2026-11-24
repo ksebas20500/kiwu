@@ -240,8 +240,12 @@ data class Documento(val bloques: List<Bloque> = listOf(Bloque())) {
             } catch (e: Exception) {
                 return vacio()
             }
+            val seenIds = mutableSetOf<String>()
             val bloques = ((raiz as? JsonObject)?.get("blocks") as? JsonArray)
                 ?.mapNotNull { (it as? JsonObject)?.let(Bloque::deJson) }
+                ?.map { b ->
+                    if (seenIds.add(b.id)) b else b.copy(id = nuevoId())
+                }
                 ?: return vacio()
             return Documento(bloques.ifEmpty { listOf(Bloque()) })
         }

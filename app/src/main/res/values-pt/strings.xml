@@ -484,7 +484,8 @@
     <string name="cuenta_correo">E-mail</string>
     <string name="cuenta_clave">Senha</string>
     <string name="cuenta_entrar">Entrar</string>
-    <string name="cuenta_crear">Criar conta (mínimo de 6 caracteres)</string>
+    <string name="cuenta_crear">Criar conta</string>
+    <string name="cuenta_crear_boton">Criar conta (mínimo de 6 caracteres)</string>
     <string name="cuenta_olvide">Esqueci minha senha</string>
     <string name="cuenta_recuperar_enviado">Enviamos um e-mail para redefinir a senha.</string>
     <string name="cuenta_sincronizando">Sincronizando…</string>

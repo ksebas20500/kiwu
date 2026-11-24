@@ -17,6 +17,7 @@ data class Fmt(
     val highlight: String? = null,
     val link: String? = null,
 ) {
+    val tieneEstilo: Boolean get() = bold || italic || underline || strike || code || color != null || highlight != null || link != null
     fun alternar(nombre: String): Fmt = when (nombre) {
         "b" -> copy(bold = !bold)
         "i" -> copy(italic = !italic)
@@ -83,11 +84,14 @@ object Formato {
         var sufijo = 0
         while (sufijo < tope - prefijo && viejo[viejo.length - 1 - sufijo] == nuevo[nuevo.length - 1 - sufijo]) sufijo++
         val insertados = nuevo.length - prefijo - sufijo
-        val herencia = pendiente ?: if (prefijo > 0) fmtViejo[prefijo - 1].copy(link = null) else Fmt.NINGUNO
+        val herencia = pendiente ?: if (prefijo > 0 && prefijo - 1 in fmtViejo.indices) fmtViejo[prefijo - 1].copy(link = null) else Fmt.NINGUNO
         val salida = ArrayList<Fmt>(nuevo.length)
-        for (i in 0 until prefijo) salida.add(fmtViejo[i])
-        repeat(insertados) { salida.add(herencia) }
-        for (i in viejo.length - sufijo until viejo.length) salida.add(fmtViejo[i])
+        val pMax = minOf(prefijo, fmtViejo.size)
+        for (i in 0 until pMax) salida.add(fmtViejo[i])
+        repeat(maxOf(0, insertados)) { salida.add(herencia) }
+        val sufijoValido = minOf(sufijo, fmtViejo.size)
+        for (i in (fmtViejo.size - sufijoValido).coerceAtLeast(pMax) until fmtViejo.size) salida.add(fmtViejo[i])
+        while (salida.size < nuevo.length) salida.add(herencia)
         return salida
     }
 

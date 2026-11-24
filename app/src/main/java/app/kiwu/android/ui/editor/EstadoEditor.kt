@@ -64,7 +64,8 @@ class BloqueEd(base: Bloque) {
         }
 
     fun poner(texto: String, fmt: List<Fmt>, cursor: Int = texto.length) {
-        contenido = armar(texto, fmt, TextRange(cursor.coerceIn(0, texto.length)))
+        val fmtAjustado = if (fmt.size == texto.length) fmt else List(texto.length) { i -> fmt.getOrNull(i) ?: Fmt.NINGUNO }
+        contenido = armar(texto, fmtAjustado, TextRange(cursor.coerceIn(0, texto.length)))
     }
 
     fun aBloque(): Bloque {
@@ -128,7 +129,11 @@ class EstadoEditor(inicial: Documento) {
 
     fun cargar(doc: Documento) {
         bloques.clear()
-        doc.bloques.forEach { bloques.add(BloqueEd(it)) }
+        val ids = mutableSetOf<String>()
+        doc.bloques.forEach { b ->
+            val idUnico = if (ids.add(b.id)) b.id else app.kiwu.android.domain.nuevoId()
+            bloques.add(BloqueEd(if (idUnico == b.id) b else b.copy(id = idUnico)))
+        }
         asegurarFinal()
     }
 
@@ -144,7 +149,10 @@ class EstadoEditor(inicial: Documento) {
     private fun esta(b: BloqueEd) = indiceDe(b) >= 0
 
     private fun asegurarFinal() {
-        if (bloques.isEmpty() || bloques.last().kind != TiposBloque.PARRAFO) bloques.add(BloqueEd(Bloque()))
+        val ultimo = bloques.lastOrNull()
+        if (ultimo?.kind != TiposBloque.PARRAFO) {
+            bloques.add(BloqueEd(Bloque(id = app.kiwu.android.domain.nuevoId())))
+        }
     }
 
     fun bloqueEnfocado(): BloqueEd? = bloques.firstOrNull { it.id == enfocado }
@@ -232,7 +240,8 @@ class EstadoEditor(inicial: Documento) {
         while (true) {
             val salto = modelo.indexOf('\n', inicio)
             val fin = if (salto < 0) modelo.length else salto
-            lineas.add(modelo.substring(inicio, fin) to fmt.subList(inicio, fin).toList())
+            val subFmt = if (inicio <= fin && fin <= fmt.size) fmt.subList(inicio, fin).toList() else List(fin - inicio) { Fmt.NINGUNO }
+            lineas.add(modelo.substring(inicio, fin) to subFmt)
             if (salto < 0) break
             inicio = salto + 1
         }
@@ -261,7 +270,7 @@ class EstadoEditor(inicial: Documento) {
         for (k in 1 until lineas.size) {
             val esLista = b.kind in LISTAS
             val nuevo = BloqueEd(
-                Bloque(kind = if (esLista) b.kind else TiposBloque.PARRAFO, indent = if (esLista) b.indent else 0),
+                Bloque(id = app.kiwu.android.domain.nuevoId(), kind = if (esLista) b.kind else TiposBloque.PARRAFO, indent = if (esLista) b.indent else 0),
             )
             nuevo.poner(lineas[k].first, lineas[k].second, cursor = 0)
             bloques.add(++i, nuevo)
@@ -306,8 +315,10 @@ class EstadoEditor(inicial: Documento) {
         if (i <= 0) return
         val previo = bloques[i - 1]
         if (previo.kind !in TiposBloque.deTexto) return
-        val union = previo.texto.length
-        previo.poner(previo.texto + b.texto, previo.fmt + b.fmt, cursor = union)
+        val textoPrevioLimpio = if (previo.kind != TiposBloque.CODIGO) previo.texto.trimEnd('\n') else previo.texto
+        val textoActualLimpio = if (b.kind != TiposBloque.CODIGO) b.texto.replace("\n", "") else b.texto
+        val union = textoPrevioLimpio.length
+        previo.poner(textoPrevioLimpio + textoActualLimpio, previo.fmt + b.fmt, cursor = union)
         bloques.removeAt(i)
         enfocar(previo, alFinal = false, posicion = union)
         asegurarFinal()
@@ -322,7 +333,13 @@ class EstadoEditor(inicial: Documento) {
         val i = indiceDe(b)
         bloques.removeAt(i)
         val previo = bloques[(i - 1).coerceIn(0, bloques.lastIndex)]
-        if (previo.kind in TiposBloque.deTexto || previo.kind == TiposBloque.CODIGO) enfocar(previo)
+        if (previo.kind in TiposBloque.deTexto || previo.kind == TiposBloque.CODIGO) {
+            val textoLimpio = if (previo.kind != TiposBloque.CODIGO) previo.texto.trimEnd('\n') else previo.texto
+            if (previo.kind != TiposBloque.CODIGO && textoLimpio != previo.texto) {
+                previo.poner(textoLimpio, previo.fmt, cursor = textoLimpio.length)
+            }
+            enfocar(previo, alFinal = false, posicion = textoLimpio.length)
+        }
         asegurarFinal()
         cambio()
     }
@@ -433,15 +450,109 @@ class EstadoEditor(inicial: Documento) {
 
     fun marcarCambio() = cambio()
 
+    /**
+     * Aplica la opción elegida en la barra de bloques.
+     * Si es por slash (`/`), remueve la consulta `/query` e integra la conversión o acción.
+     * Si es por el botón `+ Bloque` (manual):
+     *   - Si el bloque está vacío, convierte el bloque actual sin borrar nada.
+     *   - Si el bloque ya tiene texto, inserta un bloque nuevo del tipo elegido debajo sin alterar el texto actual.
+     */
+    fun aplicarOpcionBloque(b: BloqueEd, tipo: String, esPorSlash: Boolean) {
+        if (esPorSlash) {
+            val t = b.texto.replace("\u200B", "")
+            val slashIndex = when {
+                t.startsWith("/") -> 0
+                t.contains(" /") -> t.lastIndexOf(" /") + 1
+                else -> -1
+            }
+            val prefijo = if (slashIndex >= 0) t.substring(0, slashIndex).trimEnd() else t
+            b.poner(prefijo, List(prefijo.length) { Fmt.NINGUNO })
+            b.slashDescartado = false
+
+            when (tipo) {
+                TiposBloque.IMAGEN, TiposBloque.ARCHIVO, ACCION_TEXTO_FOTO -> accionPendiente = AccionPendiente(tipo, b)
+                ACCION_REPASAR -> { marcarCambio(); accionPendiente = AccionPendiente(tipo, b) }
+                TiposBloque.DIVISOR -> insertarTras(b, listOf(app.kiwu.android.domain.Bloque(kind = TiposBloque.DIVISOR)))
+                else -> convertir(b, tipo, prefijo)
+            }
+        } else {
+            val textoLimpio = b.texto.replace("\u200B", "").trim()
+            if (textoLimpio.isEmpty()) {
+                when (tipo) {
+                    TiposBloque.IMAGEN, TiposBloque.ARCHIVO, ACCION_TEXTO_FOTO -> accionPendiente = AccionPendiente(tipo, b)
+                    ACCION_REPASAR -> { marcarCambio(); accionPendiente = AccionPendiente(tipo, b) }
+                    TiposBloque.DIVISOR -> insertarTras(b, listOf(app.kiwu.android.domain.Bloque(kind = TiposBloque.DIVISOR)))
+                    else -> convertir(b, tipo, "")
+                }
+            } else {
+                when (tipo) {
+                    TiposBloque.IMAGEN, TiposBloque.ARCHIVO, ACCION_TEXTO_FOTO -> accionPendiente = AccionPendiente(tipo, b)
+                    ACCION_REPASAR -> { marcarCambio(); accionPendiente = AccionPendiente(tipo, b) }
+                    TiposBloque.DIVISOR -> insertarTras(b, listOf(app.kiwu.android.domain.Bloque(kind = TiposBloque.DIVISOR)))
+                    else -> {
+                        val nuevo = BloqueEd(app.kiwu.android.domain.Bloque(id = app.kiwu.android.domain.nuevoId(), kind = tipo))
+                        val idx = bloques.indexOfFirst { it.id == b.id }
+                        if (idx >= 0) {
+                            bloques.add(idx + 1, nuevo)
+                        } else {
+                            bloques.add(nuevo)
+                        }
+                        asegurarFinal()
+                        enfocar(nuevo)
+                    }
+                }
+            }
+        }
+        marcarCambio()
+    }
+
     // --- menú «/» ----------------------------------------------------------------------------------
+
+    private fun aliasBloque(tipo: String): List<String> = when (tipo) {
+        TiposBloque.TITULO -> listOf("h1", "header", "encabezado", "titulo", "title")
+        TiposBloque.SUBTITULO -> listOf("h2", "sub", "subtitulo", "subtitle")
+        TiposBloque.PARRAFO -> listOf("p", "text", "texto", "parrafo", "paragraph")
+        TiposBloque.VINETAS -> listOf("bullet", "vineta", "vinetas", "list", "lista", "puntos")
+        TiposBloque.NUMERADA -> listOf("num", "numero", "numerada", "numbered", "1.")
+        TiposBloque.TAREAS -> listOf("todo", "task", "tarea", "tareas", "check", "casilla")
+        TiposBloque.CITA -> listOf("quote", "cita", "bar", "barra")
+        TiposBloque.DESTACADO -> listOf("callout", "destacado", "aviso", "idea", "bulb", "luz")
+        TiposBloque.CODIGO -> listOf("code", "codigo", "dev", "script")
+        TiposBloque.TARJETA -> listOf("card", "tarjeta", "flashcard", "repaso")
+        TiposBloque.IMAGEN -> listOf("img", "image", "imagen", "foto", "pic")
+        TiposBloque.ARCHIVO -> listOf("file", "archivo", "doc", "adjunto")
+        TiposBloque.DIVISOR -> listOf("hr", "divider", "divisor", "linea", "separador")
+        ACCION_REPASAR -> listOf("repaso", "repasar", "review", "srs")
+        ACCION_TEXTO_FOTO -> listOf("ocr", "scan", "escanear", "foto", "camara")
+        else -> emptyList()
+    }
 
     /** Tipos que ofrece el menú «/» para este bloque, filtrados por su nombre en [titulos]; vacío si no hay que mostrarlo. */
     fun opcionesSlash(b: BloqueEd, titulos: Map<String, String>): List<String> {
-        val t = b.texto
-        if (b.kind != TiposBloque.PARRAFO || !t.startsWith("/") || t.contains('\n') || b.slashDescartado) return emptyList()
-        val filtro = sinTildes(t.drop(1))
-        return (TiposBloque.todos + ACCION_TEXTO_FOTO + ACCION_REPASAR).filter {
-            it != TiposBloque.PARRAFO && (filtro.isEmpty() || filtro in sinTildes(titulos[it] ?: ""))
+        val t = b.texto.replace("\u200B", "")
+        if (b.kind != TiposBloque.PARRAFO || t.contains('\n') || b.slashDescartado) return emptyList()
+
+        val slashIndex = when {
+            t.startsWith("/") -> 0
+            t.contains(" /") -> t.lastIndexOf(" /") + 1
+            else -> -1
+        }
+        if (slashIndex < 0) return emptyList()
+
+        val afterSlash = if (t.length > slashIndex + 1) {
+            val startIdx = (slashIndex + 1).coerceIn(0, t.length)
+            t.substring(startIdx, t.length.coerceIn(startIdx, t.length))
+        } else ""
+
+        if (afterSlash.contains(" ")) return emptyList()
+
+        val filtro = sinTildes(afterSlash.trim())
+        return (TiposBloque.todos + ACCION_TEXTO_FOTO + ACCION_REPASAR).filter { tipo ->
+            if (tipo == TiposBloque.PARRAFO) return@filter false
+            if (filtro.isEmpty()) return@filter true
+            val tituloStr = sinTildes(titulos[tipo] ?: "")
+            val aliases = aliasBloque(tipo)
+            filtro in tituloStr || aliases.any { filtro in sinTildes(it) }
         }
     }
 

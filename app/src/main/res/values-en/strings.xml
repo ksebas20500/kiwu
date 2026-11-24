@@ -682,7 +682,8 @@
     <string name="cuenta_correo">Email</string>
     <string name="cuenta_clave">Password</string>
     <string name="cuenta_entrar">Sign in</string>
-    <string name="cuenta_crear">Create account (6+ characters)</string>
+    <string name="cuenta_crear">Create account</string>
+    <string name="cuenta_crear_boton">Create account (min. 6 characters)</string>
     <string name="cuenta_olvide">Forgot my password</string>
     <string name="cuenta_recuperar_enviado">We emailed you a link to change your password.</string>
     <string name="cuenta_sincronizando">Syncingâ€¦</string>

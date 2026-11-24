@@ -77,6 +77,7 @@ fun SeccionCuenta(app: KiwuApp) {
     var clave by remember { mutableStateOf("") }
     var modoRegistro by rememberSaveable { mutableStateOf(false) }
     var mostrarClave by remember { mutableStateOf(false) }
+    var intentoseRegistro by remember { mutableStateOf(false) }
     var ocupado by remember { mutableStateOf(false) }
     var mensaje by remember { mutableStateOf<String?>(null) }
     var confirmarBorrado by remember { mutableStateOf(false) }
@@ -199,11 +200,13 @@ fun SeccionCuenta(app: KiwuApp) {
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         )
 
+                        val errorClave = modoRegistro && intentoseRegistro && clave.length < 6
                         OutlinedTextField(
                             value = clave,
                             onValueChange = { clave = it },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
+                            isError = errorClave,
                             label = { Text(stringResource(R.string.cuenta_clave)) },
                             visualTransformation = if (mostrarClave) VisualTransformation.None else PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -215,23 +218,26 @@ fun SeccionCuenta(app: KiwuApp) {
                                     )
                                 }
                             },
-                            supportingText = if (modoRegistro) {
-                                { Text(stringResource(R.string.ajustes_min_caracteres)) }
+                            supportingText = if (errorClave) {
+                                { Text(stringResource(R.string.ajustes_min_caracteres), color = MaterialTheme.colorScheme.error) }
                             } else null,
                         )
 
                         Button(
                             onClick = {
                                 if (modoRegistro) {
-                                    intentar { sync.registrar(correo, clave) }
+                                    intentoseRegistro = true
+                                    if (clave.length >= 6) {
+                                        intentar { sync.registrar(correo, clave) }
+                                    }
                                 } else {
                                     intentar { sync.entrar(correo, clave) }
                                 }
                             },
-                            enabled = !ocupado && correo.isNotBlank() && (if (modoRegistro) clave.length >= 6 else clave.isNotEmpty()),
+                            enabled = !ocupado && correo.isNotBlank() && clave.isNotEmpty(),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(stringResource(if (modoRegistro) R.string.cuenta_crear else R.string.cuenta_entrar))
+                            Text(stringResource(if (modoRegistro) R.string.cuenta_crear_boton else R.string.cuenta_entrar))
                         }
 
                         TextButton(

@@ -18,6 +18,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -356,11 +359,12 @@ private fun CeldaDia(
 
 @Composable
 private fun TarjetaEventoExternoAgenda(evento: EventoExterno, zona: ZoneId) {
+    val colorTextoEvento = MaterialTheme.colorScheme.primary
     Surface(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
         shape = RoundedCornerShape(12.dp),
         color = AzulEvento.copy(alpha = 0.35f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, AzulEventoTexto.copy(alpha = 0.3f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, colorTextoEvento.copy(alpha = 0.3f)),
     ) {
         Row(
             Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -370,16 +374,32 @@ private fun TarjetaEventoExternoAgenda(evento: EventoExterno, zona: ZoneId) {
                 Modifier.size(36.dp).background(AzulEvento, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Filled.Event, null, Modifier.size(20.dp), tint = AzulEventoTexto)
+                Icon(Icons.Filled.Event, null, Modifier.size(20.dp), tint = colorTextoEvento)
             }
             Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                Text(evento.titulo, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    evento.titulo,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Row(
-                    Modifier.padding(top = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(stringResource(R.string.google_calendar), style = MaterialTheme.typography.labelSmall, color = AzulEventoTexto, fontWeight = FontWeight.Bold)
+                    Text(
+                        stringResource(R.string.google_calendar),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colorTextoEvento,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f, fill = false),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                     val horaTexto = if (evento.todoElDia) {
                         stringResource(R.string.todo_el_dia)
                     } else {
@@ -387,6 +407,7 @@ private fun TarjetaEventoExternoAgenda(evento: EventoExterno, zona: ZoneId) {
                         val horaFin = evento.fin?.let { Instant.ofEpochMilli(it).atZone(zona).toLocalTime().toString() }
                         if (horaFin != null) "$horaInicio - $horaFin" else horaInicio
                     }
+                    Spacer(Modifier.width(12.dp))
                     Text(horaTexto, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }

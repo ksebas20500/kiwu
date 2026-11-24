@@ -88,6 +88,13 @@ fun PaginaScreen(vm: PaginaViewModel, adjuntos: OrigenAdjuntos, alVolver: () -> 
 
     val p = pagina ?: run { Box(Modifier.fillMaxSize()); return }
     val editor = rememberEstadoEditor(remember(p.id) { vm.documentoActual() }, vm::cambioDocumento)
+
+    LaunchedEffect(p.id) {
+        if (p.titulo.isBlank() && editor.bloques.size == 1 && editor.bloques[0].texto.isEmpty()) {
+            editor.enfocar(editor.bloques[0])
+        }
+    }
+
     val irATarjetas = { vm.guardarYLuego(editor.documento(), alTarjetas); Unit }
     // «/repasar» en el editor.
     LaunchedEffect(editor.accionPendiente) {

@@ -49,6 +49,13 @@ class Repositorio(
     val paginas: Flow<List<ResumenPagina>> = dao.paginas()
     /** Páginas con tarjetas guardadas: la cola global de repaso. */
     val paginasConTarjetas: Flow<List<app.kiwu.android.domain.PaginaTarjetas>> = dao.paginasConTarjetas()
+    val refrescoRepaso: kotlinx.coroutines.flow.MutableStateFlow<Int> = kotlinx.coroutines.flow.MutableStateFlow(0)
+    /** Cola global de tarjetas vencidas o priorizadas para repasar hoy. */
+    val tarjetasParaRepasar: Flow<List<app.kiwu.android.domain.TarjetaDeNota>> = combine(
+        paginasConTarjetas, cuadernos, deberes, materias, refrescoRepaso
+    ) { paginas, cuadernos, deberes, materias, _ ->
+        app.kiwu.android.domain.RepasoGlobal.cola(paginas, cuadernos, deberes, materias, ahora())
+    }
     val horarios: Flow<List<Horario>> = dao.horarios()
     val clases: Flow<List<Clase>> = dao.clases()
     val grupos: Flow<List<GrupoLista>> = dao.grupos()

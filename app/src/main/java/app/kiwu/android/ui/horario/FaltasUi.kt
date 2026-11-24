@@ -89,11 +89,11 @@ internal fun InsigniaFaltas(c: ContadorFaltas, @Suppress("UNUSED_PARAMETER") neu
     val texto = if (c.maximo != null) {
         when (c.estado) {
             EstadoFaltas.Superado -> "⚠️ Excedido (${c.cuentan}/${c.maximo})"
-            EstadoFaltas.Aviso -> "⚠️ ${c.quedan} restantes"
-            else -> "${c.cuentan}/${c.maximo} fallas"
+            EstadoFaltas.Aviso -> if (c.quedan == 1) "⚠️ 1 restante" else "⚠️ ${c.quedan} restantes"
+            else -> if (c.cuentan == 1) "${c.cuentan}/${c.maximo} falla" else "${c.cuentan}/${c.maximo} fallas"
         }
     } else {
-        "${c.cuentan} fallas"
+        if (c.cuentan == 1) "1 falla" else "${c.cuentan} fallas"
     }
     Surface(modifier, shape = RoundedCornerShape(50), color = fondo, contentColor = textoColor) {
         Text(texto, Modifier.padding(horizontal = 8.dp, vertical = 2.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)

@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -142,7 +143,7 @@ fun Raiz(
                         app, alAbrirTarea = { nav.navigate("tarea/$it") }, alAbrirPagina = { nav.navigate("pagina/$it") }, alAjustes = { nav.navigate("ajustes") },
                         alRacha = { nav.navigate("racha") }, alBuscar = { nav.navigate("buscar") },
                         alTemporizador = { nav.navigate("temporizador") }, alCalificaciones = { nav.navigate("calificaciones/$it") },
-                        alRepasoHoy = { nav.navigate("repaso-hoy") },
+                        alRepasoHoy = { nav.navigate("repaso-hoy") }, alPapelera = { nav.navigate("ajustes/papelera") },
                         abrirLista = abrirLista, alAbrirLista = { abrirLista = null },
                         seccionInicial = seccion, alAtenderSeccion = alAtender,
                     )
@@ -156,6 +157,10 @@ fun Raiz(
                     DetalleTareaScreen(vm, adjuntos, alVolver = { nav.volver() })
                 }
                 composable("ajustes") { AjustesScreen(app, alVolver = { nav.volver() }, alVerGuia = { nav.navigate("repaso") }) }
+                composable("ajustes/{seccion}") { entrada ->
+                    val seccionStr = entrada.arguments?.getString("seccion")
+                    AjustesScreen(app, seccionInicial = seccionStr, alVolver = { nav.volver() }, alVerGuia = { nav.navigate("repaso") })
+                }
                 composable("pagina/{id}") { entrada ->
                     val id = entrada.arguments?.getString("id") ?: return@composable
                     val vm: PaginaViewModel = viewModel(
@@ -226,7 +231,7 @@ private fun androidx.navigation.NavController.volver() {
 private fun Principal(
     app: KiwuApp, alAbrirTarea: (String) -> Unit, alAbrirPagina: (String) -> Unit, alAjustes: () -> Unit,
     alRacha: () -> Unit = {}, alBuscar: () -> Unit = {}, alTemporizador: () -> Unit = {}, alCalificaciones: (String) -> Unit = {},
-    alRepasoHoy: () -> Unit = {},
+    alRepasoHoy: () -> Unit = {}, alPapelera: () -> Unit = {},
     abrirLista: String? = null, alAbrirLista: () -> Unit = {},
     seccionInicial: String? = null, alAtenderSeccion: () -> Unit = {},
 ) {
@@ -241,26 +246,59 @@ private fun Principal(
     }
     val notasVm: NotasViewModel = viewModel(factory = viewModelFactory { initializer { NotasViewModel(app.repo) } })
     val horarioVm: HorarioViewModel = viewModel(factory = viewModelFactory { initializer { HorarioViewModel(app.repo) } })
+    val ajustes by app.ajustes.flujo.collectAsStateWithLifecycle(AjustesUi())
     val drawer = androidx.compose.material3.rememberDrawerState(androidx.compose.material3.DrawerValue.Closed)
     val alcance = androidx.compose.runtime.rememberCoroutineScope()
+    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+
+    LaunchedEffect(drawer.targetValue, drawer.isOpen) {
+        if (drawer.targetValue == androidx.compose.material3.DrawerValue.Open || drawer.isOpen) {
+            focusManager.clearFocus(force = true)
+            keyboardController?.hide()
+        }
+    }
+
     val cerrarMenu: () -> Unit = { alcance.launch { drawer.close() } }
     val cerrarYLuego: (() -> Unit) -> Unit = { accion ->
         alcance.launch {
             drawer.close()
-            if (modulo == "inicio") modulo = "tareas"
+            modulo = "tareas"
             accion()
         }
     }
     val abrirMenu: () -> Unit = { alcance.launch { drawer.open() } }
     androidx.activity.compose.BackHandler(enabled = drawer.isOpen) { cerrarMenu() }
+    val estadoNotas by notasVm.estado.collectAsStateWithLifecycle()
+    val estadoHorario by horarioVm.estado.collectAsStateWithLifecycle()
+    var estaArrastrandoLista by remember { mutableStateOf(false) }
+
     androidx.compose.material3.ModalNavigationDrawer(
         drawerState = drawer,
+        gesturesEnabled = drawer.isOpen && !estaArrastrandoLista,
         drawerContent = {
-            when (modulo) {
-                "notas" -> MenuNotas(notasVm, cerrarYLuego, alAjustes)
-                "horario" -> MenuHorario(horarioVm, cerrarYLuego, alAjustes)
-                else -> MenuTareas(tareasVm, cerrarYLuego, alAjustes, alRacha)
-            }
+            MenuTareas(
+                vm = tareasVm,
+                cerrarYLuego = cerrarYLuego,
+                alAjustes = alAjustes,
+                alRacha = alRacha,
+                cuadernos = estadoNotas.cuadernos,
+                horarios = estadoHorario.horarios,
+                flashcardsPendientes = estadoNotas.tarjetasPendientes,
+                alElegirCuaderno = { id ->
+                    notasVm.filtrar(FiltroNotas.DeCuaderno(id))
+                    modulo = "notas"
+                },
+                alElegirHorario = { id ->
+                    horarioVm.elegir(id)
+                    modulo = "horario"
+                },
+                alRepasoHoy = alRepasoHoy,
+                alPapelera = alPapelera,
+                app = app,
+                ajustes = ajustes,
+                alCambiarArrastre = { esta -> estaArrastrandoLista = esta },
+            )
         },
     ) {
     Scaffold(

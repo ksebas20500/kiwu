@@ -5,8 +5,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -84,6 +89,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
@@ -179,8 +185,9 @@ internal fun estiloDe(f: Fmt, oscuro: Boolean, colorEnlace: Color, fondoCodigo: 
 }
 
 /** Dibuja el formato por carácter sobre el texto (que lleva delante el carácter invisible `ZW`). */
-internal fun anotar(visible: String, fmt: List<Fmt>, oscuro: Boolean, colorEnlace: Color, fondoCodigo: Color): AnnotatedString =
-    buildAnnotatedString {
+internal fun anotar(visible: String, fmt: List<Fmt>, oscuro: Boolean, colorEnlace: Color, fondoCodigo: Color): AnnotatedString {
+    if (fmt.isEmpty() || fmt.none { it.tieneEstilo }) return AnnotatedString(visible)
+    return buildAnnotatedString {
         append(visible)
         if (fmt.size != visible.length - 1) return@buildAnnotatedString
         var i = 0
@@ -191,7 +198,9 @@ internal fun anotar(visible: String, fmt: List<Fmt>, oscuro: Boolean, colorEnlac
             i = j
         }
     }
+}
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BloqueTextoUi(ed: EstadoEditor, b: BloqueEd, numero: Int?) {
     val oscuro = esOscuro()
@@ -200,6 +209,52 @@ private fun BloqueTextoUi(ed: EstadoEditor, b: BloqueEd, numero: Int?) {
     val fondoCodigo = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
     val foco = remember { FocusRequester() }
     var enfocado by remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val density = LocalDensity.current
+
+    var campoLocal by remember(b.id) { androidx.compose.runtime.mutableStateOf(b.contenido.campo) }
+
+    LaunchedEffect(b.contenido.campo) {
+        val campoModelo = b.contenido.campo
+        val campoLimpio = if (b.kind != TiposBloque.CODIGO && campoModelo.text.contains('\n')) {
+            val sinEnter = campoModelo.text.replace("\n", "")
+            campoModelo.copy(text = sinEnter, selection = TextRange(campoModelo.selection.start.coerceAtMost(sinEnter.length)))
+        } else {
+            campoModelo
+        }
+        if (campoLocal != campoLimpio) {
+            campoLocal = campoLimpio
+        }
+    }
+
+    LaunchedEffect(campoLocal) {
+        if (campoLocal != b.contenido.campo) {
+            kotlinx.coroutines.delay(350)
+            escribir(ed, b, campoLocal)
+        }
+    }
+
+    LaunchedEffect(campoLocal.selection.end, layoutResult?.lineCount, enfocado) {
+        val layout = layoutResult ?: return@LaunchedEffect
+        if (!enfocado) return@LaunchedEffect
+        val text = campoLocal.text
+        val cursorOffset = campoLocal.selection.end.coerceIn(0, text.length)
+        val cursorRect = layout.getCursorRect(cursorOffset)
+        val extraBottomPx = with(density) { 80.dp.toPx() }
+        runCatching {
+            bringIntoViewRequester.bringIntoView(cursorRect.copy(bottom = cursorRect.bottom + extraBottomPx))
+        }
+    }
+
+    DisposableEffect(b.id) {
+        onDispose {
+            if (campoLocal != b.contenido.campo) {
+                escribir(ed, b, campoLocal)
+            }
+        }
+    }
 
     PedirFoco(ed, b, foco)
 
@@ -214,8 +269,13 @@ private fun BloqueTextoUi(ed: EstadoEditor, b: BloqueEd, numero: Int?) {
         color = if (hecho) colorTexto.copy(alpha = 0.5f) else colorTexto,
         textDecoration = if (hecho) TextDecoration.LineThrough else null,
     )
-    val transformacion = remember(b.fmt, oscuro, colorEnlace) {
-        VisualTransformation { t -> TransformedText(anotar(t.text, b.fmt, oscuro, colorEnlace, fondoCodigo), OffsetMapping.Identity) }
+    val tieneFormato = remember(b.fmt) { b.fmt.any { it.tieneEstilo } }
+    val transformacion = if (!tieneFormato) {
+        VisualTransformation.None
+    } else {
+        remember(b.fmt, oscuro, colorEnlace) {
+            VisualTransformation { t -> TransformedText(anotar(t.text, b.fmt, oscuro, colorEnlace, fondoCodigo), OffsetMapping.Identity) }
+        }
     }
     val sangria = (b.indent * 24).dp
 
@@ -236,11 +296,12 @@ private fun BloqueTextoUi(ed: EstadoEditor, b: BloqueEd, numero: Int?) {
                 TiposBloque.DESTACADO -> Icon(Icons.Filled.Lightbulb, null, Modifier.padding(end = 10.dp, top = 2.dp), tint = MaterialTheme.colorScheme.primary)
             }
             Box(Modifier.weight(1f)) {
-                if (b.texto.isEmpty()) {
+                val textoLimpio = campoLocal.text.replace("\u200B", "")
+                if (textoLimpio.isEmpty()) {
                     val pista = when {
                         b.kind == TiposBloque.TITULO -> stringResource(R.string.bloque_titulo1)
                         b.kind == TiposBloque.SUBTITULO -> stringResource(R.string.bloque_titulo2)
-                        b.kind == TiposBloque.PARRAFO && (enfocado || (ed.enfocado == null && ed.bloques.lastOrNull()?.id == b.id)) ->stringResource(R.string.pista_parrafo)
+                        b.kind == TiposBloque.PARRAFO && (enfocado || (ed.enfocado == null && ed.bloques.lastOrNull()?.id == b.id)) -> stringResource(R.string.pista_parrafo)
                         b.kind == TiposBloque.CITA -> stringResource(R.string.bloque_cita)
                         b.kind == TiposBloque.DESTACADO -> stringResource(R.string.bloque_destacado)
                         else -> ""
@@ -248,13 +309,39 @@ private fun BloqueTextoUi(ed: EstadoEditor, b: BloqueEd, numero: Int?) {
                     if (pista.isNotEmpty()) Text(pista, style = estilo, color = colorTexto.copy(alpha = 0.6f), modifier = Modifier.padding(start = 0.dp))
                 }
                 BasicTextField(
-                    value = b.contenido.campo,
-                    onValueChange = { escribir(ed, b, it) },
+                    value = campoLocal,
+                    onValueChange = { newValue ->
+                        // 1. Ignorar si el texto no cambió (solo selección/cursor/composición de Gboard)
+                        if (newValue.text == campoLocal.text) {
+                            campoLocal = newValue
+                            return@BasicTextField
+                        }
+
+                        // 2. Interceptar \n ANTES de guardarlo en campoLocal (para bloques de no-Código)
+                        if (b.kind != TiposBloque.CODIGO && newValue.text.contains('\n')) {
+                            val rawText = newValue.text.replace("\u200B", "")
+                            val idx = rawText.indexOf('\n')
+                            val antes = if (idx >= 0) rawText.substring(0, idx) else rawText
+                            val nuevoCampo = TextFieldValue(text = ZW + antes, selection = TextRange(antes.length + 1))
+                            campoLocal = nuevoCampo
+                            escribir(ed, b, newValue)
+                            return@BasicTextField
+                        }
+
+                        // Ruta normal de escritura
+                        campoLocal = newValue
+                        val text = newValue.text.replace("\u200B", "")
+                        if (text.startsWith("/") || text.contains(" /") || text.isEmpty()) {
+                            escribir(ed, b, newValue)
+                        }
+                    },
+                    onTextLayout = { layoutResult = it },
                     textStyle = estilo,
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     visualTransformation = transformacion,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Default),
                     modifier = Modifier.fillMaxWidth()
+                        .bringIntoViewRequester(bringIntoViewRequester)
                         .focusRequester(foco)
                         .onFocusChanged {
                             enfocado = it.isFocused
@@ -281,9 +368,6 @@ private fun BloqueTextoUi(ed: EstadoEditor, b: BloqueEd, numero: Int?) {
             ) { Box(Modifier.padding(10.dp)) { contenido() } }
             else -> contenido()
         }
-        val titulos = titulosBloques()
-        val opciones = if (enfocado) ed.opcionesSlash(b, titulos) else emptyList()
-        if (opciones.isNotEmpty()) MenuSlash(ed, b, opciones)
     }
 }
 
@@ -357,7 +441,7 @@ private fun descripcionBloque(tipo: String): String = when (tipo) {
 }
 
 @Composable
-private fun iconoBloque(tipo: String): androidx.compose.ui.graphics.vector.ImageVector = when (tipo) {
+internal fun iconoBloque(tipo: String): androidx.compose.ui.graphics.vector.ImageVector = when (tipo) {
     TiposBloque.TITULO -> Icons.Filled.Title
     TiposBloque.SUBTITULO -> Icons.Filled.FormatSize
     TiposBloque.PARRAFO -> Icons.AutoMirrored.Filled.ShortText
@@ -376,72 +460,60 @@ private fun iconoBloque(tipo: String): androidx.compose.ui.graphics.vector.Image
     else -> Icons.Filled.Description
 }
 
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-@Composable
-private fun MenuSlash(ed: EstadoEditor, b: BloqueEd, opciones: List<String>) {
-    val visible = androidx.compose.foundation.relocation.BringIntoViewRequester()
-    LaunchedEffect(opciones.size) { androidx.compose.runtime.withFrameNanos { }; runCatching { visible.bringIntoView() } }
-    Surface(
-        Modifier.fillMaxWidth().heightIn(max = 280.dp).padding(vertical = 4.dp).bringIntoViewRequester(visible),
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 3.dp,
-        shadowElevation = 4.dp,
-    ) {
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(vertical = 4.dp)) {
-            for (tipo in opciones) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { ed.elegirSlash(b, tipo) }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.size(32.dp),
-                    ) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Icon(
-                                iconoBloque(tipo),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            titulosBloques()[tipo] ?: tipo,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Text(
-                            descripcionBloque(tipo),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
 /** Aplica la opción elegida en el menú «/». Las que necesitan el sistema se resuelven en `AccionesEditor`. */
 fun EstadoEditor.elegirSlash(b: BloqueEd, tipo: String) {
-    b.poner("", emptyList())
+    val t = b.texto.replace("\u200B", "")
+    val slashIndex = when {
+        t.startsWith("/") -> 0
+        t.contains(" /") -> t.lastIndexOf(" /") + 1
+        else -> -1
+    }
+    val textoRestante = if (slashIndex >= 0) t.substring(0, slashIndex).trimEnd() else ""
+    b.poner(textoRestante, List(textoRestante.length) { Fmt.NINGUNO })
+    b.slashDescartado = false
+
     when (tipo) {
         TiposBloque.IMAGEN, TiposBloque.ARCHIVO, ACCION_TEXTO_FOTO -> accionPendiente = AccionPendiente(tipo, b)
         ACCION_REPASAR -> { marcarCambio(); accionPendiente = AccionPendiente(tipo, b) }
         TiposBloque.DIVISOR -> insertarTras(b, listOf(app.kiwu.android.domain.Bloque(kind = TiposBloque.DIVISOR)))
-        else -> convertir(b, tipo, "")
+        else -> convertir(b, tipo, textoRestante)
     }
+    marcarCambio()
 }
 
 /** Nombre de cada tipo de bloque en el idioma de la app (menú «/», «Convertir en…»). */
 @Composable
-internal fun titulosBloques(): Map<String, String> =
-    TiposBloque.titulos.mapValues { (_, id) -> stringResource(id) } + (ACCION_REPASAR to stringResource(R.string.slash_repasar)) +
-        (ACCION_TEXTO_FOTO to stringResource(R.string.slash_texto_foto))
+internal fun titulosBloques(): Map<String, String> {
+    val t1 = stringResource(R.string.bloque_titulo1)
+    val t2 = stringResource(R.string.bloque_titulo2)
+    val cita = stringResource(R.string.bloque_cita)
+    val des = stringResource(R.string.bloque_destacado)
+    val vin = stringResource(R.string.bloque_vinetas)
+    val num = stringResource(R.string.bloque_numerada)
+    val tar = stringResource(R.string.bloque_tareas)
+    val cod = stringResource(R.string.bloque_codigo)
+    val flash = stringResource(R.string.bloque_tarjeta)
+    val img = stringResource(R.string.bloque_imagen)
+    val arch = stringResource(R.string.bloque_archivo)
+    val div = stringResource(R.string.bloque_divisor)
+    val rep = stringResource(R.string.slash_repasar)
+    val foto = stringResource(R.string.slash_texto_foto)
+    return remember(t1, t2, cita, des, vin, num, tar, cod, flash, img, arch, div, rep, foto) {
+        mapOf(
+            TiposBloque.TITULO to t1,
+            TiposBloque.SUBTITULO to t2,
+            TiposBloque.CITA to cita,
+            TiposBloque.DESTACADO to des,
+            TiposBloque.VINETAS to vin,
+            TiposBloque.NUMERADA to num,
+            TiposBloque.TAREAS to tar,
+            TiposBloque.CODIGO to cod,
+            TiposBloque.TARJETA to flash,
+            TiposBloque.IMAGEN to img,
+            TiposBloque.ARCHIVO to arch,
+            TiposBloque.DIVISOR to div,
+            ACCION_REPASAR to rep,
+            ACCION_TEXTO_FOTO to foto,
+        )
+    }
+}

@@ -229,11 +229,19 @@ class ParColor(val claro: Color, val oscuro: Color)
 
 object ColoresNota {
     val colores = mapOf(
-        "amarillo" to ParColor(Color(0xFFFFF1A8), Color(0xFF62581A)),
-        "verde" to ParColor(Color(0xFFC7F3D6), Color(0xFF1E5233)),
-        "azul" to ParColor(Color(0xFFCBE5FF), Color(0xFF1D4570)),
-        "morado" to ParColor(Color(0xFFEADBFF), Color(0xFF4C2F70)),
-        "rosa" to ParColor(Color(0xFFFFD8E4), Color(0xFF69243C)),
+        "amarillo" to ParColor(Color(0xFF8D6E00), Color(0xFFFFE082)),
+        "verde" to ParColor(Color(0xFF2E7D32), Color(0xFF81C784)),
+        "azul" to ParColor(Color(0xFF1565C0), Color(0xFF64B5F6)),
+        "morado" to ParColor(Color(0xFF7B1FA2), Color(0xFFBA68C8)),
+        "rosa" to ParColor(Color(0xFFC2185B), Color(0xFFF48FB1)),
+    )
+
+    val fondosResaltado = mapOf(
+        "amarillo" to ParColor(Color(0xFFFFF1A8), Color(0xFF524800)),
+        "verde" to ParColor(Color(0xFFC7F3D6), Color(0xFF004D25)),
+        "azul" to ParColor(Color(0xFFCBE5FF), Color(0xFF00325B)),
+        "morado" to ParColor(Color(0xFFEADBFF), Color(0xFF38006B)),
+        "rosa" to ParColor(Color(0xFFFFD8E4), Color(0xFF4A001F)),
     )
 
     val titulos = mapOf(
@@ -245,5 +253,5 @@ object ColoresNota {
     )
 
     fun texto(f: String?, oscuro: Boolean): Color? = colores[f]?.let { if (oscuro) it.oscuro else it.claro }
-    fun resaltado(f: String?, oscuro: Boolean): Color? = colores[f]?.let { if (oscuro) it.oscuro else it.claro }
+    fun resaltado(f: String?, oscuro: Boolean): Color? = fondosResaltado[f]?.let { if (oscuro) it.oscuro else it.claro }
 }

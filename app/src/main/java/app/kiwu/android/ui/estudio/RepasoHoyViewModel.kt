@@ -4,13 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.kiwu.android.data.Repositorio
 import app.kiwu.android.domain.Repaso
-import app.kiwu.android.domain.RepasoGlobal
 import app.kiwu.android.domain.TarjetaDeNota
 import app.kiwu.android.domain.Tarjetas
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -30,12 +28,8 @@ data class RepasoHoyEstado(
  * La prioridad por examen la calcula [RepasoGlobal] con los deberes y las materias.
  */
 class RepasoHoyViewModel(private val repo: Repositorio) : ViewModel() {
-    private val refresco = MutableStateFlow(0)
 
-    val estado: StateFlow<RepasoHoyEstado> = combine(
-        repo.paginasConTarjetas, repo.cuadernos, repo.deberes, repo.materias, refresco,
-    ) { paginas, cuadernos, deberes, materias, _ ->
-        val cola = RepasoGlobal.cola(paginas, cuadernos, deberes, materias, System.currentTimeMillis())
+    val estado: StateFlow<RepasoHoyEstado> = repo.tarjetasParaRepasar.map { cola ->
         RepasoHoyEstado(
             cola = cola,
             notas = cola.distinctBy { it.paginaId }.size,
@@ -45,7 +39,7 @@ class RepasoHoyViewModel(private val repo: Repositorio) : ViewModel() {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), RepasoHoyEstado())
 
     /** Vuelve a calcular «vencidas» con la hora actual (por si el teléfono estuvo abierto desde ayer). */
-    fun refrescar() = refresco.update { it + 1 }
+    fun refrescar() = repo.refrescoRepaso.update { it + 1 }
 
     /** Contesta una tarjeta: guarda su caja nueva en la nota de la que salió. */
     fun contestar(t: TarjetaDeNota, sabida: Boolean) = viewModelScope.launch {

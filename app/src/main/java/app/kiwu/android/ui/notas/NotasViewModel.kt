@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Qué notas se ven: todas, solo las favoritas o las de un cuaderno. */
 sealed interface FiltroNotas {
@@ -34,6 +35,7 @@ data class NotasEstado(
     val busqueda: String = "",
     val paginas: List<ResumenPagina> = emptyList(),
     val todasLasPaginas: List<ResumenPagina> = emptyList(),
+    val tarjetasPendientes: Int = 0,
     val cargado: Boolean = false,
 ) {
     val cuadernoActual: Cuaderno? get() = (filtro as? FiltroNotas.DeCuaderno)?.let { f -> cuadernos.firstOrNull { it.id == f.id } }
@@ -46,7 +48,9 @@ class NotasViewModel(private val repo: Repositorio) : ViewModel() {
     private val filtro = MutableStateFlow<FiltroNotas>(FiltroNotas.Todas)
     private val busqueda = MutableStateFlow("")
 
-    val estado: StateFlow<NotasEstado> = combine(repo.cuadernos, repo.paginas, filtro, busqueda) { cuadernos, paginas, f, q ->
+    val estado: StateFlow<NotasEstado> = combine(
+        repo.cuadernos, repo.paginas, filtro, busqueda, repo.tarjetasParaRepasar,
+    ) { cuadernos, paginas, f, q, tarjetas ->
         val actual = if (f is FiltroNotas.DeCuaderno && cuadernos.none { it.id == f.id }) FiltroNotas.Todas else f
         val consulta = sinTildes(q.trim())
         val visibles = paginas.filter { p ->
@@ -57,7 +61,7 @@ class NotasViewModel(private val repo: Repositorio) : ViewModel() {
             }
             dentro && (consulta.isEmpty() || consulta in sinTildes(p.titulo) || consulta in sinTildes(p.textoPlano))
         }
-        NotasEstado(cuadernos, actual, q, visibles, paginas, cargado = true)
+        NotasEstado(cuadernos, actual, q, visibles, paginas, tarjetas.size, cargado = true)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NotasEstado())
 
     fun filtrar(f: FiltroNotas) { filtro.value = f }
@@ -115,11 +119,11 @@ class PaginaViewModel(private val repo: Repositorio, private val alcanceApp: Cor
 
     init {
         viewModelScope.launch {
-            val p = repo.pagina(id)
+            val p = withContext(kotlinx.coroutines.Dispatchers.IO) { repo.pagina(id) }
             if (p != null) {
                 titulo.value = p.titulo
                 icono.value = p.icono
-                documento = Documento.deJson(p.contenido)
+                documento = withContext(kotlinx.coroutines.Dispatchers.Default) { Documento.deJson(p.contenido) }
             }
             pagina.value = p
         }

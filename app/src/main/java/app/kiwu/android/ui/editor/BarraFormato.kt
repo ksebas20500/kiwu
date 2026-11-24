@@ -1,16 +1,24 @@
 package app.kiwu.android.ui.editor
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FormatBold
@@ -135,22 +143,77 @@ fun BarraFormato(ed: EstadoEditor, adjuntos: OrigenAdjuntos, modifier: Modifier 
     var menuInsertar by remember { mutableStateOf(false) }
     var menuMas by remember { mutableStateOf(false) }
     var menuConvertir by remember { mutableStateOf(false) }
+    var forzarMostrarBloques by remember { mutableStateOf(false) }
     val esTexto = b.kind in TiposBloque.deTexto
 
+    val titulos = titulosBloques()
+    val opcionesSlash = remember(b.texto, b.kind, b.slashDescartado) {
+        ed.opcionesSlash(b, titulos)
+    }
+    val esPorSlash = opcionesSlash.isNotEmpty()
+    val mostrarSlashBar = esPorSlash || forzarMostrarBloques
+
+    val textoInicialManual = remember(forzarMostrarBloques) {
+        if (forzarMostrarBloques) b.texto else null
+    }
+    LaunchedEffect(b.texto) {
+        if (forzarMostrarBloques && textoInicialManual != null && b.texto != textoInicialManual) {
+            forzarMostrarBloques = false
+        }
+    }
+
     Surface(modifier.fillMaxWidth().imePadding().navigationBarsPadding(), tonalElevation = 3.dp, shadowElevation = 6.dp) {
-        Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(
-                onClick = {
-                    if (b.texto.isEmpty()) b.poner("/", emptyList()) else b.poner("${b.texto}/", emptyList())
-                },
-                contentPadding = PaddingValues(horizontal = 8.dp),
-            ) {
-                Text("+ Bloque", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        Column {
+            AnimatedVisibility(visible = mostrarSlashBar) {
+                Column {
+                    val listaOpciones = if (opcionesSlash.isNotEmpty()) opcionesSlash else (TiposBloque.todos + ACCION_TEXTO_FOTO + ACCION_REPASAR).filter { it != TiposBloque.PARRAFO }
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp),
+                    ) {
+                        items(listaOpciones, key = { it }) { tipo ->
+                            FilterChip(
+                                selected = false,
+                                onClick = {
+                                    forzarMostrarBloques = false
+                                    ed.aplicarOpcionBloque(b, tipo, esPorSlash)
+                                },
+                                label = { Text(titulos[tipo] ?: tipo, style = MaterialTheme.typography.labelMedium) },
+                                leadingIcon = {
+                                    Icon(
+                                        iconoBloque(tipo),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurface,
+                                ),
+                            )
+                        }
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                }
             }
-            VerticalDivider(
-                modifier = Modifier.height(24.dp).padding(horizontal = 2.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-            )
+
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                TextButton(
+                    onClick = {
+                        b.slashDescartado = false
+                        forzarMostrarBloques = !forzarMostrarBloques
+                    },
+                    contentPadding = PaddingValues(horizontal = 8.dp),
+                ) {
+                    Text("+ Bloque", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                }
+                VerticalDivider(
+                    modifier = Modifier.height(24.dp).padding(horizontal = 2.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                )
             if (esTexto) {
                 Boton(Icons.Filled.FormatBold, stringResource(R.string.negrita), ed.activo(b, "b")) { ed.alternarFormato("b") }
                 Boton(Icons.Filled.FormatItalic, stringResource(R.string.cursiva), ed.activo(b, "i")) { ed.alternarFormato("i") }
@@ -208,6 +271,7 @@ fun BarraFormato(ed: EstadoEditor, adjuntos: OrigenAdjuntos, modifier: Modifier 
             }
         }
     }
+}
 
     if (dialogoEnlace) DialogoEnlace(ed, b, adjuntos) { dialogoEnlace = false }
 }
