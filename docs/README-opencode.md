@@ -15,6 +15,7 @@
 | [**0.9.0**](versiones/android-0.9.0.md) | `33` | Inicio, estantería de cuadernos, portadas, mejoras de editor y Ajustes. Commit `488e7a7`. | **Room v13** (migraciones acumuladas desde v9). |
 | [**0.9.1**](versiones/android-0.9.1.md) | — | Correcciones de «Para hoy» y eventos externos, menús contextuales para editar y eliminar, y rediseño de Ajustes. Atribución según las notas locales. | **Room v13**. |
 | [**0.9.2**](versiones/android-0.9.2.md) | `35` | Arrastre de listas, barra horizontal de comandos, mejoras del cursor y cola común de repaso. Atribución según las notas locales y el código actual. | **Room v13**. |
+| [**0.9.3**](versiones/android-0.9.3.md) | `36` | Widgets translúcidos, agenda lateral adaptable, captura rápida con prioridad y descripción, y carpetas visibles en vistas generales. | **Room v13**. |
 
 ---
 

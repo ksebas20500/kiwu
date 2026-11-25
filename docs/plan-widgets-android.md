@@ -10,6 +10,8 @@ Son tres widgets de pantalla de inicio con **Jetpack Glance**:
 | **Horario** | Tarjeta «Ahora / Siguiente» (clase en curso o la próxima, con horas, aula y color) y las clases de hoy con sus puntos de urgencia. Configurable: todos los horarios o uno. Tocar abre la pestaña Horario. |
 | **Nota rápida** | Botón «+ Nueva» (crea la nota en el cuaderno elegido) y las notas más recientes del cuaderno. Tocar una nota la abre. Configurable: todas las notas o un cuaderno. |
 
+La agenda del widget Calendario tiene una mejora posterior para [mostrar la carpeta de cada tarea](plan-carpetas-agenda-widget.md).
+
 ## Decisiones
 
 - **Glance 1.2** (`androidx.glance:glance-appwidget`): el resto de la app ya es Compose.
@@ -41,6 +43,28 @@ Pendiente de probar en un teléfono: la alarma de refresco después de reiniciar
 
 ## Más adelante
 
-- Widget *Calendario de deberes* (mes con puntos), con RemoteViews dedicado si Glance no da para una cuadrícula cómoda.
 - Widget de la racha.
 - Elegir un día distinto de hoy en el widget de Horario (o un widget de semana).
+
+## Rediseño de los cuatro widgets · noviembre de 2026
+
+| Widget | Comportamiento implementado |
+| --- | --- |
+| Deberes | La cabecera muestra el filtro activo y el total de tareas pendientes de ese alcance. Cada fila muestra la carpeta antes de la lista y la fecha. El botón de añadir, el control de completar y la zona que abre la tarea tienen un objetivo táctil de 48 dp de alto. |
+| Horario | La clase en curso o siguiente se destaca arriba. Si esa sesión es de hoy, se omite de «Clases de hoy». Al mostrar todos los horarios, cada clase identifica su horario. El contador indica explícitamente que las cifras se refieren a faltas. |
+| Calendario | Mantiene la cuadrícula mensual de siete columnas en todos los tamaños, con flechas de 48 dp para cambiar de mes y un toque en el encabezado para volver al mes actual. Cada día abre su agenda. Según el espacio, las celdas muestran títulos abreviados o conteos. La cuadrícula aprovecha todo el ancho y las celdas pueden medir menos de 48 dp en tamaños compactos. |
+| Nota rápida | «Nueva» y las filas tienen 48 dp de alto. En «Todas las notas», la cabecera muestra el cuaderno que recibirá la nota nueva cuando ya existe uno. El título y el extracto de cada nota se muestran en una línea cada uno. |
+
+La agenda del Calendario, Deberes y el selector de Deberes comparten la resolución de la carpeta a partir de los IDs de la tarea y la lista. Por ejemplo, «Revisión del proyecto» se distingue entre **Universidad › Proyecto integrador** y **Cursos › Proyecto de integración**. Las listas sueltas o con una carpeta ausente muestran solo el nombre de la lista. La apertura y la finalización se resuelven por ID de tarea. [Detalle del caso reportado](plan-carpetas-agenda-widget.md)
+
+La configuración agrupa filtros rápidos, carpetas y listas en Deberes, presenta un único control de selección por fila y guarda la elección por instancia. La pantalla informa si falla la lectura o el guardado. La agenda aplica los márgenes del sistema y del teclado, carga los elementos externos en segundo plano y oculta el teclado al abrir el selector de lista o de fecha u hora. Los cambios utilizan el esquema de datos existente.
+
+Tras revisar las capturas del launcher, se recuperó la cuadrícula mensual en tamaños compactos. Los cuatro widgets usan una superficie gris cálida y un acento arena en modo oscuro. El modo claro conserva su paleta.
+
+La prueba focalizada `DatosWidgetsTest` pasó antes de los últimos ajustes. La validación de la versión final en el launcher, incluidos los tamaños, el contraste y TalkBack, queda pendiente.
+
+### Captura rápida y agenda lateral
+
+Deberes y Calendario permiten crear tareas desde una tarjeta flotante con título, descripción opcional, fecha, prioridad y destino. La descripción se guarda en la nota de la tarea. Calendario vuelve a la agenda del día al guardar y Deberes cierra la tarjeta. El borrador se conserva si falla el guardado.
+
+Los cuatro widgets usan fondos translúcidos con una opacidad inicial del 84 % en oscuro y del 90 % en claro. El Calendario reparte el ancho entre la cuadrícula y la agenda, separadas por una línea discreta. Con la escala de texto estándar, el diseño lateral aparece desde 297 dp de ancho y requiere entre 160 y 176 dp de alto para meses de cinco o seis semanas. En tamaños compactos, el mes mantiene el ancho completo y tocar una fecha abre su agenda. En la vista amplia, la selección y el mes visible se guardan por instancia del widget.

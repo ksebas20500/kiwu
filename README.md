@@ -10,7 +10,7 @@
 
 **Kiwu** es una aplicación nativa de Android desarrollada en **Kotlin**, **Jetpack Compose** y **Room**, diseñada específicamente para estudiantes universitarios y escolares. Te ayuda a gestionar tus tareas, horarios de clases, notas enriquecidas, temporizador Pomodoro y calificaciones predictivas en un solo lugar, con almacenamiento 100% privado en tu dispositivo y soporte para widgets de pantalla de inicio.
 
-Versión actual: **0.7.8** · Requiere Android 8.0 (API 26) o superior.
+Versión actual: [**0.9.3**](docs/versiones/android-0.9.3.md) · Requiere Android 8.0 (API 26) o superior.
 
 ---
 
@@ -24,7 +24,7 @@ Versión actual: **0.7.8** · Requiere Android 8.0 (API 26) o superior.
 | **📓 Notas Enriquecidas** | Cuadernos con páginas en formato Markdown / bloques con menú `/`, formato en línea, bloques de código, imágenes, archivos adjuntos y generación automática de tarjetas de repaso. |
 | **🎓 Calificaciones Predictivas** | Sistema de cálculo de notas con nota acumulada, promedio de lo calificado, barra de progreso segmentada y cálculo automático de la nota necesaria para aprobar en el porcentaje restante. |
 | **⏱️ Estudio y Pomodoro** | Temporizador de estudio con cuenta atrás persistente en notificaciones, pausa y reanudación, descansos, modo «No molestar» automático y estadísticas de estudio semanal. |
-| **📊 Widgets de Inicio** | Cuatro widgets interactivos (Deberes, Horario, Nota rápida y Calendario) para consultar y completar tareas sin abrir la app. |
+| **📊 Widgets de Inicio** | Cuatro widgets interactivos para consultar el horario y la agenda, completar tareas y crear notas rápidas. Deberes y la agenda muestran la carpeta de cada lista. [Documentación de widgets](docs/plan-widgets-android.md). |
 | **🏫 Faltas de Clase** | Control de faltas e inasistencias por materia con alertas de límite máximo y justificación de faltas. |
 | **🌐 Idiomas** | Disponible en Español (base), Inglés y Portugués. |
 
@@ -63,7 +63,7 @@ app/src/main/java/app/kiwu/android/
   data/      Room, repositorio local, cifrado y copias de seguridad (.kiwu.json)
   notify/    Alarmas de sistema, notificaciones con cronómetro y reprogramación
   ui/        Pantallas de Jetpack Compose (tareas, calendario, notas, editor, estudio y ajustes)
-  widgets/   Widgets de inicio con Glance (deberes, horario y notas rápidas)
+  widgets/   Widgets de inicio con Glance (deberes, horario, notas rápidas y calendario)
 app/src/test/   Pruebas unitarias y de integración (Robolectric y JUnit)
 ```
 
