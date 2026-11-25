@@ -119,6 +119,7 @@ fun ListaTareas(vm: TareasViewModel, estado: TareasEstado, alCrearLista: () -> U
                                     d, if (mostrarLista) estado.nombres[d.materiaId] else null, estado.ahora, vm.reglas,
                                     alAbrir = { alAbrir(d.id) }, alMarcar = { vm.marcar(d.id, it) },
                                     alEliminar = { vm.eliminarTarea(d.id) }, alPosponer = { vm.posponer(d.id) },
+                                    nombreCarpeta = estado.nombreCarpetaDe(d),
                                 )
                             }
                         }
@@ -132,6 +133,7 @@ fun ListaTareas(vm: TareasViewModel, estado: TareasEstado, alCrearLista: () -> U
                                 d, if (mostrarLista) estado.nombres[d.materiaId] else null, estado.ahora, vm.reglas,
                                 alAbrir = { alAbrir(d.id) }, alMarcar = { vm.marcar(d.id, it) },
                                 alEliminar = { vm.eliminarTarea(d.id) }, alPosponer = { vm.posponer(d.id) },
+                                nombreCarpeta = estado.nombreCarpetaDe(d),
                             )
                         }
                     }
@@ -163,6 +165,7 @@ fun ListaTareas(vm: TareasViewModel, estado: TareasEstado, alCrearLista: () -> U
                                 d, if (mostrarLista) estado.nombres[d.materiaId] else null, estado.ahora, vm.reglas,
                                 alAbrir = { alAbrir(d.id) }, alMarcar = { vm.marcar(d.id, it) },
                                 alEliminar = { vm.eliminarTarea(d.id) }, alPosponer = { vm.posponer(d.id) },
+                                nombreCarpeta = estado.nombreCarpetaDe(d),
                             )
                         }
                     }

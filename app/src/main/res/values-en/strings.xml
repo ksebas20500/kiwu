@@ -900,4 +900,21 @@
     <string name="saludo_manana">Good morning</string>
     <string name="saludo_tarde">Good afternoon</string>
     <string name="saludo_noche">Good evening</string>
+    <string name="w_agenda_hoy">Today’s agenda</string>
+    <plurals name="w_fecha_elementos">
+        <item quantity="one">%1$s, %2$d item</item>
+        <item quantity="other">%1$s, %2$d items</item>
+    </plurals>
+    <string name="w_carpetas">Folders</string>
+    <string name="w_listas">Lists</string>
+    <string name="w_error_config">Couldn’t load or save widget settings.</string>
+    <string name="w_reintentar">Retry</string>
+    <string name="w_completar_tarea">Complete %1$s</string>
+    <string name="w_error_captura">Could not save. Try again.</string>
+    <string name="w_guardando_captura">Saving…</string>
+    <string name="w_descartar_captura">Discard draft?</string>
+    <string name="w_descartar">Discard</string>
+    <string name="w_descripcion_tarea">Description (optional)</string>
+    <string name="w_elegir_lista">Choose a list</string>
+    <string name="w_lista_seleccionada">Selected list</string>
 </resources>

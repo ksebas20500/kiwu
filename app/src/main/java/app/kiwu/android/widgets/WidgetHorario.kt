@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
+import androidx.glance.ImageProvider
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.LocalContext
@@ -31,13 +32,13 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
+import androidx.glance.text.FontFamily
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import app.kiwu.android.KiwuApp
 import app.kiwu.android.domain.ContadorFaltas
-import app.kiwu.android.domain.EstadoFaltas
 import app.kiwu.android.domain.ReglasHorario
 import app.kiwu.android.domain.UrgenciaTarea
 import kotlinx.coroutines.flow.first
@@ -72,45 +73,53 @@ class HorarioWidgetReceiver : GlanceAppWidgetReceiver() {
 private fun ContenidoHorario(datos: DatosHorario, colores: ColoresWidget) {
     val contexto = LocalContext.current
     val alto = LocalSize.current.height
+    val destacadaHoy = datos.enCurso ?: datos.siguiente?.takeIf { datos.diasSiguiente == 0 }
+    val otrasClases = datos.hoy.filterNot { it.id == destacadaHoy?.id }
     val maximo = when {
         alto < 140.dp -> 0
         alto < 200.dp -> 2
         alto < 260.dp -> 4
         else -> 7
     }
-    Column(
-        GlanceModifier.fillMaxSize().cornerRadius(18.dp).background(colores.fondo).padding(14.dp)
-            .clickable(actionStartActivity(intencionDeApertura(contexto, seccion = "horario"))),
+    Box(
+        GlanceModifier.fillMaxSize()
+            .background(ImageProvider(R.drawable.widget_borde_cristal))
+            .padding(1.dp),
     ) {
-        Row(GlanceModifier.fillMaxWidth()) {
-            Text(textoWidget(R.string.horario), style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = colores.texto))
-            if (datos.nombre != null) {
-                Text(
-                    "  ·  ${datos.nombre}",
-                    style = TextStyle(fontSize = 13.sp, color = colores.secundario),
-                    maxLines = 1,
-                )
+        Column(
+            GlanceModifier.fillMaxSize().cornerRadius(17.dp).background(colores.fondo).padding(14.dp)
+                .clickable(actionStartActivity(intencionDeApertura(contexto, seccion = "horario"))),
+        ) {
+            Row(GlanceModifier.fillMaxWidth()) {
+                Text(textoWidget(R.string.horario), style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = colores.texto))
+                if (datos.nombre != null) {
+                    Text(
+                        "  ·  ${datos.nombre}",
+                        style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 13.sp, color = colores.secundario),
+                        maxLines = 1,
+                    )
+                }
             }
-        }
-        Spacer(GlanceModifier.height(8.dp))
-        if (!datos.hayHorarios) {
-            AvisoHorario(textoWidget(R.string.w_crea_horario), colores)
-        } else {
-            when {
-                datos.enCurso != null -> TarjetaClase(datos.enCurso, textoWidget(R.string.w_ahora), colores)
-                datos.siguiente != null -> TarjetaClase(datos.siguiente, textoWidget(R.string.w_siguiente), colores, datos.diasSiguiente)
-                else -> AvisoHorario(textoWidget(R.string.w_sin_mas_clases), colores)
-            }
-            if (maximo > 0) {
-                Spacer(GlanceModifier.height(10.dp))
-                Text(textoWidget(R.string.w_clases_hoy), style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, color = colores.secundario))
-                Spacer(GlanceModifier.height(6.dp))
-                if (datos.hoy.isEmpty()) {
-                    AvisoHorario(textoWidget(R.string.w_hoy_sin_clases), colores)
-                } else {
-                    LazyColumn(GlanceModifier.fillMaxSize()) {
-                        items(datos.hoy.take(maximo), itemId = { it.id.hashCode().toLong() }) { clase ->
-                            FilaClaseWidget(clase, colores)
+            Spacer(GlanceModifier.height(8.dp))
+            if (!datos.hayHorarios) {
+                AvisoHorario(textoWidget(R.string.w_crea_horario), colores)
+            } else {
+                when {
+                    datos.enCurso != null -> TarjetaClase(datos.enCurso, textoWidget(R.string.w_ahora), colores)
+                    datos.siguiente != null -> TarjetaClase(datos.siguiente, textoWidget(R.string.w_siguiente), colores, datos.diasSiguiente)
+                    else -> AvisoHorario(textoWidget(R.string.w_sin_mas_clases), colores)
+                }
+                if (maximo > 0 && (otrasClases.isNotEmpty() || datos.hoy.isEmpty())) {
+                    Spacer(GlanceModifier.height(10.dp))
+                    Text(textoWidget(R.string.w_clases_hoy), style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = colores.secundario))
+                    Spacer(GlanceModifier.height(6.dp))
+                    if (datos.hoy.isEmpty()) {
+                        AvisoHorario(textoWidget(R.string.w_hoy_sin_clases), colores)
+                    } else {
+                        LazyColumn(GlanceModifier.fillMaxSize()) {
+                            items(otrasClases.take(maximo), itemId = { it.id.hashCode().toLong() }) { clase ->
+                                FilaClaseWidget(clase, colores)
+                            }
                         }
                     }
                 }
@@ -121,85 +130,88 @@ private fun ContenidoHorario(datos: DatosHorario, colores: ColoresWidget) {
 
 @Composable
 private fun TarjetaClase(clase: FilaClase, etiqueta: String, colores: ColoresWidget, dias: Int = 0) {
-    val texto = ColorProvider(clase.color.texto)
-    Column(
-        GlanceModifier.fillMaxWidth().cornerRadius(12.dp).background(colorDeClase(clase.color)).padding(horizontal = 12.dp, vertical = 9.dp),
+    val contexto = LocalContext.current
+    Row(
+        GlanceModifier.fillMaxWidth().cornerRadius(12.dp)
+            .background(ColorProvider(clase.color.fondo.copy(alpha = 0.14f)))
+            .padding(horizontal = 8.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(etiqueta, style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Bold, color = texto), modifier = GlanceModifier.defaultWeight())
-            clase.faltas?.let { f ->
-                if (app.kiwu.android.domain.ReglasFaltas.seMuestra(f)) {
-                    FaltasWidget(f, colores)
+        Column(GlanceModifier.defaultWeight()) {
+            Text(etiqueta, style = estiloHorario(10, colores.secundario, FontWeight.Bold), maxLines = 1)
+            Text(clase.titulo, style = estiloHorario(15, colores.texto, FontWeight.Bold), maxLines = 1)
+            Text(detalle(clase, dias), style = estiloHorario(12, colores.secundario), maxLines = 1)
+        }
+        if (clase.aula.isNotBlank() || clase.faltas != null) {
+            Column(GlanceModifier.width(76.dp), horizontalAlignment = Alignment.End) {
+                if (clase.aula.isNotBlank()) PastillaHorario(clase.aula, colores.texto, colores)
+                clase.faltas?.let {
+                    if (clase.aula.isNotBlank()) Spacer(GlanceModifier.height(3.dp))
+                    PastillaHorario(textoFaltas(it, contexto), colores.texto, colores)
                 }
             }
         }
-        Text(
-            clase.titulo,
-            style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = texto),
-            maxLines = 1,
-        )
-        Text(
-            detalle(clase, dias),
-            style = TextStyle(fontSize = 12.sp, color = texto),
-            maxLines = 1,
-        )
     }
 }
 
-/** Día de la próxima clase, solo cuando no es hoy («Mañana», «Sáb»…). */
-private fun diaDeLaClase(dias: Int, diaSemana: Int, manana: String): String? = when {
-    dias <= 0 -> null
-    dias == 1 -> manana
-    else -> app.kiwu.android.ui.Fechas.diaCorto(diaSemana)
-}
-
 @Composable
-private fun detalle(clase: FilaClase, dias: Int = 0): String = listOfNotNull(
-    diaDeLaClase(dias, clase.diaSemana, textoWidget(R.string.manana)),
+private fun detalle(clase: FilaClase, dias: Int = 0, incluirAula: Boolean = false): String = listOfNotNull(
+    when {
+        dias <= 0 -> null
+        dias == 1 -> textoWidget(R.string.manana)
+        else -> app.kiwu.android.ui.Fechas.diaCorto(clase.diaSemana)
+    },
     "${ReglasHorario.hora(clase.inicioMin)} – ${ReglasHorario.hora(clase.finMin)}",
-    clase.aula.takeIf { it.isNotBlank() },
+    clase.aula.takeIf { incluirAula && it.isNotBlank() },
     clase.horario,
 ).joinToString(" · ")
 
 @Composable
 private fun FilaClaseWidget(clase: FilaClase, colores: ColoresWidget) {
-    Row(GlanceModifier.fillMaxWidth().padding(vertical = 4.dp)) {
-        Box(GlanceModifier.width(4.dp).height(30.dp).cornerRadius(2.dp).background(colorDeClase(clase.color))) { }
-        Column(GlanceModifier.defaultWeight().padding(start = 8.dp)) {
-            Text(
-                clase.titulo,
-                style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium, color = colores.texto),
-                maxLines = 1,
-            )
-            Text(
-                detalle(clase),
-                style = TextStyle(fontSize = 12.sp, color = colores.secundario),
-                maxLines = 1,
-            )
+    val contexto = LocalContext.current
+    val alpha = if (clase.pasada) 0.55f else 1f
+    val texto = ColorProvider(colores.texto.getColor(contexto).copy(alpha = alpha))
+    val secundario = ColorProvider(colores.secundario.getColor(contexto).copy(alpha = alpha))
+    val tonoMateria = clase.colorMateria?.let {
+        if (colores.oscuro) it.fondo else it.texto
+    } ?: colores.acento.getColor(contexto)
+    Row(GlanceModifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(GlanceModifier.width(3.dp).height(34.dp).cornerRadius(2.dp)
+            .background(ColorProvider(tonoMateria.copy(alpha = alpha)))) { }
+        Column(GlanceModifier.defaultWeight().padding(horizontal = 8.dp)) {
+            Text(clase.titulo, style = estiloHorario(14, texto, FontWeight.Medium), maxLines = 1)
+            Text(detalle(clase, incluirAula = true), style = estiloHorario(12, secundario), maxLines = 1)
         }
-        clase.faltas?.let { FaltasWidget(it, colores) }
-        if (clase.urgencia != null) {
-            PuntoUrgencia(clase.urgencia, colores)
+        clase.faltas?.takeIf { it.maximo != null }?.let {
+            Box(GlanceModifier.width(76.dp), contentAlignment = Alignment.CenterEnd) {
+                PastillaHorario(textoFaltas(it, contexto), secundario, colores)
+            }
+        }
+        clase.urgencia?.let {
+            Spacer(GlanceModifier.width(4.dp))
+            PuntoUrgencia(it, colores)
         }
     }
 }
 
-/** Contador de faltas de la clase: las que quedan (o las que lleva, sin máximo), con el color del estado. */
+private fun textoFaltas(f: ContadorFaltas, contexto: Context): String =
+    f.quedan?.takeIf { it > 0 }?.let {
+        contexto.resources.getQuantityString(R.plurals.faltas_n, it, it)
+    } ?: app.kiwu.android.ui.horario.textoCortoFaltas(f, contexto.resources)
+
 @Composable
-private fun FaltasWidget(f: ContadorFaltas, colores: ColoresWidget) {
-    val color = when (f.estado) {
-        EstadoFaltas.Superado -> colores.rojo
-        EstadoFaltas.Aviso -> ColorProvider(Color(0xFFF9A825))
-        EstadoFaltas.Tranquilo -> ColorProvider(Color(0xFF2E7D32))
-        EstadoFaltas.SinLimite -> colores.secundario
-    }
+private fun PastillaHorario(etiqueta: String, color: ColorProvider, colores: ColoresWidget) {
+    val fondo = colores.texto.getColor(LocalContext.current).copy(alpha = 0.09f)
     Text(
-        app.kiwu.android.ui.horario.textoCortoFaltas(f, androidx.glance.LocalContext.current.resources),
-        GlanceModifier.padding(end = 6.dp),
-        style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, color = color),
+        etiqueta,
+        GlanceModifier.cornerRadius(8.dp).background(ColorProvider(fondo)).padding(horizontal = 5.dp, vertical = 2.dp),
+        style = estiloHorario(10, color, FontWeight.Medium),
         maxLines = 1,
     )
 }
+
+private fun estiloHorario(tamano: Int, color: ColorProvider, peso: FontWeight = FontWeight.Normal) =
+    TextStyle(fontFamily = FontFamily.SansSerif, fontSize = tamano.sp, color = color, fontWeight = peso)
 
 @Composable
 private fun PuntoUrgencia(urgencia: UrgenciaTarea, colores: ColoresWidget) {
@@ -213,5 +225,5 @@ private fun PuntoUrgencia(urgencia: UrgenciaTarea, colores: ColoresWidget) {
 
 @Composable
 private fun AvisoHorario(texto: String, colores: ColoresWidget) {
-    Text(texto, style = TextStyle(fontSize = 14.sp, color = colores.secundario), maxLines = 2)
+    Text(texto, style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 14.sp, color = colores.secundario), maxLines = 2)
 }

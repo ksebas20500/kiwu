@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -242,6 +244,7 @@ private fun TarjetaTarea(
 }
 
 /** Aspecto de una tarjeta de tarea (la misma que se ve en la columna y flotando mientras se arrastra). */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TarjetaBase(d: Deber, estado: TareasEstado, color: ColorPastel?, vm: TareasViewModel, conMenu: Boolean, modifier: Modifier = Modifier) {
     var menu by remember { mutableStateOf(false) }
@@ -255,9 +258,10 @@ private fun TarjetaBase(d: Deber, estado: TareasEstado, color: ColorPastel?, vm:
                     textDecoration = if (d.completado) TextDecoration.LineThrough else null,
                 )
                 if (d.fechaEntrega != null || estado.materiaActual == null) {
-                    Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    FlowRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         ChipFecha(d, estado.ahora, vm.reglas)
                         if (estado.materiaActual == null) estado.nombres[d.materiaId]?.let { Chip(it) }
+                        estado.nombreCarpetaDe(d)?.let { EtiquetaCarpeta(it) }
                     }
                 }
             }

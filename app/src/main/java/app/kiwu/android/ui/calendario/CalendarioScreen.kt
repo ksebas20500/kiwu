@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -42,12 +44,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -69,6 +73,7 @@ import app.kiwu.android.ui.tareas.TarjetaEventoAgenda
 import app.kiwu.android.ui.tareas.TareasEstado
 import app.kiwu.android.ui.tareas.TareasViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.DayOfWeek
 import java.time.Instant
@@ -122,89 +127,113 @@ fun CalendarioScreen(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String
             .groupBy { Instant.ofEpochMilli(it.fechaEntrega!!).atZone(zona).toLocalDate() }
     }
 
-    Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            // Selector de mes y botón Hoy
-            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    Fechas.mes(primeroDelMes).replaceFirstChar { it.uppercase() },
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f).padding(start = 4.dp)
-                )
-                IconButton(onClick = { mes = primeroDelMes.minusMonths(1).toString() }) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(R.string.mes_anterior))
-                }
-                TextButton(onClick = { mes = hoy.withDayOfMonth(1).toString(); seleccionado = hoy.toString() }) {
-                    Text(stringResource(R.string.hoy), fontWeight = FontWeight.Bold)
-                }
-                IconButton(onClick = { mes = primeroDelMes.plusMonths(1).toString() }) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, stringResource(R.string.mes_siguiente))
-                }
-            }
+    val tareasDelDia = remember(estado.deberes, diaSel) { vm.reglas.delDia(estado.deberes, diaSel) }
+    val pendientesDia = tareasDelDia.filter { !it.completado }
+    val completadosDia = tareasDelDia.filter { it.completado }
+    val externosDia = externosPorDia[diaSel].orEmpty()
+    val nombres = remember(estado.materias) { estado.nombres }
+    val desplazamiento = rememberLazyListState()
+    val alcance = rememberCoroutineScope()
+    val espacioAgenda = with(LocalDensity.current) { 96.dp.roundToPx() }
 
-            if (!tienePermiso) {
-                Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 4.dp), horizontalArrangement = Arrangement.Center) {
-                    Surface(
-                        onClick = { launcherPermiso.launch(Manifest.permission.READ_CALENDAR) },
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                    ) {
-                        Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.Event, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
-                            Text(
-                                stringResource(R.string.ver_google_calendar),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.padding(start = 6.dp),
-                            )
+    fun mostrarAgenda() {
+        val vista = desplazamiento.layoutInfo
+        val encabezado = vista.visibleItemsInfo.firstOrNull { it.key == "agenda" }
+        if (encabezado == null || vista.viewportEndOffset - encabezado.offset - encabezado.size < espacioAgenda) {
+            alcance.launch { desplazamiento.animateScrollToItem(1) }
+        }
+    }
+
+    Column(Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            state = desplazamiento,
+            contentPadding = PaddingValues(bottom = 8.dp),
+        ) {
+            item(key = "mes") {
+                Column {
+                    // Selector de mes y botón Hoy
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            Fechas.mes(primeroDelMes).replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f).padding(start = 4.dp)
+                        )
+                        IconButton(onClick = { mes = primeroDelMes.minusMonths(1).toString() }) {
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(R.string.mes_anterior))
+                        }
+                        TextButton(onClick = {
+                            mes = hoy.withDayOfMonth(1).toString()
+                            seleccionado = hoy.toString()
+                            mostrarAgenda()
+                        }) {
+                            Text(stringResource(R.string.hoy), fontWeight = FontWeight.Bold)
+                        }
+                        IconButton(onClick = { mes = primeroDelMes.plusMonths(1).toString() }) {
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, stringResource(R.string.mes_siguiente))
                         }
                     }
-                }
-            }
 
-            // Días de la semana
-            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp)) {
-                for (d in (1..7).map { Fechas.letraDia(it) }) {
-                    Text(d, Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-
-            // Rejilla mensual compacta sin bordes rígidos
-            val inicio = inicioDeRejilla(primeroDelMes)
-            val filas = (primeroDelMes.dayOfWeek.value - 1 + primeroDelMes.lengthOfMonth() + 6) / 7
-            Column(Modifier.fillMaxWidth().padding(horizontal = 6.dp)) {
-                for (fila in 0 until filas) {
-                    Row(Modifier.height(ALTO_FILA).fillMaxWidth()) {
-                        for (col in 0 until 7) {
-                            val dia = inicio.plusDays((fila * 7 + col).toLong())
-                            CeldaDia(
-                                dia = dia,
-                                delMes = dia.month == primeroDelMes.month,
-                                esHoy = dia == hoy,
-                                seleccionada = dia == diaSel,
-                                tareas = porDia[dia].orEmpty().sortedBy { it.fechaEntrega },
-                                eventosExternos = externosPorDia[dia].orEmpty(),
-                                modifier = Modifier.weight(1f).fillMaxHeight(),
-                                alElegir = {
-                                    seleccionado = dia.toString()
-                                    if (dia.month != primeroDelMes.month) mes = dia.withDayOfMonth(1).toString()
-                                },
-                            )
+                    if (!tienePermiso) {
+                        Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 4.dp), horizontalArrangement = Arrangement.Center) {
+                            Surface(
+                                onClick = { launcherPermiso.launch(Manifest.permission.READ_CALENDAR) },
+                                modifier = Modifier.heightIn(min = 48.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                            ) {
+                                Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Filled.Event, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                                    Text(
+                                        stringResource(R.string.ver_google_calendar),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        modifier = Modifier.padding(start = 6.dp),
+                                    )
+                                }
+                            }
                         }
                     }
+
+                    // Días de la semana
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp)) {
+                        for (d in (1..7).map { Fechas.letraDia(it) }) {
+                            Text(d, Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+
+                    // Rejilla mensual compacta sin bordes rígidos
+                    val inicio = inicioDeRejilla(primeroDelMes)
+                    val filas = (primeroDelMes.dayOfWeek.value - 1 + primeroDelMes.lengthOfMonth() + 6) / 7
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 6.dp)) {
+                        for (fila in 0 until filas) {
+                            Row(Modifier.height(ALTO_FILA).fillMaxWidth()) {
+                                for (col in 0 until 7) {
+                                    val dia = inicio.plusDays((fila * 7 + col).toLong())
+                                    CeldaDia(
+                                        dia = dia,
+                                        delMes = dia.month == primeroDelMes.month,
+                                        esHoy = dia == hoy,
+                                        seleccionada = dia == diaSel,
+                                        tareas = porDia[dia].orEmpty().sortedBy { it.fechaEntrega },
+                                        eventosExternos = externosPorDia[dia].orEmpty(),
+                                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                                        alElegir = {
+                                            seleccionado = dia.toString()
+                                            if (dia.month != primeroDelMes.month) mes = dia.withDayOfMonth(1).toString()
+                                            mostrarAgenda()
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(Modifier.padding(top = 8.dp, bottom = 4.dp))
                 }
             }
-
-            HorizontalDivider(Modifier.padding(top = 8.dp, bottom = 4.dp))
-
-            // Agenda del Día Seleccionado
-            val tareasDelDia = remember(estado.deberes, diaSel) { vm.reglas.delDia(estado.deberes, diaSel) }
-            val pendientesDia = tareasDelDia.filter { !it.completado }
-            val completadosDia = tareasDelDia.filter { it.completado }
-            val externosDia = externosPorDia[diaSel].orEmpty()
-
-            Column(Modifier.fillMaxWidth().weight(1f)) {
+            item(key = "agenda") {
                 Text(
                     fechaCorta(diaSel.atStartOfDay(zona).toInstant().toEpochMilli(), estado.ahora, zona)
                         .replaceFirstChar { it.uppercase() },
@@ -212,80 +241,77 @@ fun CalendarioScreen(vm: TareasViewModel, estado: TareasEstado, alAbrir: (String
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
+            }
+            if (tareasDelDia.isEmpty() && externosDia.isEmpty()) {
+                item {
+                    Text(
+                        stringResource(R.string.sin_entregas_dia),
+                        Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
 
-                LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(bottom = 88.dp)) {
-                    if (tareasDelDia.isEmpty() && externosDia.isEmpty()) {
-                        item {
-                            Text(
-                                stringResource(R.string.sin_entregas_dia),
-                                Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+            // Eventos de Google Calendar / Teléfono
+            items(externosDia, key = { "ext-${it.id}-${it.inicio}" }) { ext ->
+                TarjetaEventoExternoAgenda(ext, zona)
+            }
+
+            // Tareas pendientes y eventos de Kiwu
+            items(pendientesDia, key = { it.id }) { d ->
+                if (d.esEvento) {
+                    TarjetaEventoAgenda(d, nombres[d.materiaId], alAbrir = { alAbrir(d.id) })
+                } else {
+                    FilaTarea(
+                        d, nombres[d.materiaId], estado.ahora, vm.reglas,
+                        alAbrir = { alAbrir(d.id) }, alMarcar = { vm.marcar(d.id, it) },
+                        alEliminar = { vm.eliminarTarea(d.id) }, alPosponer = { vm.posponer(d.id) },
+                        nombreCarpeta = estado.nombreCarpetaDe(d),
+                    )
+                }
+            }
+
+            // Sección completadas plegable
+            if (completadosDia.isNotEmpty()) {
+                item(key = "hdr-completadas-dia") {
+                    Row(
+                        Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { completadasVisibles = !completadasVisibles }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(if (completadasVisibles) Icons.Filled.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
+                        Text(
+                            stringResource(R.string.completadas),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(start = 6.dp)
+                        )
+                        Text(
+                            completadosDia.size.toString(),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
                     }
-
-                    // Eventos de Google Calendar / Teléfono
-                    items(externosDia, key = { "ext-${it.id}" }) { ext ->
-                        TarjetaEventoExternoAgenda(ext, zona)
-                    }
-
-                    // Tareas pendientes y eventos de Kiwu
-                    items(pendientesDia, key = { it.id }) { d ->
-                        if (d.esEvento) {
-                            TarjetaEventoAgenda(d, estado.nombres[d.materiaId], alAbrir = { alAbrir(d.id) })
-                        } else {
-                            FilaTarea(
-                                d, estado.nombres[d.materiaId], estado.ahora, vm.reglas,
-                                alAbrir = { alAbrir(d.id) }, alMarcar = { vm.marcar(d.id, it) },
-                                alEliminar = { vm.eliminarTarea(d.id) }, alPosponer = { vm.posponer(d.id) },
-                            )
-                        }
-                    }
-
-                    // Sección completadas plegable
-                    if (completadosDia.isNotEmpty()) {
-                        item(key = "hdr-completadas-dia") {
-                            Row(
-                                Modifier.fillMaxWidth().clickable { completadasVisibles = !completadasVisibles }
-                                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(if (completadasVisibles) Icons.Filled.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
-                                Text(
-                                    stringResource(R.string.completadas),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                    modifier = Modifier.padding(start = 6.dp)
-                                )
-                                Text(
-                                    completadosDia.size.toString(),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                    modifier = Modifier.padding(start = 8.dp),
-                                )
-                            }
-                        }
-                        if (completadasVisibles) {
-                            items(completadosDia, key = { "c-" + it.id }) { d ->
-                                FilaTarea(
-                                    d, estado.nombres[d.materiaId], estado.ahora, vm.reglas,
-                                    alAbrir = { alAbrir(d.id) }, alMarcar = { vm.marcar(d.id, it) },
-                                    alEliminar = { vm.eliminarTarea(d.id) },
-                                )
-                            }
-                        }
+                }
+                if (completadasVisibles) {
+                    items(completadosDia, key = { "c-" + it.id }) { d ->
+                        FilaTarea(
+                            d, nombres[d.materiaId], estado.ahora, vm.reglas,
+                            alAbrir = { alAbrir(d.id) }, alMarcar = { vm.marcar(d.id, it) },
+                            alEliminar = { vm.eliminarTarea(d.id) },
+                            nombreCarpeta = estado.nombreCarpetaDe(d),
+                        )
                     }
                 }
             }
         }
 
-        // Input rápido inferior flotante adaptado
-        val marcadorDia = if (diaSel == hoy) stringResource(R.string.anadir_tarea) else "Añadir a " + fechaCorta(diaSel.atStartOfDay(zona).toInstant().toEpochMilli(), estado.ahora)
+        val marcadorDia = if (diaSel == hoy) stringResource(R.string.anadir_tarea) else stringResource(R.string.anadir_tarea_dia)
         CampoNuevaTarea(
             materias = estado.materias + app.kiwu.android.ui.tareas.ListaEventos,
             fija = null,
             alCrear = { t, m, f -> vm.crearTareaEnDia(t, m, diaSel, f) },
-            modifier = Modifier.align(Alignment.BottomCenter),
             marcador = marcadorDia,
             diaFijo = diaSel,
         )

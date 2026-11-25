@@ -35,6 +35,7 @@ val ClaveDeberWidget = ActionParameters.Key<String>("deber")
 
 /** Colores con los que se dibuja un widget: los del tema y el color de la app en ese momento. */
 class ColoresWidget(
+    val oscuro: Boolean,
     val fondo: ColorProvider,
     val texto: ColorProvider,
     val secundario: ColorProvider,
@@ -64,14 +65,16 @@ suspend fun coloresDelWidget(contexto: Context): ColoresWidget {
     } else {
         esquemaDe(ajustes.acento, oscuro)
     }
+    val fondo = if (oscuro) Color(0xFF252423) else esquema.background
     return ColoresWidget(
-        fondo = ColorProvider(esquema.background),
-        texto = ColorProvider(esquema.onSurface),
-        secundario = ColorProvider(esquema.onSurfaceVariant),
-        acento = ColorProvider(esquema.primary),
-        sobreAcento = ColorProvider(esquema.onPrimary),
+        oscuro = oscuro,
+        fondo = ColorProvider(fondo.copy(alpha = if (oscuro) 0.84f else 0.90f)),
+        texto = ColorProvider(if (oscuro) Color(0xFFF3EFEB) else esquema.onSurface),
+        secundario = ColorProvider(if (oscuro) Color(0xFFC9C2BA) else esquema.onSurfaceVariant),
+        acento = ColorProvider(if (oscuro) Color(0xFFE2B98B) else esquema.primary),
+        sobreAcento = ColorProvider(if (oscuro) Color(0xFF2B2118) else esquema.onPrimary),
         rojo = ColorProvider(if (oscuro) Color(0xFFFF8A80) else Color(0xFFD32F2F)),
-        celda = ColorProvider(esquema.onSurface.copy(alpha = if (oscuro) 0.10f else 0.05f)),
+        celda = ColorProvider(if (oscuro) Color(0xFF34312E).copy(alpha = 0.55f) else esquema.onSurface.copy(alpha = 0.05f)),
         eventoFondo = ColorProvider(AzulEvento),
         eventoGlifo = ColorProvider(AzulEventoTexto),
         eventoTexto = ColorProvider(if (oscuro) Color(0xFFCFE5F7) else AzulEventoTexto),
@@ -100,21 +103,23 @@ fun intencionDeApertura(
 
 /**
  * Intención para añadir una tarea desde el widget de deberes sin abrir la app. [lista] es la lista fija del widget (null =
- * elegirla) y [hoy] hace que la tarea venza hoy, para que aparezca en un widget que solo muestra «Hoy».
+ * elegirla). [carpeta] prioriza sus listas y [hoy] preselecciona una entrega para hoy.
  */
-fun intencionNuevaTarea(contexto: Context, lista: String?, hoy: Boolean): Intent =
+fun intencionNuevaTarea(contexto: Context, lista: String?, hoy: Boolean, carpeta: String? = null): Intent =
     Intent(contexto, NuevaTareaActivity::class.java).apply {
         // Un `data` distinto por destino, por lo mismo que en `intencionDeApertura`.
-        data = android.net.Uri.parse("kiwu://widget/nueva-tarea/${lista.orEmpty()}/$hoy")
+        data = android.net.Uri.parse("kiwu://widget/nueva-tarea/${lista.orEmpty()}/$hoy/${carpeta.orEmpty()}")
         if (lista != null) putExtra(NuevaTareaActivity.EXTRA_LISTA, lista)
         putExtra(NuevaTareaActivity.EXTRA_HOY, hoy)
+        if (carpeta != null) putExtra(NuevaTareaActivity.EXTRA_CARPETA, carpeta)
     }
 
 /** Intención para abrir la hoja de un día del widget de calendario (lo pendiente y añadir una tarea), sin abrir la app. */
-fun intencionDiaCalendario(contexto: Context, dia: java.time.LocalDate): Intent =
+fun intencionDiaCalendario(contexto: Context, dia: java.time.LocalDate, crear: Boolean = false): Intent =
     Intent(contexto, DiaCalendarioActivity::class.java).apply {
-        data = android.net.Uri.parse("kiwu://widget/dia/${dia.toEpochDay()}")
+        data = android.net.Uri.parse("kiwu://widget/dia/${dia.toEpochDay()}/$crear")
         putExtra(DiaCalendarioActivity.EXTRA_DIA, dia.toEpochDay())
+        putExtra(DiaCalendarioActivity.EXTRA_CREAR, crear)
     }
 
 /**

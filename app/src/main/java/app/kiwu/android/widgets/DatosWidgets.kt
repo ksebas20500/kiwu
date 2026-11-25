@@ -22,6 +22,7 @@ import app.kiwu.android.ui.ColorPastel
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 import java.time.format.DateTimeFormatter
 
@@ -42,8 +43,19 @@ object ConfigWidget {
     fun cuaderno(id: String) = CUADERNO + id
 }
 
+internal data class UbicacionLista(val lista: String, val carpeta: String?) {
+    val etiqueta: String get() = listOfNotNull(carpeta, lista).joinToString(" › ")
+}
+
+internal fun ubicacionesDeListas(materias: List<Materia>, grupos: List<GrupoLista>): Map<String, UbicacionLista> {
+    val nombres = grupos.associate { it.id to it.nombre }
+    return materias.associate { lista ->
+        lista.id to UbicacionLista(lista.nombre, lista.grupoId?.takeUnless { lista.id == ID_EVENTOS }?.let(nombres::get))
+    }
+}
+
 /** Una fila del widget de deberes. [esEvento] marca los eventos propios (no se completan, se ven con la pastilla azul). */
-data class FilaDeber(val id: String, val titulo: String, val lista: String, val fecha: String, val vencida: Boolean, val esEvento: Boolean = false)
+data class FilaDeber(val id: String, val titulo: String, val lista: String, val fecha: String, val vencida: Boolean, val esEvento: Boolean = false, val ubicacion: String = lista, val urgente: Boolean = false)
 
 data class DatosDeberes(
     val titulo: String,
@@ -67,6 +79,8 @@ data class FilaClase(
     val urgencia: UrgenciaTarea?,
     /** Faltas de la materia, si tiene máximo o alguna falta; null = no se muestra nada. */
     val faltas: ContadorFaltas? = null,
+    val pasada: Boolean = false,
+    val colorMateria: ColorPastel? = null,
 )
 
 data class DatosHorario(
@@ -84,9 +98,10 @@ data class FilaNota(val id: String, val titulo: String, val icono: String, val r
 data class DatosNotas(
     val cuaderno: Cuaderno?,
     val notas: List<FilaNota>,
-    /** Cuaderno donde crear la nota rápida (null = que la app elija el primero). */
+    /** Cuaderno donde crear la nota rápida (null si todavía no existe ninguno). */
     val cuadernoNuevo: String?,
     val hayCuadernos: Boolean,
+    val nombreDestino: String? = null,
 )
 
 /**
@@ -115,7 +130,7 @@ object DatosWidgets {
         zona: ZoneId = ZoneId.systemDefault(),
     ): DatosDeberes {
         val reglas = Reglas(zona)
-        val nombres = materias.associate { it.id to it.nombre }
+        val ubicaciones = ubicacionesDeListas(materias, grupos)
         val (elemento, titulo, soloListas) = alcance(config, materias, grupos, textos)
         // Los eventos propios (lista «Eventos») se mezclan con las tareas por fecha, igual que en la app:
         // en «Hoy» solo los de hoy, en «Todas» sin los pasados, y nunca «Vencida» (un evento no vence, pasa).
@@ -134,10 +149,18 @@ object DatosWidgets {
             FilaDeber(
                 id = it.id,
                 titulo = it.titulo,
-                lista = nombres[it.materiaId].orEmpty(),
+                lista = ubicaciones[it.materiaId]?.lista.orEmpty(),
+                ubicacion = ubicaciones[it.materiaId]?.etiqueta.orEmpty(),
                 fecha = textoFecha(it.fechaEntrega, ahora, textos, zona),
                 vencida = reglas.estaVencido(it, ahora),
                 esEvento = it.esEvento,
+                urgente = it.fechaEntrega?.let { entrega ->
+                    val dias = ChronoUnit.DAYS.between(
+                        Instant.ofEpochMilli(ahora).atZone(zona).toLocalDate(),
+                        Instant.ofEpochMilli(entrega).atZone(zona).toLocalDate(),
+                    )
+                    dias in 0L..1L
+                } == true,
             )
         }
         return DatosDeberes(titulo, pendientes, pendientes.count { !it.esEvento }, materias.isNotEmpty())
@@ -203,7 +226,8 @@ object DatosWidgets {
         val dia = reloj.dayOfWeek.value
         val minuto = reloj.hour * 60 + reloj.minute
 
-        fun fila(c: Clase) = FilaClase(
+        val coloresMateria = materias.associate { it.id to it.color }
+        fun fila(c: Clase, pasada: Boolean = false) = FilaClase(
             id = c.id,
             titulo = c.titulo,
             aula = c.aula,
@@ -211,19 +235,21 @@ object DatosWidgets {
             diaSemana = c.diaSemana,
             inicioMin = c.inicioMin,
             finMin = c.finMin,
-            color = ColoresClase.de(c, materias.firstOrNull { it.id == c.materiaId }?.color),
+            color = ColoresClase.de(c, coloresMateria[c.materiaId]),
+            colorMateria = coloresMateria[c.materiaId]?.let { ColoresClase.de(c.copy(color = it), it) },
+            pasada = pasada,
             urgencia = TareasDeClase.masUrgente(TareasDeClase.puntos(deberes, c.materiaId, ahora)),
             faltas = contadores[c.grupo]?.takeIf { ReglasFaltas.seMuestra(it) },
         )
 
-        val enCurso = ReglasHorario.enCurso(visibles, dia, minuto)?.let(::fila)
+        val enCurso = ReglasHorario.enCurso(visibles, dia, minuto)?.let { fila(it) }
         val siguiente = ReglasHorario.siguiente(visibles, dia, minuto)
         return DatosHorario(
             nombre = elegido?.nombre,
             enCurso = enCurso,
-            siguiente = siguiente?.first?.let(::fila),
+            siguiente = siguiente?.first?.let { fila(it) },
             diasSiguiente = siguiente?.second ?: 0,
-            hoy = ReglasHorario.deDia(visibles, dia).map(::fila),
+            hoy = ReglasHorario.deDia(visibles, dia).map { fila(it, pasada = it.finMin <= minuto) },
             hayHorarios = horarios.isNotEmpty(),
         )
     }
@@ -265,7 +291,8 @@ object DatosWidgets {
                 resumen = resumen(it.textoPlano),
             )
         }
-        return DatosNotas(elegido, notas, elegido?.id, cuadernos.isNotEmpty())
+        val destino = elegido ?: cuadernos.firstOrNull()
+        return DatosNotas(elegido, notas, destino?.id, cuadernos.isNotEmpty(), destino?.nombre)
     }
 
     /** Primer trozo de la nota, en una línea y sin pasarse de largo. */

@@ -5,6 +5,8 @@ import app.kiwu.android.domain.Columna
 import app.kiwu.android.domain.AvisosDeTareas
 import app.kiwu.android.domain.Cuaderno
 import app.kiwu.android.domain.Deber
+import app.kiwu.android.domain.Bloque
+import app.kiwu.android.domain.DOCUMENTO_VACIO
 import app.kiwu.android.domain.Documento
 import app.kiwu.android.domain.EntradaRacha
 import app.kiwu.android.domain.GrupoLista
@@ -184,7 +186,13 @@ class Repositorio(
     // --- tareas ---------------------------------------------------------------------------------
 
     /** Crea una tarea; si [materiaId] es [ID_EVENTOS] es un evento (la lista especial se crea la primera vez). */
-    suspend fun crearDeber(titulo: String, materiaId: String, fecha: Long? = null): Deber {
+    suspend fun crearDeber(
+        titulo: String,
+        materiaId: String,
+        fecha: Long? = null,
+        prioridad: Int = 0,
+        descripcion: String = "",
+    ): Deber {
         val t = reloj()
         val evento = materiaId == ID_EVENTOS
         if (evento && dao.materia(ID_EVENTOS) == null) {
@@ -194,6 +202,9 @@ class Repositorio(
         val d = Deber(
             materiaId = materiaId, titulo = titulo.trim(), fechaEntrega = fecha, creada = t, actualizada = t,
             recordatorioHoras = if (evento) 1 else 24,
+            prioridad = prioridad.coerceIn(0, 3),
+            nota = if (descripcion.isBlank()) DOCUMENTO_VACIO
+            else Documento(descripcion.lines().map { Bloque(text = it) }).aJson(),
         )
         dao.guardarDeber(d)
         return d

@@ -956,4 +956,22 @@
     <string name="saludo_manana">Bom dia</string>
     <string name="saludo_tarde">Boa tarde</string>
     <string name="saludo_noche">Boa noite</string>
+    <string name="w_agenda_hoy">Agenda de hoje</string>
+    <plurals name="w_fecha_elementos">
+        <item quantity="one">%1$s, %2$d item</item>
+        <item quantity="many">%1$s, %2$d itens</item>
+        <item quantity="other">%1$s, %2$d itens</item>
+    </plurals>
+    <string name="w_carpetas">Pastas</string>
+    <string name="w_listas">Listas</string>
+    <string name="w_error_config">Não foi possível carregar ou salvar as configurações.</string>
+    <string name="w_reintentar">Tentar novamente</string>
+    <string name="w_completar_tarea">Concluir %1$s</string>
+    <string name="w_error_captura">Não foi possível salvar. Tente novamente.</string>
+    <string name="w_guardando_captura">Salvando…</string>
+    <string name="w_descartar_captura">Descartar o rascunho?</string>
+    <string name="w_descartar">Descartar</string>
+    <string name="w_descripcion_tarea">Descrição (opcional)</string>
+    <string name="w_elegir_lista">Escolher lista</string>
+    <string name="w_lista_seleccionada">Lista selecionada</string>
 </resources>

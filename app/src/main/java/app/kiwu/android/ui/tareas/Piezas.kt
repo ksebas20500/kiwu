@@ -15,6 +15,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -250,6 +252,7 @@ fun ConGestosTarea(
 }
 
 /** Una fila de la lista de tareas. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun FilaTarea(
     d: Deber,
@@ -261,6 +264,7 @@ fun FilaTarea(
     alEliminar: () -> Unit = {},
     /** Deslizar la fila a la izquierda: pospone la entrega a mañana (se ignora si está vacío o la tarea se repite). */
     alPosponer: () -> Unit = {},
+    nombreCarpeta: String? = null,
 ) {
     val columna = reglas.columnaDe(d)
     val esSoloLectura = d.esExterno
@@ -298,10 +302,10 @@ fun FilaTarea(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (d.completado) 0.5f else 1f),
                         style = MaterialTheme.typography.bodyLarge,
                     )
-                    val hayExtras = d.fechaEntrega != null || nombreLista != null || columna == Columna.EN_CURSO || d.repite != 0 ||
+                    val hayExtras = nombreCarpeta != null || d.fechaEntrega != null || nombreLista != null || columna == Columna.EN_CURSO || d.repite != 0 ||
                         d.prioridad != 0 || d.etiquetas.isNotEmpty() || d.pasos.isNotEmpty() || d.examen || esSoloLectura
                     if (hayExtras) {
-                        Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        FlowRow(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             if (columna == Columna.EN_CURSO) {
                                 Chip(stringResource(R.string.en_curso), MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
                             }
@@ -325,6 +329,7 @@ fun FilaTarea(
                             if (nombreLista != null) {
                                 Chip(nombreLista, fondo = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f), color = MaterialTheme.colorScheme.onSecondaryContainer)
                             }
+                            nombreCarpeta?.let { EtiquetaCarpeta(it) }
                             if (esSoloLectura) {
                                 Chip("Google", fondo = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f), color = MaterialTheme.colorScheme.onTertiaryContainer)
                             }
@@ -357,6 +362,7 @@ fun CampoNuevaTarea(
     /** Pone el cursor en el campo al abrirse (la pantalla de añadir desde el widget). */
     enfocar: Boolean = false,
 ) {
+    val teclado = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val foco = remember { androidx.compose.ui.focus.FocusRequester() }
     // El campo está desactivado hasta que llegan las listas: se enfoca cuando ya se puede escribir.
     LaunchedEffect(materias.isNotEmpty()) { if (enfocar && materias.isNotEmpty()) foco.requestFocus() }
@@ -391,7 +397,10 @@ fun CampoNuevaTarea(
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             val puesta = if (diaFijo != null) hora != null else fecha != null
-            IconButton(onClick = { selector = true }) {
+            IconButton(onClick = {
+                teclado?.hide()
+                selector = true
+            }) {
                 Icon(
                     if (diaFijo != null) Icons.Filled.Schedule else Icons.Filled.Event,
                     stringResource(if (diaFijo != null) R.string.elegir_hora_entrega else R.string.elegir_fecha_entrega),
@@ -416,7 +425,10 @@ fun CampoNuevaTarea(
             )
             if (fija == null && materias.isNotEmpty() && elegida != null) {
                 Box {
-                    TextButton(onClick = { menu = true }) {
+                    TextButton(onClick = {
+                        teclado?.hide()
+                        menu = true
+                    }) {
                         Text(elegida.nombre, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(end = 2.dp))
                         Icon(Icons.Filled.ArrowDropDown, null)
                     }
@@ -510,4 +522,10 @@ fun FondoCompletar(deslizar: SwipeToDismissBoxState, completado: Boolean) {
             )
         }
     }
+}
+
+
+@Composable
+internal fun EtiquetaCarpeta(nombre: String) {
+    Chip(nombre, fondo = MaterialTheme.colorScheme.tertiaryContainer, color = MaterialTheme.colorScheme.onTertiaryContainer)
 }

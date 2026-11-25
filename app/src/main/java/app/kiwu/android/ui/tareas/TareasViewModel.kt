@@ -15,6 +15,7 @@ import app.kiwu.android.domain.NodoMenu
 import app.kiwu.android.domain.Materia
 import app.kiwu.android.domain.Racha
 import app.kiwu.android.domain.Rachas
+import app.kiwu.android.domain.esEvento
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -55,6 +56,15 @@ data class TareasEstado(
     val grupoActual: GrupoLista? get() = (elemento as? Elemento.DeGrupo)?.let { e -> grupos.firstOrNull { it.id == e.id } }
     val materiaActual: Materia? get() = (elemento as? Elemento.DeMateria)?.let { e -> if (e.id == ID_EVENTOS) ListaEventos else materias.firstOrNull { it.id == e.id } }
     val enEventos: Boolean get() = (elemento as? Elemento.DeMateria)?.id == ID_EVENTOS
+    fun nombreCarpetaDe(tarea: Deber): String? {
+        if (tarea.esEvento || tarea.esExterno) return null
+        when (elemento) {
+            Elemento.Todos, Elemento.Proximos, Elemento.Calendario -> Unit
+            else -> return null
+        }
+        val grupoId = materias.firstOrNull { it.id == tarea.materiaId }?.grupoId ?: return null
+        return grupos.firstOrNull { it.id == grupoId }?.nombre
+    }
     val nombres: Map<String, String> get() = materias.associate { it.id to it.nombre } + (ID_EVENTOS to ListaEventos.nombre)
 }
 

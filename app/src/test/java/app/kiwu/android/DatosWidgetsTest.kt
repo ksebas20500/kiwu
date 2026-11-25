@@ -64,6 +64,28 @@ class DatosWidgetsTest {
     // --- deberes ---------------------------------------------------------------------------------
 
     @Test
+    fun deberesDistingueTareasHomonimasPorSuCarpetaActual() {
+        val grupos = listOf(
+            GrupoLista(id = "uni", nombre = "Universidad", creada = 0, actualizada = 0),
+            GrupoLista(id = "cursos", nombre = "Cursos", creada = 0, actualizada = 0),
+        )
+        val materias = listOf(
+            materia("a", "Proyecto integrador", "uni"),
+            materia("b", "Proyecto de integración", "cursos"),
+            materia("c", "Proyecto libre", "carpeta-ausente"),
+        )
+        val tareas = materias.map { deber(it.id, it.id, "Revisión del proyecto", ahora) }
+        val datos = DatosWidgets.deberes(materias, grupos, tareas, null, ahora, textos, zona)
+        assertEquals(
+            mapOf("a" to "Universidad › Proyecto integrador", "b" to "Cursos › Proyecto de integración", "c" to "Proyecto libre"),
+            datos.pendientes.associate { it.id to it.ubicacion },
+        )
+        val movidas = materias.map { if (it.id == "a") it.copy(grupoId = "cursos") else it }
+        val actualizadas = DatosWidgets.deberes(movidas, grupos, tareas, null, ahora, textos, zona)
+        assertEquals("Cursos › Proyecto integrador", actualizadas.pendientes.first { it.id == "a" }.ubicacion)
+    }
+
+    @Test
     fun deberesOrdenaPorFechaYDejaLasVencidasPrimero() {
         val listas = listOf(materia("mate", "Cálculo"))
         val deberes = listOf(

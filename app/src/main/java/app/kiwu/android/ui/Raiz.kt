@@ -236,11 +236,18 @@ private fun Principal(
     seccionInicial: String? = null, alAtenderSeccion: () -> Unit = {},
 ) {
     var modulo by rememberSaveable { mutableStateOf("inicio") }
-    // Abrir desde el widget de horario (o de notas): se cambia de pestaña una sola vez.
-    LaunchedEffect(seccionInicial) {
-        if (seccionInicial != null) { modulo = seccionInicial; alAtenderSeccion() }
-    }
     val tareasVm: TareasViewModel = viewModel(factory = viewModelFactory { initializer { TareasViewModel(app, app.repo, app.ajustes) } })
+    LaunchedEffect(seccionInicial) {
+        if (seccionInicial != null) {
+            if (seccionInicial == "calendario") {
+                tareasVm.ir(Elemento.Calendario)
+                modulo = "tareas"
+            } else {
+                modulo = seccionInicial
+            }
+            alAtenderSeccion()
+        }
+    }
     LaunchedEffect(abrirLista) {
         if (abrirLista != null) { tareasVm.ir(Elemento.DeMateria(abrirLista)); modulo = "tareas"; alAbrirLista() }
     }

@@ -20,10 +20,10 @@ import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.currentState
+import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
-import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
@@ -60,37 +60,39 @@ class NotasWidgetReceiver : GlanceAppWidgetReceiver() {
 private fun ContenidoNotas(datos: DatosNotas, colores: ColoresWidget) {
     val contexto = LocalContext.current
     val alto = LocalSize.current.height
-    val maximo = when {
-        alto < 140.dp -> 1
-        alto < 200.dp -> 2
-        alto < 260.dp -> 4
-        else -> 7
-    }
+    val maximo = ((alto.value - 62f) / 48f).toInt().coerceAtLeast(0)
     val nueva = intencionDeApertura(contexto, nuevaNotaEnCuaderno = datos.cuadernoNuevo ?: "")
     Column(
-        GlanceModifier.fillMaxSize().cornerRadius(18.dp).background(colores.fondo).padding(14.dp),
+        GlanceModifier.fillMaxSize().cornerRadius(18.dp).background(colores.fondo).padding(horizontal = 8.dp, vertical = 7.dp),
     ) {
-        Row(GlanceModifier.fillMaxWidth()) {
-            Text(
-                datos.cuaderno?.let { "${it.icono} ${it.nombre}" } ?: textoWidget(R.string.notas),
-                style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = colores.texto),
-                maxLines = 1,
-                modifier = GlanceModifier.defaultWeight()
+        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(
+                GlanceModifier.defaultWeight().height(48.dp)
                     .clickable(actionStartActivity(intencionDeApertura(contexto, seccion = "notas"))),
-            )
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    datos.cuaderno?.let { "${it.icono} ${it.nombre}" } ?: textoWidget(R.string.notas),
+                    style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = colores.texto),
+                    maxLines = 1,
+                )
+                if (datos.cuaderno == null && datos.nombreDestino != null) {
+                    Text(datos.nombreDestino, style = TextStyle(fontSize = 12.sp, color = colores.secundario), maxLines = 1)
+                }
+            }
             Box(
                 GlanceModifier.cornerRadius(12.dp).background(colores.acento)
-                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                    .height(48.dp).padding(horizontal = 10.dp)
                     .clickable(actionStartActivity(nueva)),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(textoWidget(R.string.w_nueva), style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colores.sobreAcento))
             }
         }
-        Spacer(GlanceModifier.height(8.dp))
         when {
             !datos.hayCuadernos -> AvisoNotas(textoWidget(R.string.w_crea_cuaderno), colores)
             datos.notas.isEmpty() -> AvisoNotas(textoWidget(R.string.w_sin_notas), colores)
-            else -> LazyColumn(GlanceModifier.fillMaxSize()) {
+            maximo > 0 -> LazyColumn(GlanceModifier.fillMaxSize()) {
                 items(datos.notas.take(maximo), itemId = { it.id.hashCode().toLong() }) { nota ->
                     FilaNotaWidget(nota, colores)
                 }
@@ -103,8 +105,9 @@ private fun ContenidoNotas(datos: DatosNotas, colores: ColoresWidget) {
 private fun FilaNotaWidget(nota: FilaNota, colores: ColoresWidget) {
     val contexto = LocalContext.current
     Column(
-        GlanceModifier.fillMaxWidth().padding(vertical = 5.dp)
+        GlanceModifier.fillMaxWidth().height(48.dp)
             .clickable(actionStartActivity(intencionDeApertura(contexto, nota = nota.id))),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             "${nota.icono} ${nota.titulo}",

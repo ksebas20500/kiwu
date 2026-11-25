@@ -11,6 +11,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +24,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,20 +32,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Event
+import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
-import app.kiwu.android.domain.ID_EVENTOS
-import app.kiwu.android.ui.tareas.AzulEvento
 import app.kiwu.android.ui.tareas.AzulEventoTexto
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,17 +61,15 @@ import app.kiwu.android.data.AjustesUi
 import app.kiwu.android.data.CalendarioTelefono
 import app.kiwu.android.data.TareasGoogle
 import app.kiwu.android.domain.EventoExterno
+import app.kiwu.android.domain.ID_EVENTOS
 import app.kiwu.android.domain.Deber
+import app.kiwu.android.ui.tareas.ListaEventos
 import app.kiwu.android.domain.esEvento
 import app.kiwu.android.ui.Fechas
 import app.kiwu.android.ui.KiwuTheme
-import app.kiwu.android.ui.tareas.CampoNuevaTarea
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -84,30 +86,34 @@ class DiaCalendarioActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val app = application as KiwuApp
+        val abrirCaptura = intent?.getBooleanExtra(EXTRA_CREAR, false) == true
         val dia = LocalDate.ofEpochDay(intent?.getLongExtra(EXTRA_DIA, LocalDate.now().toEpochDay()) ?: LocalDate.now().toEpochDay())
-        val ajustes = runBlocking { withTimeoutOrNull(1500) { app.ajustes.flujo.first() } } ?: AjustesUi()
-        val oscuro = when (ajustes.tema) {
-            "claro" -> false
-            "oscuro", Acentos.NEGRO -> true
-            else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        }
         setContent {
+            val ajustes by app.ajustes.flujo.collectAsStateWithLifecycle(AjustesUi())
+            val oscuro = when (ajustes.tema) {
+                "claro" -> false
+                "oscuro", Acentos.NEGRO -> true
+                else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+            }
             KiwuTheme(oscuro, ajustes.acento, amoled = false) {
                 val materias by app.repo.materias.collectAsStateWithLifecycle(emptyList())
+                val grupos by app.repo.grupos.collectAsStateWithLifecycle(emptyList())
                 val deberes by app.repo.deberes.collectAsStateWithLifecycle(emptyList())
+                val ubicaciones = remember(materias, grupos) { ubicacionesDeListas(materias, grupos) }
                 val zona = ZoneId.systemDefault()
                 fun externosDe(): List<EventoExterno> =
                     (if (ajustes.calendarioGoogle) CalendarioTelefono.eventos(this@DiaCalendarioActivity, dia, dia, zona) else emptyList()) +
                         (if (ajustes.tareasGoogle) TareasGoogle.leer(this@DiaCalendarioActivity).filter { it.dia(zona) == dia } else emptyList())
                 var externos by remember(dia, ajustes.calendarioGoogle, ajustes.tareasGoogle) {
-                    mutableStateOf(externosDe())
+                    mutableStateOf<List<EventoExterno>?>(null)
                 }
                 // Las tareas de Google salen de la copia local del widget (máximo 5 minutos de edad): al abrir la
                 // hoja se le pide la lista fresca, para que lo que se ve aquí esté tan al día como se pueda.
-                LaunchedEffect(dia, ajustes.tareasGoogle) {
+                LaunchedEffect(dia, ajustes.calendarioGoogle, ajustes.tareasGoogle) {
+                    externos = withContext(Dispatchers.IO) { externosDe() }
                     if (ajustes.tareasGoogle) {
                         val nueva = withContext(Dispatchers.IO) { TareasGoogle.actualizar(this@DiaCalendarioActivity) }
-                        if (nueva) externos = externosDe()
+                        if (nueva) externos = withContext(Dispatchers.IO) { externosDe() }
                     }
                 }
                 val delDia = remember(deberes, dia) {
@@ -116,53 +122,73 @@ class DiaCalendarioActivity : ComponentActivity() {
                             Instant.ofEpochMilli(d.fechaEntrega).atZone(zona).toLocalDate() == dia
                     }.sortedBy { it.fechaEntrega }
                 }
+                var creando by rememberSaveable { mutableStateOf(if (abrirCaptura) "tarea" else null) }
+                var cerrarSolicitado by rememberSaveable { mutableStateOf(0) }
                 Box(
                     Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f))
-                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { finish() },
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { if (creando == null) finish() else cerrarSolicitado++ },
                     contentAlignment = Alignment.BottomCenter,
                 ) {
                     // Tocar la hoja no la cierra: solo el fondo oscuro.
                     Surface(
-                        Modifier.pointerInput(Unit) { detectTapGestures { } },
-                        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                        Modifier.statusBarsPadding()
+                            .then(if (creando != null) Modifier.padding(horizontal = 12.dp, vertical = 8.dp) else Modifier)
+                            .pointerInput(Unit) { detectTapGestures { } },
+                        shape = if (creando == null) RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp) else RoundedCornerShape(20.dp),
                         color = MaterialTheme.colorScheme.surface,
                     ) {
-                        Column(Modifier.navigationBarsPadding().imePadding()) {
+                        val captura = creando
+                        if (captura != null) {
+                            Box(Modifier.navigationBarsPadding().imePadding()) {
+                                CapturaTareaWidget(
+                                    listas = if (captura == ID_EVENTOS) listOf(ListaEventos) else materias.filter { it.id != ID_EVENTOS },
+                                    ubicaciones = ubicaciones,
+                                    tituloFormulario = stringResource(if (captura == ID_EVENTOS) R.string.anadir_evento else R.string.anadir_tarea),
+                                    fechaInicial = entregaWidget(dia),
+                                    diaFijo = dia,
+                                    cerrarSolicitado = cerrarSolicitado,
+                                    cerrarDirectamente = abrirCaptura,
+                                    alCerrar = { if (abrirCaptura) finish() else creando = null },
+                                    guardar = { titulo, lista, fecha, prioridad, descripcion ->
+                                        app.repo.crearDeber(titulo, lista, fecha, prioridad, descripcion)
+                                    },
+                                )
+                            }
+                        } else Column(Modifier.navigationBarsPadding().imePadding()) {
                             Text(Fechas.diaLargo(dia), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 4.dp))
-                            if (delDia.isEmpty() && externos.isEmpty()) {
+                            if (externos == null && delDia.isEmpty()) {
+                                LinearProgressIndicator(Modifier.fillMaxWidth())
+                            } else if (delDia.isEmpty() && externos.isNullOrEmpty()) {
                                 Text(
                                     stringResource(R.string.dia_sin_pendientes), color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
                                 )
                             } else {
-                                LazyColumn(Modifier.heightIn(max = 240.dp)) {
-                                    items(externos, key = { "g:${it.id}:${it.inicio}" }) { e -> FilaExterna(e, zona) }
+                                LazyColumn(Modifier.weight(1f, fill = false).heightIn(max = 240.dp)) {
+                                    items(externos.orEmpty(), key = { "g:${it.id}:${it.inicio}" }) { e -> FilaExterna(e, zona) }
                                     items(delDia, key = { it.id }) { d ->
-                                        val lista = materias.firstOrNull { it.id == d.materiaId }?.nombre
+                                        val ubicacion = ubicaciones[d.materiaId]
                                         FilaDia(
-                                            d, lista, zona,
+                                            d, ubicacion?.lista, ubicacion?.carpeta, zona,
                                             alCompletar = { app.alcance.launch { app.repo.marcar(d.id, true) } },
                                             alAbrir = { startActivity(intencionDeApertura(this@DiaCalendarioActivity, tarea = d.id)); finish() },
                                         )
                                     }
                                 }
                             }
-                            // «Evento» crea un evento azul (sin lista, sin casilla) en lugar de una tarea.
-                            var evento by remember { mutableStateOf(false) }
-                            FilterChip(
-                                selected = evento, onClick = { evento = !evento }, label = { Text(stringResource(R.string.evento)) },
-                                modifier = Modifier.padding(start = 16.dp, top = 4.dp),
-                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = AzulEvento, selectedLabelColor = AzulEventoTexto),
-                            )
-                            CampoNuevaTarea(
-                                materias = materias, fija = null, diaFijo = dia,
-                                alCrear = { titulo, lista, fecha ->
-                                    val materiaId = if (evento) ID_EVENTOS else lista
-                                    // Sin hora elegida, la tarea vence ese día a las 18:00, como en el calendario de la app.
-                                    val entrega = fecha ?: dia.atTime(LocalTime.of(18, 0)).atZone(zona).toInstant().toEpochMilli()
-                                    app.alcance.launch { app.repo.crearDeber(titulo, materiaId, entrega) }
-                                },
-                            )
+                            Row(
+                                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                            ) {
+                                TextButton(
+                                    onClick = { creando = ID_EVENTOS },
+                                    modifier = Modifier.heightIn(min = 48.dp),
+                                ) { Text(stringResource(R.string.anadir_evento)) }
+                                Button(
+                                    onClick = { creando = "tarea" },
+                                    modifier = Modifier.heightIn(min = 48.dp),
+                                ) { Text(stringResource(R.string.anadir_tarea)) }
+                            }
                         }
                     }
                 }
@@ -173,19 +199,39 @@ class DiaCalendarioActivity : ComponentActivity() {
     companion object {
         /** El día que se abre, como `LocalDate.toEpochDay()`. */
         const val EXTRA_DIA = "dia"
+        const val EXTRA_CREAR = "crear"
     }
 }
 
 @androidx.compose.runtime.Composable
-private fun FilaDia(d: Deber, lista: String?, zona: ZoneId, alCompletar: () -> Unit, alAbrir: () -> Unit) {
+@OptIn(ExperimentalLayoutApi::class)
+private fun FilaDia(d: Deber, lista: String?, carpeta: String?, zona: ZoneId, alCompletar: () -> Unit, alAbrir: () -> Unit) {
     val hora = d.fechaEntrega?.let { Instant.ofEpochMilli(it).atZone(zona).toLocalTime() }?.takeIf { it != LocalTime.MIDNIGHT }
-    val detalle = listOfNotNull(lista, hora?.let { Fechas.hora(d.fechaEntrega!!, zona) }).joinToString(" · ")
+    val horaTexto = hora?.let { Fechas.hora(d.fechaEntrega!!, zona) }
+    val detalle = listOfNotNull(lista, horaTexto).joinToString(" · ")
     Row(Modifier.fillMaxWidth().clickable(onClick = alAbrir).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         // Los eventos no se completan: en su lugar va un hueco del mismo ancho para que el texto quede alineado.
         if (d.esEvento) Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Event, null, tint = AzulEventoTexto) } else Checkbox(checked = false, onCheckedChange = { alCompletar() }, modifier = Modifier.casillaDe(d.titulo))
         Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
             Text(d.titulo, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (detalle.isNotBlank()) Text(detalle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (carpeta != null) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    ) {
+                        Text(carpeta, Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall)
+                    }
+                    if (lista != null) Text(lista, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (horaTexto != null) Text(horaTexto, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else if (detalle.isNotBlank()) {
+                Text(detalle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
     }
 }

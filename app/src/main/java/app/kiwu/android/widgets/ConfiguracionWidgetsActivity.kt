@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -29,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -45,10 +47,7 @@ import app.kiwu.android.data.AjustesUi
 import app.kiwu.android.domain.ID_EVENTOS
 import app.kiwu.android.ui.Acentos
 import app.kiwu.android.ui.KiwuTheme
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
 import app.kiwu.android.R
 import androidx.compose.ui.res.stringResource
 
@@ -62,6 +61,8 @@ private enum class TipoWidget { DEBERES, HORARIO, NOTAS }
 class ConfiguracionWidgetsActivity : ComponentActivity() {
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
     private var tipo = TipoWidget.DEBERES
+    private var guardando by mutableStateOf(false)
+    private var error by mutableStateOf(false)
 
     override fun attachBaseContext(base: android.content.Context) = super.attachBaseContext(app.kiwu.android.Idioma.contexto(base))
 
@@ -83,13 +84,13 @@ class ConfiguracionWidgetsActivity : ComponentActivity() {
             else -> TipoWidget.NOTAS
         }
         val app = application as KiwuApp
-        val ajustes = runBlocking { withTimeoutOrNull(1500) { app.ajustes.flujo.first() } } ?: AjustesUi()
-        val oscuro = when (ajustes.tema) {
-            "claro" -> false
-            "oscuro", Acentos.NEGRO -> true
-            else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        }
         setContent {
+            val ajustes by app.ajustes.flujo.collectAsStateWithLifecycle(AjustesUi())
+            val oscuro = when (ajustes.tema) {
+                "claro" -> false
+                "oscuro", Acentos.NEGRO -> true
+                else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+            }
             KiwuTheme(oscuro, ajustes.acento, amoled = false) {
                 Scaffold { relleno ->
                     PantallaConfiguracion(
@@ -99,6 +100,8 @@ class ConfiguracionWidgetsActivity : ComponentActivity() {
                         modifier = Modifier.padding(relleno),
                         alCancelar = { finish() },
                         alGuardar = ::guardar,
+                        guardando = guardando,
+                        error = error,
                     )
                 }
             }
@@ -108,20 +111,35 @@ class ConfiguracionWidgetsActivity : ComponentActivity() {
     private val appWidgetManager by lazy { AppWidgetManager.getInstance(this) }
 
     private fun guardar(valor: String) {
+        if (guardando) return
+        guardando = true
+        error = false
         lifecycleScope.launch {
-            val id = GlanceAppWidgetManager(this@ConfiguracionWidgetsActivity).getGlanceIdBy(appWidgetId)
-            updateAppWidgetState(this@ConfiguracionWidgetsActivity, PreferencesGlanceStateDefinition, id) { prefs ->
-                prefs.toMutablePreferences().apply { this[ClaveConfig] = valor }
+            try {
+                guardarConfiguracion(valor)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                error = true
+            } finally {
+                guardando = false
             }
-            val contexto = this@ConfiguracionWidgetsActivity
-            when (tipo) {
-                TipoWidget.DEBERES -> DeberesWidget().update(contexto, id)
-                TipoWidget.HORARIO -> HorarioWidget().update(contexto, id)
-                TipoWidget.NOTAS -> NotasWidget().update(contexto, id)
-            }
-            setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId))
-            finish()
         }
+    }
+
+    private suspend fun guardarConfiguracion(valor: String) {
+        val id = GlanceAppWidgetManager(this@ConfiguracionWidgetsActivity).getGlanceIdBy(appWidgetId)
+        updateAppWidgetState(this@ConfiguracionWidgetsActivity, PreferencesGlanceStateDefinition, id) { prefs ->
+            prefs.toMutablePreferences().apply { this[ClaveConfig] = valor }
+        }
+        val contexto = this@ConfiguracionWidgetsActivity
+        when (tipo) {
+            TipoWidget.DEBERES -> DeberesWidget().update(contexto, id)
+            TipoWidget.HORARIO -> HorarioWidget().update(contexto, id)
+            TipoWidget.NOTAS -> NotasWidget().update(contexto, id)
+        }
+        setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId))
+        finish()
     }
 }
 
@@ -133,6 +151,8 @@ private fun PantallaConfiguracion(
     modifier: Modifier = Modifier,
     alCancelar: () -> Unit,
     alGuardar: (String) -> Unit,
+    guardando: Boolean,
+    error: Boolean,
 ) {
     val materias by app.repo.materias.collectAsStateWithLifecycle(emptyList())
     val grupos by app.repo.grupos.collectAsStateWithLifecycle(emptyList())
@@ -141,21 +161,33 @@ private fun PantallaConfiguracion(
     // Al volver a configurar un widget ya puesto, se marca lo que tenía guardado.
     val contexto = LocalContext.current
     var guardada by remember(appWidgetId) { mutableStateOf<String?>(null) }
-    LaunchedEffect(appWidgetId) {
-        val id = GlanceAppWidgetManager(contexto).getGlanceIdBy(appWidgetId)
-        val prefs: Preferences = getAppWidgetState(contexto, PreferencesGlanceStateDefinition, id)
-        guardada = prefs[ClaveConfig]
+    var errorLectura by remember(appWidgetId) { mutableStateOf(false) }
+    var intento by remember(appWidgetId) { mutableStateOf(0) }
+    LaunchedEffect(appWidgetId, intento) {
+        errorLectura = false
+        try {
+            val id = GlanceAppWidgetManager(contexto).getGlanceIdBy(appWidgetId)
+            val prefs: Preferences = getAppWidgetState(contexto, PreferencesGlanceStateDefinition, id)
+            guardada = prefs[ClaveConfig] ?: ConfigWidget.TODAS
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            errorLectura = true
+        }
     }
     var eleccion by rememberSaveable { mutableStateOf<String?>(null) }
-    val seleccion = eleccion ?: guardada ?: ConfigWidget.TODAS
 
+    val ubicaciones = remember(materias, grupos) { ubicacionesDeListas(materias, grupos) }
     val opciones = when (tipo) {
         TipoWidget.DEBERES -> buildList {
             add(ConfigWidget.TODAS to stringResource(R.string.todas_tareas))
             add(ConfigWidget.HOY to stringResource(R.string.hoy))
             add(ConfigWidget.PROXIMOS to stringResource(R.string.proximos_7))
-            materias.filter { it.id != ID_EVENTOS }.forEach { add(ConfigWidget.lista(it.id) to "${it.emoji ?: "📋"} ${it.nombre}") }
+            if (grupos.isNotEmpty()) add("encabezado:carpetas" to stringResource(R.string.w_carpetas))
             grupos.forEach { add(ConfigWidget.grupo(it.id) to "${it.icono} ${it.nombre}") }
+            val listas = materias.filter { it.id != ID_EVENTOS }
+            if (listas.isNotEmpty()) add("encabezado:listas" to stringResource(R.string.w_listas))
+            listas.forEach { add(ConfigWidget.lista(it.id) to "${it.emoji ?: "📋"} ${ubicaciones[it.id]?.etiqueta ?: it.nombre}") }
         }
         TipoWidget.HORARIO -> buildList {
             add(ConfigWidget.TODAS to stringResource(R.string.w_todos_horarios))
@@ -166,6 +198,8 @@ private fun PantallaConfiguracion(
             cuadernos.forEach { add(ConfigWidget.cuaderno(it.id) to "${it.icono} ${it.nombre}") }
         }
     }
+
+    val seleccion = (eleccion ?: guardada)?.takeIf { valor -> opciones.any { it.first == valor } } ?: ConfigWidget.TODAS
 
     Column(modifier.fillMaxSize().padding(horizontal = 20.dp)) {
         Text(
@@ -188,25 +222,37 @@ private fun PantallaConfiguracion(
             modifier = Modifier.padding(bottom = 12.dp),
         )
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            items(opciones, key = { it.first }) { (valor, etiqueta) ->
-                Row(
-                    Modifier.fillMaxWidth()
-                        .selectable(selected = seleccion == valor, onClick = { eleccion = valor })
+            if (guardada != null) items(opciones, key = { it.first }) { (valor, etiqueta) ->
+                if (valor.startsWith("encabezado:")) {
+                    Text(etiqueta, Modifier.padding(top = 12.dp, bottom = 4.dp), style = MaterialTheme.typography.labelLarge)
+                } else Row(
+                    Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                        .selectable(selected = seleccion == valor, enabled = !guardando, role = Role.RadioButton, onClick = { eleccion = valor })
                         .padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    RadioButton(selected = seleccion == valor, onClick = { eleccion = valor })
+                    RadioButton(selected = seleccion == valor, onClick = null)
                     Text(etiqueta, Modifier.padding(start = 8.dp))
                 }
             }
+        }
+        if (guardada == null && !errorLectura || guardando) {
+            androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth())
+        }
+        if (errorLectura || error) {
+            Text(stringResource(R.string.w_error_config), color = MaterialTheme.colorScheme.error)
         }
         Row(
             Modifier.fillMaxWidth().padding(vertical = 12.dp),
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(onClick = alCancelar) { Text(stringResource(R.string.cancelar)) }
-            Button(onClick = { alGuardar(seleccion) }, modifier = Modifier.padding(start = 8.dp)) { Text(stringResource(R.string.guardar)) }
+            TextButton(onClick = alCancelar, enabled = !guardando, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.cancelar)) }
+            Button(
+                onClick = { if (errorLectura) intento++ else alGuardar(seleccion) },
+                enabled = !guardando && (errorLectura || guardada != null),
+                modifier = Modifier.padding(start = 8.dp).heightIn(min = 48.dp),
+            ) { Text(stringResource(if (errorLectura) R.string.w_reintentar else R.string.guardar)) }
         }
     }
 }
